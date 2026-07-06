@@ -161,12 +161,8 @@ export function ApiEditPage() {
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 54px)' }}>
-      {/* 顶部导航 */}
-      <header className="topbar !relative">
-        <a href="/projects" className="brand">
-          <div className="brand-mark">M</div>
-          <span>Mock Studio</span>
-        </a>
+      {/* 面包屑 + 操作条（不重复 MainLayout 的 topbar） */}
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-white/70 px-6 py-2.5">
         <Breadcrumb
           items={[
             { label: '项目', to: '/projects' },
@@ -176,7 +172,7 @@ export function ApiEditPage() {
               : [{ label: showApi.name, current: true }]),
           ]}
         />
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5">
           <Button variant="secondary">
             <BookOpen className="h-3.5 w-3.5" />
             调用日志
@@ -186,10 +182,10 @@ export function ApiEditPage() {
             保存配置
           </Button>
         </div>
-      </header>
+      </div>
 
       {/* 接口摘要 */}
-      <section className="flex items-center gap-3.5 border-b border-line bg-white px-5 py-3">
+      <section className="flex shrink-0 items-center gap-3.5 border-b border-line bg-white px-5 py-3">
         <MethodBadge method={showApi.method} />
         <div className="min-w-0 flex-1">
           <h1 className="mb-0.5 flex items-center gap-2.5 text-[16px] font-semibold leading-tight tracking-[-0.01em] text-ink">
