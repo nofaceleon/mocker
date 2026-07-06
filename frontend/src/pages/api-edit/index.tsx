@@ -227,9 +227,9 @@ export function ApiEditPage() {
           {tab === 'params' && <ParamsPanel draft={draft} onChange={setDraft} onSave={handleSave} saving={saving} />}
           {tab === 'response' && <ResponsePanel draft={draft} onChange={setDraft} onSave={handleSave} saving={saving} />}
           {tab === 'validate' && <ValidatePanel draft={draft} onChange={setDraft} onSave={handleSave} saving={saving} />}
-          {tab === 'callback' && <CallbackPanel draft={draft} onChange={setDraft} />}
+          {tab === 'callback' && <CallbackPanel draft={draft} onChange={setDraft} onSave={handleSave} saving={saving} />}
           {tab === 'datalink' && <DataLinkPanel draft={draft} onChange={setDraft} onSave={handleSave} saving={saving} />}
-          {tab === 'script' && <ScriptPanel draft={draft} onChange={setDraft} />}
+          {tab === 'script' && <ScriptPanel draft={draft} onChange={setDraft} onSave={handleSave} saving={saving} />}
           {tab === 'test' && (
             <TestPanel api={summary} onRun={async (input) => testMut.mutateAsync({ id: summary.id, input })} />
           )}

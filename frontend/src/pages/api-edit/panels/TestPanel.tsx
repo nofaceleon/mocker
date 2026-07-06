@@ -76,7 +76,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         </FormField>
         <FormField label="自定义 Header" hint="JSON 对象，留空使用默认值">
           <Textarea
-            className="mono !text-[12.5px]"
+            className="mono mono-dark !text-[12.5px]"
             rows={2}
             value={headersText}
             onChange={(e) => setHeadersText(e.target.value)}
@@ -86,7 +86,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         {api.method !== 'GET' && (
           <FormField label="Body" hint="JSON">
             <Textarea
-              className="mono !text-[12.5px]"
+              className="mono mono-dark !text-[12.5px]"
               rows={8}
               value={bodyText}
               onChange={(e) => setBodyText(e.target.value)}

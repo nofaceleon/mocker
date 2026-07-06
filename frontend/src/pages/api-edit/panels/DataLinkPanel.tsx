@@ -81,7 +81,7 @@ export function DataLinkPanel({ draft, onChange, onSave, saving }: DataLinkPanel
             }}
             rows={4}
             disabled={!enabled}
-            className="form-textarea mono !text-[12.5px] disabled:bg-canvas-subtle"
+            className="form-textarea mono mono-dark !text-[12.5px]"
             placeholder='{"status": "active"}'
           />
         </FormField>

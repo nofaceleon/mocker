@@ -130,7 +130,7 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
                   setHeadersErr(null);
                 }}
                 rows={4}
-                className={`form-textarea mono !text-[12.5px] ${headersErr ? 'border-danger' : ''}`}
+                className={`form-textarea mono mono-dark !text-[12.5px] ${headersErr ? 'border-danger' : ''}`}
                 placeholder='{"X-Request-Id": "{{req.headers[\"x-request-id\"]}}"}'
               />
               {headersErr && <div className="text-[11px] text-danger">{headersErr}</div>}

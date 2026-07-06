@@ -699,7 +699,41 @@
   }
 
   .code-content ::selection,
-  .code-content textarea::selection {
+  .code-content textarea::selection,
+  .code-content *::selection,
+  .code-editor textarea::selection,
+  .code-editor *::selection {
+    background: #4A4A6A;
+    color: #FFFFFF;
+  }
+
+  .mono-dark {
+    background: #1E1E2E;
+    color: #E4E4E7;
+    border-color: #2D2D3D;
+  }
+
+  .mono-dark::placeholder {
+    color: #6B7280;
+  }
+
+  .mono-dark:focus {
+    border-color: #4A4A6A;
+    background: #1E1E2E;
+  }
+
+  .mono-dark:disabled {
+    background: #15151F;
+    color: #6B7280;
+  }
+
+  .mono-dark::selection,
+  .mono-dark *::selection {
+    background: #4A4A6A;
+    color: #FFFFFF;
+  }
+
+  textarea.mono-dark::selection {
     background: #4A4A6A;
     color: #FFFFFF;
   }
