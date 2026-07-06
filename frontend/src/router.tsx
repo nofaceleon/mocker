@@ -18,11 +18,11 @@ const router = createBrowserRouter([
       },
       {
         path: 'projects/:projectId/apis/new',
-        lazy: () => import('@/pages/ApiEditPage').then((m) => ({ Component: m.ApiEditPage })),
+        lazy: () => import('@/pages/api-edit').then((m) => ({ Component: m.ApiEditPage })),
       },
       {
         path: 'projects/:projectId/apis/:apiId',
-        lazy: () => import('@/pages/ApiEditPage').then((m) => ({ Component: m.ApiEditPage })),
+        lazy: () => import('@/pages/api-edit').then((m) => ({ Component: m.ApiEditPage })),
       },
       {
         path: 'callbacks',

@@ -26,9 +26,12 @@ export type FeatureGroup = {
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WS' | 'SSE';
 export type DataOp = 'none' | 'insert' | 'select' | 'update' | 'delete';
 
+export type ParamType = 'string' | 'number' | 'boolean' | 'array' | 'object';
+export type ParamLocation = 'query' | 'body' | 'path' | 'header';
+
 export type ValidationParamRule = {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  type: ParamType;
   required?: boolean;
   default?: unknown;
   min?: number;
