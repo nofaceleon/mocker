@@ -105,9 +105,8 @@ export function BasicPanel({
           </FormField>
           <FormField label="HTTP 方法" required>
             <Select
-              value={isSSE ? 'GET' : draft.method}
+              value={draft.method}
               onChange={(e) => onChange({ ...draft, method: e.target.value as HttpMethod })}
-              disabled={isSSE}
             >
               {HTTP_METHODS.map((m) => (
                 <option key={m} value={m}>

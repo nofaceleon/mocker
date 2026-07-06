@@ -163,9 +163,7 @@ router.post(
       .get();
     if (!fg) throw new ApiError('NOT_FOUND', `功能组 ${featureGroupId} 不存在`, 404);
 
-    // SSE协议强制使用GET方法
-    const method = body.protocol === 'SSE' ? 'GET' : body.method;
-    assertNoConflict(db, method as HttpMethod, body.path, null);
+    assertNoConflict(db, body.method as HttpMethod, body.path, null);
 
     const [row] = db
       .insert(mockApis)
@@ -174,7 +172,7 @@ router.post(
         name: body.name,
         description: body.description ?? null,
         protocol: body.protocol,
-        method,
+        method: body.method,
         path: body.path,
         isEnabled: body.isEnabled ?? true,
         sortOrder: body.sortOrder ?? 0,
@@ -208,20 +206,19 @@ router.put(
     const existing = db.select().from(mockApis).where(eq(mockApis.id, id)).get();
     if (!existing) throw new ApiError('NOT_FOUND', `接口 ${id} 不存在`, 404);
 
-    // 确定最终的protocol和method
     const finalProtocol = body.protocol ?? existing.protocol;
-    const finalMethod = finalProtocol === 'SSE' ? 'GET' : (body.method ?? existing.method);
 
     if (body.method !== undefined || body.path !== undefined || body.protocol !== undefined) {
+      const newMethod = (body.method ?? existing.method) as HttpMethod;
       const newPath = body.path ?? existing.path;
-      assertNoConflict(db, finalMethod as HttpMethod, newPath, id);
+      assertNoConflict(db, newMethod, newPath, id);
     }
 
     const patch = {
       ...(body.name !== undefined ? { name: body.name } : {}),
       ...(body.description !== undefined ? { description: body.description } : {}),
       ...(body.protocol !== undefined ? { protocol: body.protocol } : {}),
-      ...(body.method !== undefined ? { method: finalMethod } : {}),
+      ...(body.method !== undefined ? { method: body.method } : {}),
       ...(body.path !== undefined ? { path: body.path } : {}),
       ...(body.isEnabled !== undefined ? { isEnabled: body.isEnabled } : {}),
       ...(body.sortOrder !== undefined ? { sortOrder: body.sortOrder } : {}),
