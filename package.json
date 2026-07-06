@@ -1,0 +1,28 @@
+{
+  "name": "mockhub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "通用接口 Mock 服务平台 (MockHub)",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,magenta \"pnpm --filter @mockhub/backend dev\" \"pnpm --filter @mockhub/frontend dev\"",
+    "build": "pnpm --filter @mockhub/backend build && pnpm --filter @mockhub/frontend build",
+    "start": "pnpm --filter @mockhub/backend start",
+    "lint": "pnpm -r run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css,html}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css,html}\" --ignore-path .gitignore",
+    "typecheck": "pnpm -r run typecheck",
+    "db:generate": "pnpm --filter @mockhub/backend db:generate",
+    "db:migrate": "pnpm --filter @mockhub/backend db:migrate",
+    "db:seed": "pnpm --filter @mockhub/backend db:seed",
+    "clean": "pnpm -r exec rm -rf dist node_modules .turbo && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  }
+}

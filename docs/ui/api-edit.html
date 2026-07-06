@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>编辑接口 · Mock Studio</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #FAFAFA;
+    color: #09090B;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv11", "ss01", "tnum";
+  }
+
+  /* ========== 顶部导航 ========== */
+  .topbar {
+    height: 54px;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    border-bottom: 1px solid #E4E4E7;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .logo-mark {
+    width: 26px; height: 26px;
+    background: #09090B;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    color: #FAFAFA;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: -0.02em;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+  }
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-left: 24px;
+    font-size: 13px;
+    color: #71717A;
+  }
+  .breadcrumb a, .breadcrumb span {
+    color: #71717A;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .breadcrumb a:hover { color: #09090B; }
+  .breadcrumb .sep { color: #D4D4D8; }
+  .breadcrumb .current { color: #09090B; font-weight: 500; }
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ========== 接口摘要 ========== */
+  .api-summary {
+    background: white;
+    border-bottom: 1px solid #E4E4E7;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .method-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: 5px;
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+    letter-spacing: 0.02em;
+  }
+  .method-GET    { background: #ECFEFF; color: #0E7490; }
+  .method-POST   { background: #F0FDF4; color: #15803D; }
+  .method-PUT    { background: #FEFCE8; color: #A16207; }
+  .method-DELETE { background: #FEF2F2; color: #B91C1C; }
+  .method-PATCH  { background: #F5F3FF; color: #6D28D9; }
+  .method-WS     { background: #F0FDFA; color: #0F766E; }
+  .method-SSE    { background: #FDF2F8; color: #BE185D; }
+  .summary-info { flex: 1; min-width: 0; }
+  .summary-info h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #09090B;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 2px;
+    letter-spacing: -0.01em;
+  }
+  .summary-info p {
+    font-size: 12.5px;
+    color: #71717A;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.5;
+  }
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #F0FDF4;
+    color: #166534;
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid #DCFCE7;
+  }
+  .live-badge::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #22C55E;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+  }
+  .endpoint-url {
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+    background: #F4F4F5;
+    padding: 5px 10px;
+    border-radius: 6px;
+    color: #18181B;
+    font-size: 12.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .copy-icon { cursor: pointer; color: #A1A1AA; transition: color 0.15s; }
+  .copy-icon:hover { color: #09090B; }
+
+  /* ========== 按钮 ========== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .btn svg { width: 13px; height: 13px; }
+  .btn-primary {
+    background: #09090B;
+    color: #FAFAFA;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .btn-primary:hover {
+    background: #27272A;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    background: white;
+    color: #18181B;
+    border-color: #E4E4E7;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  }
+  .btn-secondary:hover {
+    background: #F4F4F5;
+    border-color: #D4D4D8;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: #52525B;
+    border-color: transparent;
+  }
+  .btn-ghost:hover { background: #F4F4F5; color: #09090B; }
+
+  /* ========== 主布局 ========== */
+  .layout {
+    display: grid;
+    grid-template-columns: 264px 1fr;
+    height: calc(100vh - 54px - 70px);
+  }
+
+  /* ========== 左侧配置导航 ========== */
+  .config-nav {
+    background: white;
+    border-right: 1px solid #E4E4E7;
+    overflow-y: auto;
+  }
+  .config-nav::-webkit-scrollbar { width: 6px; }
+  .config-nav::-webkit-scrollbar-thumb { background: #E4E4E7; border-radius: 3px; }
+  .config-nav::-webkit-scrollbar-thumb:hover { background: #D4D4D8; }
+
+  .nav-api-card {
+    padding: 14px 16px;
+    border-bottom: 1px solid #F4F4F5;
+  }
+  .nav-api-card .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .nav-api-card .row:last-child { margin-bottom: 0; }
+  .nav-api-card .path {
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+    font-size: 11.5px;
+    color: #09090B;
+    background: #F4F4F5;
+    padding: 3px 7px;
+    border-radius: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nav-api-card .meta {
+    font-size: 11px;
+    color: #71717A;
+    line-height: 1.5;
+  }
+
+  .nav-section {
+    padding: 14px 12px 8px;
+    border-top: 1px solid #F4F4F5;
+  }
+  .nav-section-title {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #A1A1AA;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0 8px 8px;
+  }
+
+  /* 导航项 */
+  .nav-input { display: none; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    margin: 1px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #3F3F46;
+    font-size: 13px;
+    font-weight: 450;
+    transition: all 0.12s;
+    position: relative;
+    user-select: none;
+  }
+  .nav-item:hover {
+    background: #F4F4F5;
+    color: #09090B;
+  }
+  .nav-item .icon {
+    width: 22px; height: 22px;
+    background: transparent;
+    color: #71717A;
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    transition: all 0.12s;
+  }
+  .nav-item .icon svg { width: 14px; height: 14px; }
+  .nav-item .label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: -0.005em;
+  }
+  .nav-item .badge {
+    font-size: 10px;
+    font-weight: 500;
+    background: #F4F4F5;
+    color: #52525B;
+    padding: 1.5px 6px;
+    border-radius: 10px;
+    border: 1px solid #E4E4E7;
+  }
+  .nav-item .badge.on {
+    background: #F0FDF4;
+    color: #166534;
+    border-color: #DCFCE7;
+  }
+
+  /* 激活态 */
+  #tab-basic:checked    ~ .config-nav .nav-for-basic,
+  #tab-params:checked   ~ .config-nav .nav-for-params,
+  #tab-response:checked ~ .config-nav .nav-for-response,
+  #tab-validate:checked ~ .config-nav .nav-for-validate,
+  #tab-callback:checked ~ .config-nav .nav-for-callback,
+  #tab-datalink:checked ~ .config-nav .nav-for-datalink,
+  #tab-script:checked   ~ .config-nav .nav-for-script,
+  #tab-test:checked     ~ .config-nav .nav-for-test {
+    background: #09090B;
+    color: #FAFAFA;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  #tab-basic:checked    ~ .config-nav .nav-for-basic .icon,
+  #tab-params:checked   ~ .config-nav .nav-for-params .icon,
+  #tab-response:checked ~ .config-nav .nav-for-response .icon,
+  #tab-validate:checked ~ .config-nav .nav-for-validate .icon,
+  #tab-callback:checked ~ .config-nav .nav-for-callback .icon,
+  #tab-datalink:checked ~ .config-nav .nav-for-datalink .icon,
+  #tab-script:checked   ~ .config-nav .nav-for-script .icon,
+  #tab-test:checked     ~ .config-nav .nav-for-test .icon {
+    background: rgba(255,255,255,0.12);
+    color: #FAFAFA;
+  }
+  #tab-basic:checked    ~ .config-nav .nav-for-basic .badge,
+  #tab-params:checked   ~ .config-nav .nav-for-params .badge,
+  #tab-response:checked ~ .config-nav .nav-for-response .badge,
+  #tab-validate:checked ~ .config-nav .nav-for-validate .badge,
+  #tab-callback:checked ~ .config-nav .nav-for-callback .badge,
+  #tab-datalink:checked ~ .config-nav .nav-for-datalink .badge,
+  #tab-script:checked   ~ .config-nav .nav-for-script .badge,
+  #tab-test:checked     ~ .config-nav .nav-for-test .badge {
+    background: rgba(255,255,255,0.15);
+    color: #D4D4D8;
+    border-color: transparent;
+  }
+
+  /* ========== 右侧详情区 ========== */
+  .config-detail {
+    overflow-y: auto;
+    background: #FAFAFA;
+  }
+  .config-detail::-webkit-scrollbar { width: 8px; }
+  .config-detail::-webkit-scrollbar-thumb { background: #E4E4E7; border-radius: 4px; }
+  .config-detail::-webkit-scrollbar-thumb:hover { background: #D4D4D8; }
+
+  .detail-panel { display: none; }
+
+  #tab-basic:checked    ~ .config-detail .panel-basic,
+  #tab-params:checked   ~ .config-detail .panel-params,
+  #tab-response:checked ~ .config-detail .panel-response,
+  #tab-validate:checked ~ .config-detail .panel-validate,
+  #tab-callback:checked ~ .config-detail .panel-callback,
+  #tab-datalink:checked ~ .config-detail .panel-datalink,
+  #tab-script:checked   ~ .config-detail .panel-script,
+  #tab-test:checked     ~ .config-detail .panel-test {
+    display: block;
+  }
+
+  .panel-inner {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 28px 32px 48px;
+  }
+  .panel-header {
+    margin-bottom: 20px;
+  }
+  .panel-header h2 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #09090B;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    letter-spacing: -0.025em;
+  }
+  .panel-header h2 .icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    color: #09090B;
+    background: #F4F4F5;
+    border: 1px solid #E4E4E7;
+  }
+  .panel-header h2 .icon svg { width: 15px; height: 15px; }
+  .panel-header p {
+    font-size: 13.5px;
+    color: #52525B;
+    line-height: 1.6;
+    max-width: 600px;
+  }
+
+  .panel-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #E4E4E7;
+  }
+  .panel-actions .left {
+    font-size: 12px;
+    color: #A1A1AA;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .panel-actions .left::before {
+    content: "";
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: #22C55E;
+  }
+  .panel-actions .right { display: flex; gap: 8px; }
+
+  /* ========== 卡片 ========== */
+  .card {
+    background: white;
+    border: 1px solid #E4E4E7;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card-header {
+    padding: 11px 16px;
+    border-bottom: 1px solid #F4F4F5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #FAFAFA;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #09090B;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.005em;
+  }
+  .card-title .sub {
+    color: #A1A1AA;
+    font-weight: normal;
+    font-size: 12px;
+  }
+  .card-body { padding: 16px; }
+
+  /* ========== 表单 ========== */
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .form-row.three-col { grid-template-columns: repeat(3, 1fr); }
+  .form-row.single { grid-template-columns: 1fr; }
+  .form-field { margin-bottom: 14px; }
+  .form-field:last-child { margin-bottom: 0; }
+  .form-field label {
+    display: block;
+    font-size: 12px;
+    color: #3F3F46;
+    margin-bottom: 6px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+  .form-field label .req { color: #DC2626; }
+  .form-field label .help {
+    color: #A1A1AA;
+    font-weight: normal;
+    margin-left: 6px;
+    font-size: 11px;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    border: 1px solid #E4E4E7;
+    border-radius: 6px;
+    padding: 8px 11px;
+    font-size: 13px;
+    color: #09090B;
+    background: white;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .form-input.mono, .form-textarea.mono {
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+  }
+  .form-input::placeholder, .form-textarea::placeholder {
+    color: #A1A1AA;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: #09090B;
+    box-shadow: 0 0 0 3px rgba(9, 9, 11, 0.08);
+  }
+  .form-helper {
+    font-size: 11.5px;
+    color: #71717A;
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+  .form-helper code {
+    background: #F4F4F5;
+    padding: 1.5px 5px;
+    border-radius: 3px;
+    color: #09090B;
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+    font-size: 11px;
+    border: 1px solid #E4E4E7;
+  }
+  .input-group {
+    display: flex;
+    align-items: stretch;
+  }
+  .input-group-text {
+    background: #F4F4F5;
+    border: 1px solid #E4E4E7;
+    border-right: 0;
+    border-radius: 6px 0 0 6px;
+    padding: 8px 11px;
+    font-size: 12px;
+    color: #52525B;
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+  }
+  .input-group .form-input {
+    border-radius: 0 6px 6px 0;
+  }
+
+  /* ========== 表格 ========== */
+  .params-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .params-table thead { background: #FAFAFA; }
+  .params-table th {
+    text-align: left;
+    padding: 9px 12px;
+    color: #71717A;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid #E4E4E7;
+  }
+  .params-table td {
+    padding: 5px 10px;
+    border-bottom: 1px solid #F4F4F5;
+    vertical-align: middle;
+  }
+  .params-table tbody tr:last-child td { border-bottom: none; }
+  .params-table tbody tr:hover { background: #FAFAFA; }
+  .table-input {
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 6px 8px;
+    background: transparent;
+    font-size: 13px;
+    font-family: inherit;
+    color: #09090B;
+  }
+  .table-input.mono { font-family: "JetBrains Mono", "SF Mono", monospace; }
+  .table-input:hover { border-color: #E4E4E7; background: white; }
+  .table-input:focus { outline: none; border-color: #09090B; background: white; box-shadow: 0 0 0 2px rgba(9,9,11,0.06); }
+  .checkbox {
+    width: 15px; height: 15px;
+    border-radius: 3px;
+    cursor: pointer;
+    accent-color: #09090B;
+  }
+  .param-code {
+    background: #F4F4F5;
+    color: #09090B;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+    border: 1px solid #E4E4E7;
+  }
+
+  /* ========== 开关 ========== */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #E4E4E7;
+    transition: 0.2s;
+    border-radius: 18px;
+    border: 1px solid transparent;
+  }
+  .switch-slider::before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 1px;
+    top: 1px;
+    background-color: white;
+    transition: 0.2s;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.04);
+  }
+  .switch input:checked + .switch-slider {
+    background-color: #09090B;
+    border-color: #09090B;
+  }
+  .switch input:checked + .switch-slider::before {
+    transform: translateX(14px);
+  }
+
+  /* ========== 代码编辑器 ========== */
+  .code-editor {
+    border: 1px solid #E4E4E7;
+    border-radius: 7px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .code-editor-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 12px;
+    background: #0A0A0F;
+    color: #D4D4D8;
+    font-size: 11px;
+    border-bottom: 1px solid #1C1C22;
+  }
+  .code-editor-tabs-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .code-editor-tabs-left .lang {
+    font-family: "JetBrains Mono", monospace;
+    color: #E4E4E7;
+    font-weight: 600;
+    font-size: 11px;
+  }
+  .code-editor-tabs-left code {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #1C1C22;
+    color: #A1A1AA;
+  }
+  .code-content {
+    background: #09090B;
+    color: #E4E4E7;
+    font-family: "JetBrains Mono", "SF Mono", "Monaco", monospace;
+    font-size: 12.5px;
+    line-height: 1.75;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 0;
+    white-space: pre-wrap;
+  }
+  .code-content .key { color: #FBBF24; }
+  .code-content .str { color: #86EFAC; }
+  .code-content .num { color: #F0ABFC; }
+  .code-content .kw  { color: #C4B5FD; }
+  .code-content .com { color: #6B7280; font-style: italic; }
+  .code-content .fn  { color: #93C5FD; }
+  .code-content .brkt { color: #FBBF24; }
+  .code-content .var { color: #F0ABFC; }
+
+  /* ========== 提示 ========== */
+  .info-tip {
+    background: #F4F4F5;
+    border: 1px solid #E4E4E7;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: #52525B;
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    line-height: 1.6;
+  }
+  .info-tip.dark {
+    background: #09090B;
+    border-color: #27272A;
+    color: #D4D4D8;
+  }
+  .info-tip svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; color: #71717A; }
+  .info-tip code {
+    background: white;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: #09090B;
+    border: 1px solid #E4E4E7;
+  }
+  .info-tip.dark code {
+    background: #1C1C22;
+    border-color: #27272A;
+    color: #E4E4E7;
+  }
+
+  /* ========== 添加链接 ========== */
+  .add-link {
+    color: #09090B;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 5px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .add-link:hover { background: #F4F4F5; }
+  .add-link svg { width: 12px; height: 12px; }
+
+  /* ========== 测试响应 ========== */
+  .test-panel {
+    background: #09090B;
+    color: #E4E4E7;
+    border-radius: 7px;
+    padding: 14px;
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+    font-size: 12px;
+    margin-top: 12px;
+    overflow-x: auto;
+    border: 1px solid #27272A;
+  }
+  .test-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #1C1C22;
+  }
+  .test-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #86EFAC;
+  }
+
+  /* ========== 嵌套面板 ========== */
+  .nested-panel {
+    background: #FAFAFA;
+    border: 1px dashed #E4E4E7;
+    border-radius: 7px;
+    padding: 14px;
+    margin-top: 12px;
+  }
+  .nested-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .nested-panel-header strong {
+    font-size: 13px;
+    color: #09090B;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+
+  /* ========== 拖拽手柄 ========== */
+  .drag-handle { color: #D4D4D8; cursor: grab; user-select: none; font-size: 14px; }
+  .drag-handle:hover { color: #71717A; }
+
+  /* ========== 工具链接 ========== */
+  .tool-link { cursor: pointer; color: #A1A1AA; transition: color 0.15s; font-size: 12px; }
+  .tool-link:hover { color: #09090B; }
+</style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<header class="topbar">
+  <div class="logo">
+    <div class="logo-mark">M</div>
+    <span>Mock Studio</span>
+  </div>
+  <div class="breadcrumb">
+    <a href="index.html">项目</a>
+    <span class="sep">/</span>
+    <a href="project.html">人脸识别平台</a>
+    <span class="sep">/</span>
+    <a href="project.html">人脸管理</a>
+    <span class="sep">/</span>
+    <span class="current">人脸注册</span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-secondary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+      调用日志
+    </button>
+    <button class="btn btn-primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      保存配置
+    </button>
+  </div>
+</header>
+
+<!-- 接口摘要 -->
+<section class="api-summary">
+  <span class="method-badge method-POST">POST</span>
+  <div class="summary-info">
+    <h1>
+      人脸注册
+      <span class="live-badge">运行中</span>
+    </h1>
+    <p>用于注册新人脸到人脸库，5 秒后回调异步返回识别结果</p>
+  </div>
+  <span class="endpoint-url">
+    POST /api/face/add
+    <svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  </span>
+</section>
+
+<div class="layout">
+
+  <!-- radio 控制 -->
+  <input type="radio" name="config-tab" id="tab-basic"    class="nav-input" checked>
+  <input type="radio" name="config-tab" id="tab-params"   class="nav-input">
+  <input type="radio" name="config-tab" id="tab-response" class="nav-input">
+  <input type="radio" name="config-tab" id="tab-validate" class="nav-input">
+  <input type="radio" name="config-tab" id="tab-callback" class="nav-input">
+  <input type="radio" name="config-tab" id="tab-datalink" class="nav-input">
+  <input type="radio" name="config-tab" id="tab-script"   class="nav-input">
+  <input type="radio" name="config-tab" id="tab-test"     class="nav-input">
+
+  <!-- 左侧导航 -->
+  <aside class="config-nav">
+    <div class="nav-api-card">
+      <div class="row">
+        <span class="method-badge method-POST" style="font-size:10px;padding:2.5px 7px;">POST</span>
+        <span class="path">/api/face/add</span>
+      </div>
+      <div class="meta">人脸管理 · 已调用 486 次</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">基础配置</div>
+      <label for="tab-basic" class="nav-item nav-for-basic">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></span>
+        <span class="label">基本配置</span>
+      </label>
+      <label for="tab-params" class="nav-item nav-for-params">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span>
+        <span class="label">请求参数</span>
+        <span class="badge">5</span>
+      </label>
+      <label for="tab-response" class="nav-item nav-for-response">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+        <span class="label">响应配置</span>
+      </label>
+      <label for="tab-validate" class="nav-item nav-for-validate">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg></span>
+        <span class="label">参数校验</span>
+        <span class="badge">3</span>
+      </label>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">高级特性</div>
+      <label for="tab-callback" class="nav-item nav-for-callback">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+        <span class="label">延迟回调</span>
+        <span class="badge on">ON</span>
+      </label>
+      <label for="tab-datalink" class="nav-item nav-for-datalink">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
+        <span class="label">数据联动</span>
+        <span class="badge on">ON</span>
+      </label>
+      <label for="tab-script" class="nav-item nav-for-script">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
+        <span class="label">自定义脚本</span>
+        <span class="badge on">ON</span>
+      </label>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">调试</div>
+      <label for="tab-test" class="nav-item nav-for-test">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
+        <span class="label">在线测试</span>
+      </label>
+    </div>
+
+    <div class="nav-section" style="border-top:1px solid #F4F4F5;">
+      <div style="padding:8px 10px;font-size:11px;color:#A1A1AA;line-height:1.8;">
+        <div>上次保存 · <span style="color:#52525B;">3 分钟前</span></div>
+        <div>上次调用 · <span style="color:#52525B;">13:35:42</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 右侧详情 -->
+  <main class="config-detail">
+
+    <!-- 基本配置 -->
+    <section class="detail-panel panel-basic">
+      <div class="panel-inner">
+        <div class="panel-header">
+          <h2>
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>
+            基本配置
+          </h2>
+          <p>定义 Mock 接口的基础信息：名称、HTTP 方法、路由路径、归属分组与启用状态。</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">接口信息</div></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-field">
+                <label>接口名称 <span class="req">*</span></label>
+                <input class="form-input" value="人脸注册">
+              </div>
+              <div class="form-field">
+                <label>所属功能组 <span class="help">项目 / 模块</span></label>
+                <select class="form-select">
+                  <option>人脸管理</option><option>人脸识别</option><option>活体检测</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row three-col">
+              <div class="form-field">
+                <label>HTTP 方法 <span class="req">*</span></label>
+                <select class="form-select">
+                  <option>POST</option><option>GET</option><option>PUT</option><option>DELETE</option><option>PATCH</option><option>WebSocket</option><option>SSE</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>协议</label>
+                <select class="form-select">
+                  <option>HTTP / REST</option><option>WebSocket</option><option>SSE</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>路由优先级</label>
+                <select class="form-select">
+                  <option>高（精确匹配）</option><option>中（参数匹配）</option><option>低（通配符）</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label>路由路径 <span class="req">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">POST</span>
+                <input class="form-input mono" value="/api/face/add">
+              </div>
+              <div class="form-helper">支持 <code>:id</code> 占位符、<code>*</code> 通配符；匹配优先级：精确 &gt; 参数 &gt; 通配符</div>
+            </div>
+
+            <div class="form-field">
+              <label>接口描述</label>
+              <textarea class="form-textarea" rows="2">注册新人脸到人脸库，5 秒后回调异步返回识别结果</textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label>Content-Type</label>
+                <select class="form-select">
+                  <option>application/json</option><option>multipart/form-data</option><option>application/x-www-form-urlencoded</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>启用接口</label>
+                <div style="padding-top:6px;display:flex;align-items:center;gap:8px;">
+                  <label class="switch"><input type="checkbox" checked><span class="switch-slider"></span></label>
+                  <span style="font-size:12.5px;color:#52525B;">启用后接收外部调用</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <span class="left">所有修改自动保存到草稿</span>
+          <div class="right">
+            <button class="btn btn-secondary">取消</button>
+            <button class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              保存
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 请求参数 -->
+    <section class="detail-panel panel-params">
+      <div class="panel-inner">
+        <div class="panel-header">
+          <h2>
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span>
+            请求参数
+          </h2>
+          <p>定义接口期望接收的请求字段，涵盖 Query / Body / Path / Header。每行代表一个参数。</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">参数列表 <span class="sub">· 5 个参数</span></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn btn-ghost" style="height:28px;padding:0 10px;font-size:12px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                导入 JSON
+              </button>
+              <span class="add-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                添加参数
+              </span>
+            </div>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <table class="params-table">
+              <thead>
+                <tr>
+                  <th style="width:18px;"></th>
+                  <th>参数名</th>
+                  <th style="width:100px;">类型</th>
+                  <th style="width:90px;">位置</th>
+                  <th style="width:50px;">必填</th>
+                  <th style="width:110px;">默认值</th>
+                  <th>说明</th>
+                  <th style="width:40px;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="drag-handle">⋮⋮</span></td>
+                  <td><input class="table-input mono" value="name"></td>
+                  <td><select class="table-input"><option>string</option><option>number</option></select></td>
+                  <td><select class="table-input"><option>Body</option><option>Query</option></select></td>
+                  <td><input type="checkbox" class="checkbox" checked></td>
+                  <td><input class="table-input" placeholder="—"></td>
+                  <td><input class="table-input" value="人脸名称"></td>
+                  <td><button style="border:none;background:transparent;color:#A1A1AA;cursor:pointer;">✕</button></td>
+                </tr>
+                <tr>
+                  <td><span class="drag-handle">⋮⋮</span></td>
+                  <td><input class="table-input mono" value="imageUrl"></td>
+                  <td><select class="table-input"><option>string</option></select></td>
+                  <td><select class="table-input"><option>Body</option></select></td>
+                  <td><input type="checkbox" class="checkbox" checked></td>
+                  <td><input class="table-input" placeholder="—"></td>
+                  <td><input class="table-input" value="人脸图片地址（公网可访问）"></td>
+                  <td><button style="border:none;background:transparent;color:#A1A1AA;cursor:pointer;">✕</button></td>
+                </tr>
+                <tr>
+                  <td><span class="drag-handle">⋮⋮</span></td>
+                  <td><input class="table-input mono" value="requestId"></td>
+                  <td><select class="table-input"><option>string</option></select></td>
+                  <td><select class="table-input"><option>Body</option></select></td>
+                  <td><input type="checkbox" class="checkbox" checked></td>
+                  <td><input class="table-input" placeholder="—"></td>
+                  <td><input class="table-input" value="请求唯一标识（用于回调关联）"></td>
+                  <td><button style="border:none;background:transparent;color:#A1A1AA;cursor:pointer;">✕</button></td>
+                </tr>
+                <tr>
+                  <td><span class="drag-handle">⋮⋮</span></td>
+                  <td><input class="table-input mono" value="callbackUrl"></td>
+                  <td><select class="table-input"><option>string</option></select></td>
+                  <td><select class="table-input"><option>Body</option></select></td>
+                  <td><input type="checkbox" class="checkbox"></td>
+                  <td><input class="table-input" placeholder="—"></td>
+                  <td><input class="table-input" value="异步回调地址（启用回调时必填）"></td>
+                  <td><button style="border:none;background:transparent;color:#A1A1AA;cursor:pointer;">✕</button></td>
+                </tr>
+                <tr>
+                  <td><span class="drag-handle">⋮⋮</span></td>
+                  <td><input class="table-input mono" value="metadata"></td>
+                  <td><select class="table-input"><option>object</option></select></td>
+                  <td><select class="table-input"><option>Body</option></select></td>
+                  <td><input type="checkbox" class="checkbox"></td>
+                  <td><input class="table-input mono" value="{}"></td>
+                  <td><input class="table-input" value="自定义元数据"></td>
+                  <td><button style="border:none;background:transparent;color:#A1A1AA;cursor:pointer;">✕</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <span class="left">支持拖拽排序</span>
+          <div class="right">
+            <button class="btn btn-secondary">取消</button>
+            <button class="btn btn-primary">保存</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 响应配置 -->
+    <section class="detail-panel panel-response">
+      <div class="panel-inner">
+        <div class="panel-header">
+          <h2>
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+            响应配置
+          </h2>
+          <p>定义 Mock 接口如何响应外部请求：状态码、响应头、响应体、模拟延迟。</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">响应基本信息</div></div>
+          <div class="card-body">
+            <div class="form-row three-col">
+              <div class="form-field">
+                <label>状态码</label>
+                <select class="form-select">
+                  <option>200 OK</option><option>201 Created</option><option>202 Accepted</option>
+                  <option>400 Bad Request</option><option>404 Not Found</option><option>500 Server Error</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>响应延迟 <span class="help">毫秒</span></label>
+                <input class="form-input" value="0">
+              </div>
+              <div class="form-field">
+                <label>延迟类型</label>
+                <select class="form-select">
+                  <option>固定延迟</option><option>随机范围（如 500-1500）</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>响应头 <span class="help">可自定义</span></label>
+              <textarea class="form-textarea mono" rows="3">{
+  "Content-Type": "application/json",
+  "X-Request-Id": "{{req.headers['x-request-id']}}"
+}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">响应体 <span class="sub">· 支持变量插值</span></div>
+            <div style="display:flex;gap:14px;font-size:12px;">
+              <span class="tool-link">格式化</span>
+              <span class="tool-link">预览</span>
+              <span class="tool-link">复制</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="info-tip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <div>支持变量：<code>{{req.body.xxx}}</code> 请求体、<code>{{req.query.xxx}}</code> 查询参数、<code>{{global.xxx}}</code> 全局变量</div>
+            </div>
+            <div class="code-editor" style="margin-top:10px;">
+              <div class="code-editor-toolbar">
+                <div class="code-editor-tabs-left">
+                  <span class="lang">JSON</span>
+                  <code style="color:#C4B5FD;">{{req.body.*}}</code>
+                  <code style="color:#86EFAC;">{{req.query.*}}</code>
+                  <code style="color:#F0ABFC;">{{global.*}}</code>
+                </div>
+              </div>
+<pre class="code-content"><span class="com">// 立即返回"受理成功"，回调任务在 5 秒后推送识别结果</span>
+<span class="brkt">{</span>
+  <span class="key">"code"</span>: <span class="num">0</span>,
+  <span class="key">"message"</span>: <span class="str">"受理成功，人脸注册任务已创建"</span>,
+  <span class="key">"data"</span>: <span class="brkt">{</span>
+    <span class="key">"requestId"</span>: <span class="str">"{{req.body.requestId}}"</span>,
+    <span class="key">"faceId"</span>: <span class="str">"face_{{req.body.requestId}}"</span>,
+    <span class="key">"estimatedSeconds"</span>: <span class="num">5</span>,
+    <span class="key">"callbackUrl"</span>: <span class="str">"{{req.body.callbackUrl}}"</span>
+  <span class="brkt">}</span>
+<span class="brkt">}</span></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <span class="left">下次请求生效</span>
+          <div class="right">
+            <button class="btn btn-secondary">取消</button>
+            <button class="btn btn-primary">保存</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 参数校验 -->
+    <section class="detail-panel panel-validate">
+      <div class="panel-inner">
+        <div class="panel-header">
+          <h2>
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg></span>
+            参数校验
+          </h2>
+          <p>为请求参数配置校验规则。校验失败时返回自定义错误响应：状态码、错误信息、错误详情。</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">校验规则 <span class="sub">· 3 条规则</span></div>
+            <span class="add-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              添加规则
+            </span>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <table class="params-table">
+              <thead>
+                <tr>
+                  <th>参数</th>
+                  <th>规则</th>
+                  <th style="width:80px;">错误码</th>
+                  <th>错误信息模板</th>
+                  <th style="width:40px;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="param-code">name</span></td>
+                  <td><select class="table-input"><option>必填 + string + 长度 1-50</option></select></td>
+                  <td><input class="table-input mono" value="400"></td>
+                  <td><input class="table-input" value="参数 name 不能为空"></td>
+                  <td><button style="border:none;background:transparent;color:#A1A1AA;cursor:pointer;">✕</button></td>
+                </tr>
+                <tr>
+                  <td><span class="param-code">imageUrl</span></td>
+                  <td><select class="table-input"><option>必填 + 合法 URL</option></select></td>
+                  <td><input class="table-input mono" value="400"></td>
+                  <td><input class="table-input" value="imageUrl 必须为合法的 URL 地址"></td>
+                  <td><button style="border:none;background:transparent;color:#A1A1AA;cursor:pointer;">✕</button></td>
+                </tr>
+                <tr>
+                  <td><span class="param-code">imageUrl</span></td>
+                  <td><select class="table-input"><option>正则：^https://</option></select></td>
+                  <td><input class="table-input mono" value="400"></td>
+                  <td><input class="table-input" value="imageUrl 必须使用 HTTPS 协议"></td>
+                  <td><button style="border:none;background:transparent;color:#A1A1AA;cursor:pointer;">✕</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">校验失败时的默认响应</div></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-field">
+                <label>HTTP 状态码</label>
+                <select class="form-select"><option>400 Bad Request</option><option>422</option><option>500</option></select>
+              </div>
+              <div class="form-field">
+                <label>业务错误码</label>
+                <input class="form-input mono" value="40001">
+              </div>
+            </div>
+            <div class="form-field">
+              <label>错误响应体</label>
+              <div class="code-editor">
+                <div class="code-editor-toolbar"><span class="lang">JSON</span></div>
+<pre class="code-content"><span class="brkt">{</span>
+  <span class="key">"code"</span>: <span class="num">40001</span>,
+  <span class="key">"message"</span>: <span class="str">"参数校验失败：{{errorMessage}}"</span>,
+  <span class="key">"errors"</span>: <span class="brkt">[</span>
+    <span class="brkt">{</span> <span class="key">"field"</span>: <span class="str">"{{field}}"</span>, <span class="key">"rule"</span>: <span class="str">"{{rule}}"</span> <span class="brkt">}</span>
+  <span class="brkt">]</span>
+<span class="brkt">}</span></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <span class="left"></span>
+          <div class="right">
+            <button class="btn btn-secondary">取消</button>
+            <button class="btn btn-primary">保存</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 延迟回调 -->
+    <section class="detail-panel panel-callback">
+      <div class="panel-inner">
+        <div class="panel-header">
+          <h2>
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+            延迟回调
+            <label class="switch" style="margin-left:auto;"><input type="checkbox" checked><span class="switch-slider"></span></label>
+          </h2>
+          <p>启用后，接口响应后会自动按设定延迟向回调 URL 发送请求。常用于模拟支付、识别等异步通知。</p>
+        </div>
+
+        <div class="info-tip dark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>支持 <code>{{req.body.xxx}}</code> 动态提取 URL；请求体支持 <code>{{request.*}}</code>、<code>{{response.*}}</code></div>
+        </div>
+
+        <div class="card" style="margin-top:12px;">
+          <div class="card-header"><div class="card-title">回调请求</div></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-field" style="grid-column:span 2;">
+                <label>回调 URL <span class="req">*</span></label>
+                <input class="form-input mono" value="{{req.body.callbackUrl}}">
+                <div class="form-helper">支持变量替换，例 <code>{{req.body.callbackUrl}}</code> 或固定 URL</div>
+              </div>
+              <div class="form-field">
+                <label>回调方法</label>
+                <select class="form-select">
+                  <option>POST</option><option>GET</option><option>PUT</option><option>PATCH</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row three-col">
+              <div class="form-field">
+                <label>延迟类型</label>
+                <select class="form-select"><option>固定</option><option>随机范围</option></select>
+              </div>
+              <div class="form-field">
+                <label>延迟时间 <span class="help">毫秒</span></label>
+                <input class="form-input" value="5000">
+              </div>
+              <div class="form-field">
+                <label>超时 <span class="help">毫秒</span></label>
+                <input class="form-input" value="10000">
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label>回调请求头</label>
+              <textarea class="form-textarea mono" rows="3">{
+  "Content-Type": "application/json",
+  "X-Callback-Event": "face.recognized",
+  "Authorization": "Bearer mock_token"
+}</textarea>
+            </div>
+
+            <div class="form-field">
+              <label>回调请求体</label>
+              <div class="code-editor">
+                <div class="code-editor-toolbar">
+                  <div class="code-editor-tabs-left">
+                    <span class="lang">JSON</span>
+                    <code>{{request.*}}</code>
+                    <code>{{response.*}}</code>
+                  </div>
+                </div>
+<pre class="code-content"><span class="brkt">{</span>
+  <span class="key">"requestId"</span>: <span class="str">"{{request.body.requestId}}"</span>,
+  <span class="key">"code"</span>: <span class="num">0</span>,
+  <span class="key">"message"</span>: <span class="str">"success"</span>,
+  <span class="key">"data"</span>: <span class="brkt">{</span>
+    <span class="key">"faceId"</span>: <span class="str">"face_1234567890"</span>,
+    <span class="key">"similarity"</span>: <span class="num">98.5</span>,
+    <span class="key">"livenessScore"</span>: <span class="num">0.96</span>,
+    <span class="key">"completedAt"</span>: <span class="str">"2026-07-06T13:35:42Z"</span>
+  <span class="brkt">}</span>
+<span class="brkt">}</span></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">重试策略</div>
+            <label class="switch"><input type="checkbox" checked><span class="switch-slider"></span></label>
+          </div>
+          <div class="card-body">
+            <div class="form-row three-col">
+              <div class="form-field">
+                <label>最大重试次数</label>
+                <input class="form-input" value="3">
+              </div>
+              <div class="form-field">
+                <label>重试间隔 <span class="help">毫秒</span></label>
+                <input class="form-input" value="5000">
+              </div>
+              <div class="form-field">
+                <label>重试策略</label>
+                <select class="form-select">
+                  <option>固定间隔</option><option>指数退避 (2^n)</option><option>线性递增</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>触发重试的条件</label>
+              <input class="form-input mono" value="statusCode != 200 || response.body.code != 0">
+              <div class="form-helper">可用变量：<code>statusCode</code> / <code>response.body</code> / <code>errorMessage</code></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <span class="left">在回调任务页面查看日志</span>
+          <div class="right">
+            <button class="btn btn-secondary">取消</button>
+            <button class="btn btn-primary">保存</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 数据联动 -->
+    <section class="detail-panel panel-datalink">
+      <div class="panel-inner">
+        <div class="panel-header">
+          <h2>
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
+            数据联动
+            <label class="switch" style="margin-left:auto;"><input type="checkbox" checked><span class="switch-slider"></span></label>
+          </h2>
+          <p>让接口间共享 Mock 数据：<code>POST /face/add</code> 写入 → <code>GET /face/list</code> 自动返回刚写入的内容。</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">数据表配置</div></div>
+          <div class="card-body">
+            <div class="form-row three-col">
+              <div class="form-field">
+                <label>操作类型</label>
+                <select class="form-select">
+                  <option>INSERT（写入）</option><option>SELECT（查询）</option><option>UPDATE</option><option>DELETE</option><option>不操作</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>目标数据表</label>
+                <select class="form-select">
+                  <option>face_data</option><option>face_recognition</option><option>+ 新建表</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>主键字段</label>
+                <input class="form-input mono" value="faceId">
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label>表结构</label>
+              <div class="code-editor">
+                <div class="code-editor-toolbar">
+                  <div class="code-editor-tabs-left"><span class="lang">SQL</span></div>
+                  <span class="tool-link">+ 添加字段</span>
+                </div>
+<pre class="code-content"><span class="kw">CREATE TABLE</span> face_data <span class="brkt">(</span>
+  faceId     <span class="kw">TEXT PRIMARY KEY</span>,
+  name       <span class="kw">TEXT NOT NULL</span>,
+  imageUrl   <span class="kw">TEXT</span>,
+  requestId  <span class="kw">TEXT</span>,
+  metadata   <span class="kw">JSON</span>,
+  createdAt  <span class="kw">DATETIME DEFAULT</span> <span class="fn">CURRENT_TIMESTAMP</span>
+<span class="brkt">)</span>;</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-tip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>脚本中可通过 <code>db.insert()</code> / <code>db.select()</code> / <code>db.update()</code> / <code>db.delete()</code> 操作数据。</div>
+        </div>
+
+        <div class="panel-actions">
+          <span class="left"></span>
+          <div class="right">
+            <button class="btn btn-secondary">取消</button>
+            <button class="btn btn-primary">保存</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 自定义脚本 -->
+    <section class="detail-panel panel-script">
+      <div class="panel-inner">
+        <div class="panel-header">
+          <h2>
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
+            自定义脚本
+            <label class="switch" style="margin-left:auto;"><input type="checkbox" checked><span class="switch-slider"></span></label>
+          </h2>
+          <p>编写 JavaScript 自定义响应逻辑。脚本在隔离沙箱内执行，<strong>无法访问文件系统与网络</strong>。</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">handle(req, res, db)</div>
+            <div style="display:flex;gap:14px;align-items:center;font-size:12px;">
+              <span class="tool-link" style="color:#15803D;">▶ 运行测试</span>
+              <span style="color:#E4E4E7;">|</span>
+              <span class="tool-link">格式化</span>
+            </div>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="code-editor" style="border-radius:0;border:none;border-top:1px solid #E4E4E7;">
+              <div class="code-editor-toolbar">
+                <div class="code-editor-tabs-left">
+                  <span class="lang">JavaScript · ES2022</span>
+                  <span style="color:#52525B;font-size:11px;">对象：</span>
+                  <code style="color:#C4B5FD;">req</code>
+                  <code style="color:#93C5FD;">res</code>
+                  <code style="color:#86EFAC;">db</code>
+                  <code style="color:#FBBF24;">log</code>
+                </div>
+                <span style="font-size:11px;color:#71717A;">行 56 · UTF-8</span>
+              </div>
+<pre class="code-content" style="min-height:480px;font-size:13px;"><span class="com">// 收到注册请求时，将人脸数据写入数据库</span>
+<span class="com">// 然后返回"受理成功"，5 秒后由回调任务推送识别结果</span>
+<span class="kw">async function</span> <span class="fn">handle</span>(req, res, db) <span class="brkt">{</span>
+  <span class="com">// 1. 校验必填参数</span>
+  <span class="kw">const</span> <span class="brkt">{</span> name, imageUrl, requestId <span class="brkt">}</span> = req.body;
+  <span class="kw">if</span> (!name || !imageUrl) <span class="brkt">{</span>
+    <span class="kw">return</span> <span class="brkt">{</span>
+      <span class="key">code</span>: <span class="num">400</span>,
+      <span class="key">message</span>: <span class="str">'缺少必填参数 name 或 imageUrl'</span>,
+    <span class="brkt">}</span>;
+  <span class="brkt">}</span>
+
+  <span class="com">// 2. 构造人脸数据</span>
+  <span class="kw">const</span> faceData = <span class="brkt">{</span>
+    <span class="key">faceId</span>: <span class="str">'face_'</span> + Date.<span class="fn">now</span>(),
+    <span class="key">name</span>: name,
+    <span class="key">imageUrl</span>: imageUrl,
+    <span class="key">requestId</span>: requestId || <span class="str">''</span>,
+    <span class="key">metadata</span>: req.body.metadata || <span class="brkt">{}</span>,
+    <span class="key">createdAt</span>: <span class="kw">new</span> <span class="fn">Date</span>().<span class="fn">toISOString</span>(),
+  <span class="brkt">}</span>;
+
+  <span class="com">// 3. 写入数据库（数据联动）</span>
+  <span class="kw">await</span> db.<span class="fn">insert</span>(<span class="str">'face_data'</span>, faceData);
+
+  <span class="com">// 4. 记录日志</span>
+  log.<span class="fn">info</span>(<span class="str">'人脸注册成功'</span>, faceData);
+
+  <span class="com">// 5. 返回受理结果</span>
+  <span class="kw">return</span> <span class="brkt">{</span>
+    <span class="key">code</span>: <span class="num">0</span>,
+    <span class="key">message</span>: <span class="str">'受理成功'</span>,
+    <span class="key">"data"</span>: <span class="brkt">{</span>
+      <span class="key">faceId</span>: faceData.faceId,
+      <span class="key">requestId</span>: requestId,
+      <span class="key">estimatedSeconds</span>: <span class="num">5</span>,
+    <span class="brkt">}</span>,
+  <span class="brkt">}</span>;
+<span class="brkt">}</span>
+
+<span class="com">// 导出供其他接口复用</span>
+<span class="kw">module</span>.exports = <span class="brkt">{</span> handle <span class="brkt">}</span>;</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-tip dark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>
+            <strong>沙箱限制</strong>：<code>fs</code> / <code>net</code> / <code>child_process</code> 等敏感模块被禁用。返回对象即接口响应；用 <code>res.status(400)</code> 可修改状态码。
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <span class="left">Cmd / Ctrl + S 快速保存</span>
+          <div class="right">
+            <button class="btn btn-secondary">取消</button>
+            <button class="btn btn-primary">保存</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 在线测试 -->
+    <section class="detail-panel panel-test">
+      <div class="panel-inner">
+        <div class="panel-header">
+          <h2>
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
+            在线测试
+          </h2>
+          <p>直接在界面上发送请求测试 Mock 配置，立即看到响应内容和回调任务的触发情况。</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">请求</div>
+            <button class="btn btn-primary" style="height:28px;padding:0 12px;font-size:12px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              发送请求
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-field">
+                <label>Query 参数</label>
+                <input class="form-input mono" placeholder="(无)">
+              </div>
+              <div class="form-field">
+                <label>自定义 Header</label>
+                <input class="form-input mono" placeholder="(使用默认值)">
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Body <span class="help">JSON</span></label>
+              <textarea class="form-textarea mono" rows="6">{
+  "name": "张三",
+  "imageUrl": "https://example.com/face/zhangsan.jpg",
+  "requestId": "req_demo_001",
+  "callbackUrl": "https://my-app.com/api/callback/face"
+}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">响应 <span class="sub">· POST /api/face/add</span></div>
+            <span style="font-size:12px;color:#52525B;"><strong style="color:#15803D;">200 OK</strong> · 12ms · 236B</span>
+          </div>
+          <div class="card-body" style="padding:14px;">
+            <div class="test-panel" style="margin-top:0;">
+              <div class="test-panel-header">
+                <div>
+                  <strong style="color:#86EFAC;">✓ 请求成功</strong>
+                  <span style="margin-left:8px;color:#71717A;font-size:11px;">已发送</span>
+                </div>
+                <span class="tool-link" style="font-size:11px;color:#A1A1AA;">复制响应</span>
+              </div>
+<pre style="margin:0;color:#E4E4E7;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;"><span style="color:#6B7280;">// Response Body (200 OK)</span>
+<span style="color:#FBBF24;">{</span>
+  <span style="color:#86EFAC;">"code"</span>: <span style="color:#F0ABFC;">0</span>,
+  <span style="color:#86EFAC;">"message"</span>: <span style="color:#C4B5FD;">"受理成功，人脸注册任务已创建"</span>,
+  <span style="color:#86EFAC;">"data"</span>: <span style="color:#FBBF24;">{</span>
+    <span style="color:#86EFAC;">"requestId"</span>: <span style="color:#C4B5FD;">"req_demo_001"</span>,
+    <span style="color:#86EFAC;">"faceId"</span>: <span style="color:#C4B5FD;">"face_req_demo_001"</span>,
+    <span style="color:#86EFAC;">"estimatedSeconds"</span>: <span style="color:#F0ABFC;">5</span>,
+    <span style="color:#86EFAC;">"callbackUrl"</span>: <span style="color:#C4B5FD;">"https://my-app.com/api/callback/face"</span>
+  <span style="color:#FBBF24;">}</span>
+<span style="color:#FBBF24;">}</span>
+
+<span style="color:#6B7280;">// 📌 回调任务已创建</span>
+<span style="color:#6B7280;">// Task ID: 1001 · 计划发送：2026-07-06 13:35:47 (+5s)</span>
+<span style="color:#6B7280;">// Target: https://my-app.com/api/callback/face</span>
+<span style="color:#6B7280;">// → 查看日志：回调任务 &gt; #T-1001</span></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">脚本执行日志 <span class="sub">· 耗时 14ms</span></div>
+          </div>
+          <div class="card-body" style="padding:14px;">
+            <div style="background:#09090B;color:#D4D4D8;border-radius:6px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.75;border:1px solid #1C1C22;">
+<span style="color:#52525B;">[13:35:42.182]</span> <span style="color:#93C5FD;">[INFO]</span>    接收到请求 <span style="color:#F0ABFC;">POST /api/face/add</span><br>
+<span style="color:#52525B;">[13:35:42.183]</span> <span style="color:#93C5FD;">[INFO]</span>    开始执行 handle(req, res, db)<br>
+<span style="color:#52525B;">[13:35:42.184]</span> <span style="color:#93C5FD;">[INFO]</span>    校验通过：name、imageUrl、requestId 均存在<br>
+<span style="color:#52525B;">[13:35:42.185]</span> <span style="color:#93C5FD;">[INFO]</span>    db.insert(<span style="color:#F0ABFC;">'face_data'</span>, faceData) 写入数据<br>
+<span style="color:#52525B;">[13:35:42.190]</span> <span style="color:#86EFAC;">[SUCCESS]</span> 数据写入成功，faceId=<span style="color:#C4B5FD;">face_req_demo_001</span><br>
+<span style="color:#52525B;">[13:35:42.190]</span> <span style="color:#93C5FD;">[INFO]</span>    log.info(<span style="color:#F0ABFC;">'人脸注册成功'</span>)<br>
+<span style="color:#52525B;">[13:35:42.195]</span> <span style="color:#93C5FD;">[INFO]</span>    创建回调任务 TaskID=<span style="color:#C4B5FD;">T-1001</span><br>
+<span style="color:#52525B;">[13:35:42.195]</span> <span style="color:#93C5FD;">[INFO]</span>    计划时间：<span style="color:#F0ABFC;">+5000ms</span><br>
+<span style="color:#52525B;">[13:35:42.196]</span> <span style="color:#86EFAC;">[SUCCESS]</span> 脚本执行完成，耗时 <span style="color:#F0ABFC;">14ms</span><br>
+<span style="color:#52525B;">[13:35:42.197]</span> <span style="color:#86EFAC;">[SUCCESS]</span> 响应已返回 200 (12ms)
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <span class="left">每次请求都会记录到调用日志</span>
+          <div class="right">
+            <button class="btn btn-secondary">查看完整日志</button>
+            <button class="btn btn-primary">再次发送</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+</body>
+</html>

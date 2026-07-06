@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>调用日志 · Mock Studio</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* 4 列统计 */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    box-shadow: var(--shadow-xs);
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .stat-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--text-quaternary);
+  }
+  .stat-trend.up { color: var(--success); }
+  .stat-trend.down { color: var(--success); }
+  .stat-trend svg { width: 11px; height: 11px; }
+
+  /* 图表区 */
+  .chart-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .chart-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    box-shadow: var(--shadow-xs);
+  }
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+  }
+  .chart-legend {
+    display: flex;
+    gap: 14px;
+    font-size: 11.5px;
+    color: var(--text-tertiary);
+  }
+  .chart-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .chart-legend span::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--text-primary);
+  }
+  .chart-legend span:nth-child(2)::before { background: var(--success); }
+  .chart-legend span:nth-child(3)::before { background: var(--warning); }
+  .chart-area { height: 170px; width: 100%; }
+  .chart-meta {
+    font-size: 11px;
+    color: var(--text-quaternary);
+  }
+
+  /* 饼图 */
+  .pie-area {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .pie-svg { flex-shrink: 0; }
+  .pie-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+    flex: 1;
+  }
+  .pie-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .pie-row .name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+  }
+  .pie-row .name::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+  .pie-row:nth-child(1) .name::before { background: var(--success); }
+  .pie-row:nth-child(2) .name::before { background: var(--warning); }
+  .pie-row:nth-child(3) .name::before { background: var(--danger); }
+  .pie-row:nth-child(4) .name::before { background: var(--info); }
+  .pie-row .pct {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12.5px;
+  }
+
+  /* 过滤栏 */
+  .filter-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-xs);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .filter-label {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+  .filter-select, .filter-input {
+    height: 30px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 0 10px;
+    font-size: 12px;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    appearance: none;
+    min-width: 130px;
+  }
+  .filter-select {
+    padding-right: 28px;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717A' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+    cursor: pointer;
+  }
+  .filter-select:focus, .filter-input:focus {
+    outline: none;
+    border-color: var(--text-primary);
+  }
+  .quick-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--bg-subtle);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    border: 1px solid var(--border-default);
+  }
+  .quick-tab {
+    padding: 4px 10px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 450;
+  }
+  .quick-tab.active {
+    background: var(--bg-deep);
+    color: var(--text-inverse);
+    font-weight: 500;
+  }
+
+  .search-wrap {
+    flex: 1;
+    position: relative;
+    min-width: 200px;
+  }
+  .search-wrap input {
+    width: 100%;
+    height: 30px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 0 10px 0 32px;
+    font-size: 12px;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+  .search-wrap input:focus {
+    outline: none;
+    border-color: var(--text-primary);
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 10px; top: 8px;
+    width: 13px; height: 13px;
+    color: var(--text-quaternary);
+  }
+
+  /* 日志表格 */
+  .log-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .log-table thead {
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-default);
+  }
+  .log-table th {
+    text-align: left;
+    padding: 11px 14px;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .log-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .log-table tbody tr { cursor: pointer; transition: all 0.1s; }
+  .log-table tbody tr:hover { background: var(--bg-base); }
+  .log-table tbody tr:last-child td { border-bottom: none; }
+
+  .path-cell {
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+    font-size: 12px;
+    color: var(--text-primary);
+  }
+
+  .resp-time {
+    font-family: "JetBrains Mono", monospace;
+    color: var(--text-primary);
+    font-size: 12px;
+  }
+  .resp-time.fast { color: var(--success); }
+  .resp-time.slow { color: var(--warning); }
+  .resp-time.very-slow { color: var(--danger); }
+
+  /* 详情面板 */
+  .detail-panel {
+    background: var(--bg-base);
+    border-top: 1px solid var(--border-default);
+    padding: 14px 18px;
+  }
+  .detail-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  .detail-tab {
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-weight: 450;
+  }
+  .detail-tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .kv {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 8px;
+    font-size: 12px;
+    padding: 2px 0;
+  }
+  .kv .key { color: var(--text-tertiary); }
+  .kv .value {
+    color: var(--text-primary);
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+  }
+
+  .detail-section {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 12px;
+  }
+
+  .terminal {
+    background: var(--bg-deep);
+    color: #D4D4D8;
+    border: 1px solid #27272A;
+    border-radius: 6px;
+    padding: 12px;
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+    font-size: 11.5px;
+    line-height: 1.7;
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+  .terminal .ts { color: #71717A; }
+  .terminal .info { color: #93C5FD; }
+  .terminal .success { color: #86EFAC; }
+  .terminal .warn { color: #FBBF24; }
+  .terminal .error { color: #F87171; }
+  .terminal .var { color: #F0ABFC; }
+
+  /* 分页 */
+  .pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-base);
+    border-top: 1px solid var(--border-default);
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+  .page-btns { display: flex; gap: 3px; }
+  .page-btn {
+    min-width: 28px;
+    height: 28px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-elevated);
+    border-radius: 5px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 0 8px;
+  }
+  .page-btn.active { background: var(--bg-deep); color: var(--text-inverse); border-color: var(--bg-deep); }
+  .page-btn:hover:not(.active) { border-color: var(--border-strong); color: var(--text-primary); }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="index.html" class="brand">
+    <div class="brand-mark">M</div>
+    <span>Mock Studio</span>
+  </a>
+  <nav class="nav-menu">
+    <a href="index.html">项目</a>
+    <a href="callback-tasks.html">回调任务</a>
+    <a href="data.html">数据管理</a>
+    <a href="logs.html" class="active">调用日志</a>
+  </nav>
+  <div class="topbar-right">
+    <button class="btn btn-secondary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      导出日志
+    </button>
+    <button class="btn btn-danger">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      清除全部
+    </button>
+    <div class="user-avatar">JS</div>
+  </div>
+</header>
+
+<main class="page-container">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>调用日志</h1>
+      <p>所有 Mock 接口的请求记录，便于调试和回溯问题</p>
+    </div>
+  </div>
+
+  <!-- 统计 -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">总调用次数</div>
+      <div class="stat-value">12,847</div>
+      <div class="stat-trend">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        +12.5% 较上周
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">今日调用</div>
+      <div class="stat-value">2,431</div>
+      <div class="stat-trend">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+        +8.3% 较昨日
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">平均响应时间</div>
+      <div class="stat-value">42ms</div>
+      <div class="stat-trend down">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/></svg>
+        -3ms 优化中
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">成功率</div>
+      <div class="stat-value">98.7%</div>
+      <div class="stat-trend up">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        +0.2% 较上周
+      </div>
+    </div>
+  </div>
+
+  <!-- 图表 -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">近 7 天调用趋势</div>
+        <div class="chart-legend">
+          <span>HTTP</span>
+          <span>WebSocket</span>
+          <span>SSE</span>
+        </div>
+      </div>
+      <svg class="chart-area" viewBox="0 0 600 170" preserveAspectRatio="none">
+        <g stroke="#F4F4F5" stroke-width="1">
+          <line x1="0" y1="42" x2="600" y2="42"/>
+          <line x1="0" y1="85" x2="600" y2="85"/>
+          <line x1="0" y1="128" x2="600" y2="128"/>
+        </g>
+        <defs>
+          <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#09090B" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="#09090B" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M 0,120 L 100,100 L 200,75 L 300,40 L 400,52 L 500,28 L 600,48 L 600,170 L 0,170 Z" fill="url(#g1)"/>
+        <polyline points="0,120 100,100 200,75 300,40 400,52 500,28 600,48" stroke="#09090B" stroke-width="2" fill="none"/>
+        <polyline points="0,140 130,130 230,125 330,118 430,112 530,98 600,85" stroke="#22C55E" stroke-width="2" fill="none"/>
+        <polyline points="0,155 130,152 230,148 330,142 430,148 530,142 600,135" stroke="#F59E0B" stroke-width="2" fill="none"/>
+        <circle cx="300" cy="40" r="4" fill="#09090B" stroke="white" stroke-width="2"/>
+        <line x1="300" y1="40" x2="300" y2="170" stroke="#09090B" stroke-width="1" stroke-dasharray="3,3" opacity="0.3"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-quaternary);margin-top:8px;font-family:'JetBrains Mono',monospace;">
+        <span>06-30</span><span>07-01</span><span>07-02</span><span>07-03</span><span>07-04</span><span>07-05</span><span>07-06</span>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">状态码分布</div>
+        <span class="chart-meta">最近 7 天</span>
+      </div>
+      <div class="pie-area">
+        <svg class="pie-svg" width="120" height="120" viewBox="0 0 36 36" style="transform:rotate(-90deg);">
+          <circle cx="18" cy="18" r="15.9" fill="transparent" stroke="#F4F4F5" stroke-width="3"/>
+          <circle cx="18" cy="18" r="15.9" fill="transparent" stroke="#22C55E" stroke-width="3" stroke-dasharray="89 100"/>
+          <circle cx="18" cy="18" r="15.9" fill="transparent" stroke="#F59E0B" stroke-width="3" stroke-dasharray="6 100" stroke-dashoffset="-89"/>
+          <circle cx="18" cy="18" r="15.9" fill="transparent" stroke="#DC2626" stroke-width="3" stroke-dasharray="3 100" stroke-dashoffset="-95"/>
+          <circle cx="18" cy="18" r="15.9" fill="transparent" stroke="#2563EB" stroke-width="3" stroke-dasharray="2 100" stroke-dashoffset="-98"/>
+        </svg>
+        <div class="pie-legend">
+          <div class="pie-row"><span class="name">2xx</span><span class="pct">89%</span></div>
+          <div class="pie-row"><span class="name">4xx</span><span class="pct">6%</span></div>
+          <div class="pie-row"><span class="name">5xx</span><span class="pct">3%</span></div>
+          <div class="pie-row"><span class="name">3xx</span><span class="pct">2%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 过滤栏 -->
+  <div class="filter-card">
+    <div class="filter-row">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" placeholder="按路径、参数关键字搜索…">
+      </div>
+      <select class="filter-select"><option>全部项目</option><option>人脸识别平台</option><option>支付网关</option></select>
+      <select class="filter-select"><option>全部接口</option><option>人脸注册</option><option>人脸查询</option></select>
+      <select class="filter-select"><option>全部方法</option><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option></select>
+      <select class="filter-select"><option>全部状态</option><option>成功 (2xx)</option><option>客户端错误 (4xx)</option><option>服务器错误 (5xx)</option></select>
+      <button class="btn btn-ghost btn-sm">重置</button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">时间：</span>
+      <div class="quick-tabs">
+        <span class="quick-tab">最近 1 小时</span>
+        <span class="quick-tab active">最近 24 小时</span>
+        <span class="quick-tab">最近 7 天</span>
+        <span class="quick-tab">自定义</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+        <span style="font-size:11.5px;color:var(--text-tertiary);display:inline-flex;align-items:center;gap:5px;">
+          <span class="live-dot"></span>实时刷新中
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 日志表格 -->
+  <div class="log-card">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th style="width:30px;"><input type="checkbox"></th>
+          <th style="width:140px;">调用时间</th>
+          <th style="width:80px;">方法</th>
+          <th>路径</th>
+          <th>所属接口</th>
+          <th style="width:140px;">请求参数</th>
+          <th style="width:80px;">状态</th>
+          <th style="width:90px;">响应时间</th>
+          <th style="width:60px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><input type="checkbox" onclick="event.stopPropagation()"></td>
+          <td>2026-07-06<br><span style="color:var(--text-quaternary);font-size:11px;font-family:'JetBrains Mono',monospace;">13:35:42.182</span></td>
+          <td><span class="method-badge method-POST">POST</span></td>
+          <td><span class="path-cell">/api/face/add</span></td>
+          <td>人脸注册 <span style="color:var(--text-quaternary);font-size:11px;">(人脸管理)</span></td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-tertiary);">{ name, imageUrl, … }</span></td>
+          <td><span class="method-badge method-GET" style="background:var(--success-soft);color:var(--success);border:1px solid var(--success-border);">200</span></td>
+          <td><span class="resp-time fast">12 ms</span></td>
+          <td><a style="color:var(--text-primary);font-size:12px;">查看</a></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" onclick="event.stopPropagation()"></td>
+          <td>2026-07-06<br><span style="color:var(--text-quaternary);font-size:11px;font-family:'JetBrains Mono',monospace;">13:35:41.998</span></td>
+          <td><span class="method-badge method-GET">GET</span></td>
+          <td><span class="path-cell">/api/face/list?page=1&size=10</span></td>
+          <td>人脸查询 <span style="color:var(--text-quaternary);font-size:11px;">(人脸管理)</span></td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-tertiary);">{ page: 1, size: 10 }</span></td>
+          <td><span class="method-badge method-GET" style="background:var(--success-soft);color:var(--success);border:1px solid var(--success-border);">200</span></td>
+          <td><span class="resp-time fast">28 ms</span></td>
+          <td><a style="color:var(--text-primary);font-size:12px;">查看</a></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" onclick="event.stopPropagation()"></td>
+          <td>2026-07-06<br><span style="color:var(--text-quaternary);font-size:11px;font-family:'JetBrains Mono',monospace;">13:35:39.234</span></td>
+          <td><span class="method-badge method-POST">POST</span></td>
+          <td><span class="path-cell">/api/face/notfound</span></td>
+          <td>异常：人脸未找到</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-tertiary);">{ }</span></td>
+          <td><span class="method-badge method-DELETE" style="background:var(--danger-soft);color:var(--danger);border:1px solid var(--danger-border);">404</span></td>
+          <td><span class="resp-time fast">102 ms</span></td>
+          <td><a style="color:var(--text-primary);font-size:12px;">查看</a></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" onclick="event.stopPropagation()"></td>
+          <td>2026-07-06<br><span style="color:var(--text-quaternary);font-size:11px;font-family:'JetBrains Mono',monospace;">13:35:30.456</span></td>
+          <td><span class="method-badge method-POST">POST</span></td>
+          <td><span class="path-cell">/api/face/compare</span></td>
+          <td>人脸对比 <span style="color:var(--text-quaternary);font-size:11px;">(人脸识别)</span></td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-tertiary);">{ imageUrl1, imageUrl2 }</span></td>
+          <td><span class="method-badge method-GET" style="background:var(--success-soft);color:var(--success);border:1px solid var(--success-border);">200</span></td>
+          <td><span class="resp-time slow">1502 ms</span></td>
+          <td><a style="color:var(--text-primary);font-size:12px;">查看</a></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" onclick="event.stopPropagation()"></td>
+          <td>2026-07-06<br><span style="color:var(--text-quaternary);font-size:11px;font-family:'JetBrains Mono',monospace;">13:35:18.123</span></td>
+          <td><span class="method-badge method-POST">POST</span></td>
+          <td><span class="path-cell">/api/pay/wechat/create</span></td>
+          <td>微信支付</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-tertiary);">{ orderId, amount: 99 }</span></td>
+          <td><span class="method-badge method-PUT" style="background:var(--warning-soft);color:var(--warning);border:1px solid var(--warning-border);">400</span></td>
+          <td><span class="resp-time">8 ms</span></td>
+          <td><a style="color:var(--text-primary);font-size:12px;">查看</a></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" onclick="event.stopPropagation()"></td>
+          <td>2026-07-06<br><span style="color:var(--text-quaternary);font-size:11px;font-family:'JetBrains Mono',monospace;">13:34:55.789</span></td>
+          <td><span class="method-badge method-DELETE">DELETE</span></td>
+          <td><span class="path-cell">/api/face/face_1720109876</span></td>
+          <td>人脸删除</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-tertiary);">{ }</span></td>
+          <td><span class="method-badge method-GET" style="background:var(--success-soft);color:var(--success);border:1px solid var(--success-border);">204</span></td>
+          <td><span class="resp-time fast">15 ms</span></td>
+          <td><a style="color:var(--text-primary);font-size:12px;">查看</a></td>
+        </tr>
+
+        <!-- 展开的详情 -->
+        <tr>
+          <td colspan="9" style="padding:0;">
+            <div class="detail-panel">
+              <div class="detail-tabs">
+                <div class="detail-tab active">Request</div>
+                <div class="detail-tab">Response</div>
+                <div class="detail-tab">Headers</div>
+                <div class="detail-tab">脚本执行日志</div>
+              </div>
+
+              <div class="detail-grid">
+                <div>
+                  <pre class="terminal"><span class="ts">[13:35:42.182]</span> <span class="info">[INFO]</span>    接收到请求 <span class="var">POST /api/face/add</span>
+<span class="ts">[13:35:42.183]</span> <span class="info">[INFO]</span>    开始执行脚本 handler(req, res, db)
+<span class="ts">[13:35:42.184]</span> <span class="info">[INFO]</span>    参数校验通过：name、imageUrl、requestId
+<span class="ts">[13:35:42.185]</span> <span class="info">[INFO]</span>    db.insert(<span class="var">'face_data'</span>, ...) 写入数据
+<span class="ts">[13:35:42.190]</span> <span class="success">[SUCCESS]</span> 数据写入成功，faceId=<span class="var">face_req_demo_001</span>
+<span class="ts">[13:35:42.190]</span> <span class="info">[INFO]</span>    log.info(<span class="var">'人脸注册成功'</span>)
+<span class="ts">[13:35:42.195]</span> <span class="info">[INFO]</span>    创建回调任务 TaskID=<span class="var">T-1001</span>
+<span class="ts">[13:35:42.195]</span> <span class="info">[INFO]</span>    计划时间：<span class="var">+5000ms</span>
+<span class="ts">[13:35:42.196]</span> <span class="success">[SUCCESS]</span> 脚本执行完成，耗时 <span class="var">14ms</span>
+<span class="ts">[13:35:42.197]</span> <span class="success">[SUCCESS]</span> 响应已返回 200 (12ms)
+                  </pre>
+                </div>
+
+                <div class="detail-section">
+                  <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em;">请求摘要</div>
+                  <div class="kv"><span class="key">Method</span><span class="value">POST</span></div>
+                  <div class="kv"><span class="key">URL</span><span class="value">/api/face/add</span></div>
+                  <div class="kv"><span class="key">Client IP</span><span class="value">::1 (localhost)</span></div>
+                  <div class="kv"><span class="key">User-Agent</span><span class="value">PostmanRuntime/7.32.3</span></div>
+                  <div class="kv"><span class="key">Request ID</span><span class="value">req_demo_001</span></div>
+                  <div class="kv"><span class="key">HTTP Ver.</span><span class="value">HTTP/1.1</span></div>
+                  <div class="kv"><span class="key">Status</span><span class="value" style="color:var(--success);font-weight:600;">200 OK</span></div>
+                  <div class="kv"><span class="key">Response Size</span><span class="value">236 B</span></div>
+                  <div class="kv"><span class="key">Total Time</span><span class="value">12 ms</span></div>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <tr>
+          <td><input type="checkbox" onclick="event.stopPropagation()"></td>
+          <td>2026-07-06<br><span style="color:var(--text-quaternary);font-size:11px;font-family:'JetBrains Mono',monospace;">13:34:12.001</span></td>
+          <td><span class="method-badge method-GET">GET</span></td>
+          <td><span class="path-cell">/api/sms/send?phone=13800…</span></td>
+          <td>短信发送 <span style="color:var(--text-quaternary);font-size:11px;">(短信通知)</span></td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-tertiary);">{ phone, templateId }</span></td>
+          <td><span class="method-badge method-GET" style="background:var(--success-soft);color:var(--success);border:1px solid var(--success-border);">200</span></td>
+          <td><span class="resp-time fast">45 ms</span></td>
+          <td><a style="color:var(--text-primary);font-size:12px;">查看</a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pagination">
+      <span>显示 1 - 8 条 / 共 2,431 条 · 已选 0 条</span>
+      <div class="page-btns">
+        <button class="page-btn">‹</button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">2</button>
+        <button class="page-btn">3</button>
+        <button class="page-btn">4</button>
+        <button class="page-btn">5</button>
+        <button class="page-btn">…</button>
+        <button class="page-btn">305</button>
+        <button class="page-btn">›</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>
