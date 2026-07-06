@@ -73,6 +73,8 @@ export type MockApi = {
   createdAt: string;
   updatedAt: string;
   mockDataCount?: number;
+  fullPath?: string;
+  fullUrl?: string;
 };
 
 export type MockDataRow = {

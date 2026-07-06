@@ -1,4 +1,4 @@
-import { type HTMLAttributes, type ReactNode } from 'react';
+import { type HTMLAttributes, type ReactNode, useState } from 'react';
 import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
@@ -66,40 +66,61 @@ type ConfirmOptions = {
   danger?: boolean;
 };
 
+function ConfirmDialog({
+  opts,
+  onResult,
+}: {
+  opts: ConfirmOptions;
+  onResult: (ok: boolean) => void;
+}) {
+  const [open, setOpen] = useState(true);
+
+  const handleClose = (ok: boolean) => {
+    setOpen(false);
+    onResult(ok);
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={() => handleClose(false)}
+      title={opts.title ?? '请确认'}
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => handleClose(false)}>
+            {opts.cancelText ?? '取消'}
+          </Button>
+          <Button
+            variant={opts.danger ? 'danger' : 'primary'}
+            onClick={() => handleClose(true)}
+          >
+            {opts.confirmText ?? '确认'}
+          </Button>
+        </>
+      }
+    >
+      <div className="text-[13px] text-ink-secondary">{opts.message}</div>
+    </Modal>
+  );
+}
+
 export function confirm(opts: ConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
     const container = document.createElement('div');
     document.body.appendChild(container);
 
-    const close = (ok: boolean) => {
-      resolve(ok);
-      // 微任务里卸载，避免同步状态更新告警
-      queueMicrotask(() => container.remove());
-    };
-
     import('react-dom/client').then(({ createRoot }) => {
-      createRoot(container).render(
-        <Modal
-          open
-          onClose={() => close(false)}
-          title={opts.title ?? '请确认'}
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => close(false)}>
-                {opts.cancelText ?? '取消'}
-              </Button>
-              <Button
-                variant={opts.danger ? 'danger' : 'primary'}
-                onClick={() => close(true)}
-              >
-                {opts.confirmText ?? '确认'}
-              </Button>
-            </>
-          }
-        >
-          <div className="text-[13px] text-ink-secondary">{opts.message}</div>
-        </Modal>,
-      );
+      const root = createRoot(container);
+
+      const handleResult = (ok: boolean) => {
+        resolve(ok);
+        setTimeout(() => {
+          root.unmount();
+          container.remove();
+        }, 100);
+      };
+
+      root.render(<ConfirmDialog opts={opts} onResult={handleResult} />);
     });
   });
 }

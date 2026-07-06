@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ChevronRight,
@@ -38,11 +38,14 @@ import {
   useDeleteMockApi,
   useMockApis,
   useToggleMockApi,
+  useTestMockApi,
+  type TestApiOutput,
 } from '@/hooks/queries/use-mock-apis';
 import { useProject } from '@/hooks/queries/use-projects';
 import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/cn';
 import type { FeatureGroup, MockApi } from '@/types/api';
+import { CheckCircle, XCircle, Loader2, SquareCheck } from 'lucide-react';
 
 export function ProjectDetailPage() {
   const { projectId } = useParams();
@@ -302,23 +305,30 @@ function GroupNode({
 }
 
 function ApiListPanel({
+  projectId,
   projectName,
   group,
   onCreateApi,
   onEditApi,
 }: {
-  projectId?: number;
+  projectId: number;
   projectName: string;
   group: FeatureGroup;
   onCreateApi: () => void;
   onEditApi: (api: MockApi) => void;
 }) {
+  const navigate = useNavigate();
   const { data: apis, isLoading } = useMockApis(group.id);
   const toggleMut = useToggleMockApi();
   const deleteMut = useDeleteMockApi();
+  const testMut = useTestMockApi();
   const [search, setSearch] = useState('');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [testResults, setTestResults] = useState<TestApiOutput[] | null>(null);
+  const [testing, setTesting] = useState(false);
 
   const filtered = useMemo(() => {
     if (!apis) return [];
@@ -356,6 +366,136 @@ function ApiListPanel({
     }
   };
 
+  const handleTest = useCallback(
+    (api: MockApi) => {
+      navigate(`/projects/${projectId}/apis/${api.id}?tab=test`);
+    },
+    [navigate, projectId],
+  );
+
+  const buildCurlCommand = useCallback((api: MockApi): string => {
+    const url = api.fullUrl || `${window.location.origin}/mock${api.path}`;
+    const parts = [`curl -X ${api.method}`];
+
+    if (api.responseContentType) {
+      parts.push(`-H "Content-Type: ${api.responseContentType}"`);
+    }
+
+    if (api.responseHeaders) {
+      Object.entries(api.responseHeaders).forEach(([key, value]) => {
+        parts.push(`-H "${key}: ${value}"`);
+      });
+    }
+
+    if (api.method !== 'GET' && api.method !== 'DELETE' && api.responseBody) {
+      const body = typeof api.responseBody === 'string' ? api.responseBody : JSON.stringify(api.responseBody);
+      parts.push(`-d '${body}'`);
+    }
+
+    parts.push(`"${url}"`);
+    return parts.join(' \\\n  ');
+  }, []);
+
+  const handleCopy = useCallback(
+    async (api: MockApi) => {
+      const curl = buildCurlCommand(api);
+      try {
+        await navigator.clipboard.writeText(curl);
+        toast.success('已复制 curl 命令到剪贴板');
+      } catch {
+        const textarea = document.createElement('textarea');
+        textarea.value = curl;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        toast.success('已复制 curl 命令到剪贴板');
+      }
+    },
+    [buildCurlCommand],
+  );
+
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    if (!filtered) return;
+    setSelectedIds((prev) => {
+      if (prev.size === filtered.length) {
+        return new Set();
+      }
+      return new Set(filtered.map((a) => a.id));
+    });
+  }, [filtered]);
+
+  const handleBatchDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    const ok = await confirm({
+      title: '批量删除接口',
+      message: `确定删除选中的 ${selectedIds.size} 个接口吗？`,
+      confirmText: '删除',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await Promise.all(Array.from(selectedIds).map((id) => deleteMut.mutateAsync(id)));
+      toast.success(`已删除 ${selectedIds.size} 个接口`);
+      setSelectedIds(new Set());
+      setBatchMode(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '批量删除失败');
+    }
+  }, [selectedIds, deleteMut]);
+
+  const handleBatchToggle = useCallback(
+    async (isEnabled: boolean) => {
+      if (selectedIds.size === 0) return;
+      try {
+        await Promise.all(
+          Array.from(selectedIds).map((id) => toggleMut.mutateAsync({ id, isEnabled })),
+        );
+        toast.success(`已${isEnabled ? '启用' : '禁用'} ${selectedIds.size} 个接口`);
+        setSelectedIds(new Set());
+        setBatchMode(false);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : '批量操作失败');
+      }
+    },
+    [selectedIds, toggleMut],
+  );
+
+  const handleRunAllTests = useCallback(async () => {
+    if (!apis || apis.length === 0) return;
+    const enabledApis = apis.filter((a) => a.isEnabled);
+    if (enabledApis.length === 0) {
+      toast.warning('没有已启用的接口');
+      return;
+    }
+    setTesting(true);
+    setTestResults(null);
+    try {
+      const results = await Promise.all(
+        enabledApis.map((api) => testMut.mutateAsync({ id: api.id, input: {} })),
+      );
+      setTestResults(results);
+      const passed = results.filter((r) => r.responseStatus >= 200 && r.responseStatus < 300).length;
+      toast.success(`测试完成：${passed}/${results.length} 通过`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '测试失败');
+    } finally {
+      setTesting(false);
+    }
+  }, [apis, testMut]);
+
   return (
     <div className="page-container !pt-6">
       <PageHeader
@@ -368,14 +508,42 @@ function ApiListPanel({
         description={group.description ?? `管理「${projectName} / ${group.name}」下的所有 Mock 接口`}
         actions={
           <>
-            <Button variant="secondary">
-              <Play className="h-3.5 w-3.5" />
-              运行测试
+            <Button variant="secondary" onClick={handleRunAllTests} disabled={testing}>
+              {testing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Play className="h-3.5 w-3.5" />
+              )}
+              {testing ? '测试中...' : '运行测试'}
             </Button>
-            <Button variant="secondary">
-              <Trash2 className="h-3.5 w-3.5" />
-              批量管理
+            <Button
+              variant={batchMode ? 'primary' : 'secondary'}
+              onClick={() => {
+                setBatchMode(!batchMode);
+                setSelectedIds(new Set());
+              }}
+            >
+              {batchMode ? (
+                <XCircle className="h-3.5 w-3.5" />
+              ) : (
+                <SquareCheck className="h-3.5 w-3.5" />
+              )}
+              {batchMode ? '退出批量' : '批量管理'}
             </Button>
+            {batchMode && selectedIds.size > 0 && (
+              <>
+                <Button variant="secondary" onClick={() => handleBatchToggle(true)}>
+                  批量启用
+                </Button>
+                <Button variant="secondary" onClick={() => handleBatchToggle(false)}>
+                  批量禁用
+                </Button>
+                <Button variant="danger" onClick={handleBatchDelete}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  批量删除 ({selectedIds.size})
+                </Button>
+              </>
+            )}
             <Button variant="primary" onClick={onCreateApi}>
               <Plus className="h-3.5 w-3.5" />
               新建接口
@@ -436,10 +604,19 @@ function ApiListPanel({
               <thead>
                 <tr>
                   <th style={{ width: 32 }}>
-                    <input type="checkbox" />
+                    <input
+                      type="checkbox"
+                      checked={batchMode && filtered.length > 0 && selectedIds.size === filtered.length}
+                      onChange={() => batchMode && toggleSelectAll()}
+                      disabled={!batchMode}
+                      className={cn(
+                        'h-3.5 w-3.5 rounded accent-ink',
+                        batchMode ? 'cursor-pointer' : 'cursor-default opacity-0',
+                      )}
+                    />
                   </th>
                   <th>接口名称 / 描述</th>
-                  <th style={{ width: 160 }}>方法 / 路径</th>
+                  <th style={{ width: 200 }}>方法 / 路径</th>
                   <th style={{ width: 200 }}>特性</th>
                   <th style={{ width: 70 }}>状态码</th>
                   <th style={{ width: 70 }}>延迟</th>
@@ -452,11 +629,23 @@ function ApiListPanel({
                 {filtered.map((api) => (
                   <tr
                     key={api.id}
-                    onClick={() => onEditApi(api)}
-                    className="cursor-pointer transition-colors hover:bg-canvas"
+                    onClick={() => batchMode ? toggleSelect(api.id) : onEditApi(api)}
+                    className={cn(
+                      'cursor-pointer transition-colors hover:bg-canvas',
+                      batchMode && selectedIds.has(api.id) && 'bg-blue-50',
+                    )}
                   >
                     <td onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer rounded accent-ink" />
+                      <input
+                        type="checkbox"
+                        checked={batchMode ? selectedIds.has(api.id) : false}
+                        onChange={() => batchMode && toggleSelect(api.id)}
+                        disabled={!batchMode}
+                        className={cn(
+                          'h-3.5 w-3.5 rounded accent-ink',
+                          batchMode ? 'cursor-pointer' : 'cursor-default opacity-0',
+                        )}
+                      />
                     </td>
                     <td>
                       <div className="flex flex-col gap-0.5">
@@ -469,7 +658,9 @@ function ApiListPanel({
                     <td>
                       <MethodBadge method={api.method} />
                       <div className="mt-1">
-                        <span className="param-code">{api.path}</span>
+                        <span className="param-code" title={api.fullPath || `/mock${api.path}`}>
+                          {api.fullPath || `/mock${api.path}`}
+                        </span>
                       </div>
                     </td>
                     <td>
@@ -513,14 +704,16 @@ function ApiListPanel({
                           <Pencil className="h-3 w-3" />
                         </button>
                         <button
+                          onClick={() => handleTest(api)}
                           className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
                           title="测试"
                         >
                           <Play className="h-3 w-3" />
                         </button>
                         <button
+                          onClick={() => handleCopy(api)}
                           className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
-                          title="复制"
+                          title="复制 curl"
                         >
                           <Copy className="h-3 w-3" />
                         </button>
@@ -548,6 +741,10 @@ function ApiListPanel({
           </>
         )}
       </div>
+
+      {testResults && (
+        <TestResultsModal results={testResults} onClose={() => setTestResults(null)} />
+      )}
     </div>
   );
 }
@@ -682,6 +879,93 @@ function FeatureGroupModal({
             maxLength={2000}
           />
         </FormField>
+      </div>
+    </Modal>
+  );
+}
+
+function TestResultsModal({
+  results,
+  onClose,
+}: {
+  results: TestApiOutput[];
+  onClose: () => void;
+}) {
+  const passed = results.filter((r) => r.responseStatus >= 200 && r.responseStatus < 300).length;
+  const failed = results.length - passed;
+
+  return (
+    <Modal open onClose={onClose} title="测试结果" width="lg">
+      <div className="space-y-4">
+        <div className="flex items-center gap-4 text-[14px]">
+          <span className="flex items-center gap-1.5 text-green-600">
+            <CheckCircle className="h-4 w-4" />
+            通过: {passed}
+          </span>
+          {failed > 0 && (
+            <span className="flex items-center gap-1.5 text-red-600">
+              <XCircle className="h-4 w-4" />
+              失败: {failed}
+            </span>
+          )}
+          <span className="text-ink-tertiary">
+            总计: {results.length}
+          </span>
+        </div>
+
+        <div className="max-h-[400px] overflow-auto rounded border border-line">
+          <table className="params-table w-full">
+            <thead>
+              <tr>
+                <th style={{ width: 60 }}>状态</th>
+                <th style={{ width: 80 }}>方法</th>
+                <th>路径</th>
+                <th style={{ width: 100 }}>状态码</th>
+                <th style={{ width: 200 }}>响应</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((result, idx) => {
+                const ok = result.responseStatus >= 200 && result.responseStatus < 300;
+                return (
+                  <tr key={idx}>
+                    <td>
+                      {ok ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      )}
+                    </td>
+                    <td>
+                      <MethodBadge method={result.method} />
+                    </td>
+                    <td>
+                      <span className="param-code">{result.path}</span>
+                    </td>
+                    <td>
+                      <TagPill className={ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}>
+                        {result.responseStatus}
+                      </TagPill>
+                    </td>
+                    <td>
+                      <span className="block max-w-[200px] truncate text-[12px] text-ink-secondary">
+                        {typeof result.responseBody === 'string'
+                          ? result.responseBody
+                          : JSON.stringify(result.responseBody)}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex justify-end">
+          <Button variant="ghost" onClick={onClose}>
+            关闭
+          </Button>
+        </div>
       </div>
     </Modal>
   );

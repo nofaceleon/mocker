@@ -15,6 +15,7 @@ import { ApiError, asyncHandler } from '../middleware/error-handler.js';
 import { handleMockRequest } from '../mock-engine/handler.js';
 import { registry } from '../mock-engine/index.js';
 import { logger } from '../utils/logger.js';
+import { config } from '../config/index.js';
 
 const router = Router();
 
@@ -117,7 +118,18 @@ router.get(
       .where(eq(mockApis.featureGroupId, featureGroupId))
       .orderBy(asc(mockApis.sortOrder), asc(mockApis.id))
       .all();
-    res.success(rows);
+
+    // 添加完整的 mock 路由地址
+    const host = req.get('host') || `localhost:${config.port}`;
+    const protocol = req.protocol || 'http';
+    const baseUrl = `${protocol}://${host}`;
+    const result = rows.map((row) => ({
+      ...row,
+      fullPath: `/mock${row.path}`,
+      fullUrl: `${baseUrl}/mock${row.path}`,
+    }));
+
+    res.success(result);
   }),
 );
 
