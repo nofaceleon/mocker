@@ -16,7 +16,7 @@ const DATA_OPS: ReadonlyArray<{ value: DataOp; label: string; hint: string }> = 
 type DataLinkPanelProps = {
   draft: MockApiPayload;
   onChange: (next: MockApiPayload) => void;
-  onSave: () => void;
+  onSave: (data?: Partial<MockApiPayload>) => void;
   saving?: boolean;
 };
 

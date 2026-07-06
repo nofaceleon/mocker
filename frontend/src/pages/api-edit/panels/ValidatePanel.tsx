@@ -115,7 +115,7 @@ const STATUS_FAIL = [
 type ValidatePanelProps = {
   draft: MockApiPayload;
   onChange: (next: MockApiPayload) => void;
-  onSave: () => void;
+  onSave: (data?: Partial<MockApiPayload>) => void;
   saving?: boolean;
 };
 

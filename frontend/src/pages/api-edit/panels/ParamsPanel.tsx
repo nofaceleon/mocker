@@ -21,7 +21,7 @@ const TYPES: ParamType[] = ['string', 'number', 'boolean', 'array', 'object'];
 type ParamsPanelProps = {
   draft: MockApiPayload;
   onChange: (next: MockApiPayload) => void;
-  onSave: () => void;
+  onSave: (data?: Partial<MockApiPayload>) => void;
   saving?: boolean;
 };
 

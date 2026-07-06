@@ -17,7 +17,7 @@ type CallbackConfig = {
 type CallbackPanelProps = {
   draft: MockApiPayload;
   onChange: (next: MockApiPayload) => void;
-  onSave: () => void;
+  onSave: (data?: Partial<MockApiPayload>) => void;
   saving?: boolean;
 };
 

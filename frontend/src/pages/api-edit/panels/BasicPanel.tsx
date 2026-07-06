@@ -35,7 +35,7 @@ type BasicPanelProps = {
   draft: MockApiPayload;
   onChange: (next: MockApiPayload) => void;
   groupName?: string;
-  onSave: () => void;
+  onSave: (data?: Partial<MockApiPayload>) => void;
   saving?: boolean;
   extra?: Extra;
   onExtraChange?: (next: Extra) => void;

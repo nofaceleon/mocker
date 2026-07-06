@@ -8,7 +8,7 @@ import { PanelActions } from '../PanelActions';
 type ScriptPanelProps = {
   draft: MockApiPayload;
   onChange: (next: MockApiPayload) => void;
-  onSave: () => void;
+  onSave: (data?: Partial<MockApiPayload>) => void;
   saving?: boolean;
 };
 

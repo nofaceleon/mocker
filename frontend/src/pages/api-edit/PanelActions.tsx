@@ -4,7 +4,7 @@ import { Button } from '@/components/ui';
 
 type PanelActionsProps = {
   hint?: ReactNode;
-  onSave?: () => void;
+  onSave?: (data?: unknown) => void;
   saving?: boolean;
   saveLabel?: string;
   right?: ReactNode;
@@ -26,7 +26,7 @@ export function PanelActions({
       </span>
       <div className="flex items-center gap-2">
         {right ?? (
-          <Button variant="primary" onClick={onSave} loading={saving} disabled={disabled}>
+          <Button variant="primary" onClick={() => onSave?.()} loading={saving} disabled={disabled}>
             <Save className="h-3.5 w-3.5" />
             {saveLabel}
           </Button>
