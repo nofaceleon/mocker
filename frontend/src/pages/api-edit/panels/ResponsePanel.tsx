@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Check, AlertCircle } from 'lucide-react';
-import { Card, FormField, Input, Select, Button, CodeBlock } from '@/components/ui';
+import { Card, FormField, Input, Select, CodeBlock } from '@/components/ui';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
 import { PanelHeader } from '../PanelHeader';
 import { PanelActions } from '../PanelActions';
@@ -48,23 +48,20 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
     setHeadersText(safeStringify(draft.responseHeaders ?? {}));
   }, [draft.responseHeaders]);
 
-  const applyBody = () => {
+  const handleSave = () => {
     try {
-      const parsed = bodyText.trim() ? JSON.parse(bodyText) : {};
-      onChange({ ...draft, responseBody: parsed });
+      const body = bodyText.trim() ? JSON.parse(bodyText) : {};
       setBodyErr(null);
+      try {
+        const headers = headersText.trim() ? JSON.parse(headersText) : {};
+        setHeadersErr(null);
+        onChange({ ...draft, responseBody: body, responseHeaders: headers });
+        onSave();
+      } catch (e) {
+        setHeadersErr(e instanceof Error ? e.message : 'JSON 格式错误');
+      }
     } catch (e) {
-      setBodyErr(e instanceof Error ? e.message : 'JSON 解析失败');
-    }
-  };
-
-  const applyHeaders = () => {
-    try {
-      const parsed = headersText.trim() ? JSON.parse(headersText) : {};
-      onChange({ ...draft, responseHeaders: parsed as Record<string, string> });
-      setHeadersErr(null);
-    } catch (e) {
-      setHeadersErr(e instanceof Error ? e.message : 'JSON 解析失败');
+      setBodyErr(e instanceof Error ? e.message : 'JSON 格式错误');
     }
   };
 
@@ -128,21 +125,15 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
             <div className="space-y-1.5">
               <textarea
                 value={headersText}
-                onChange={(e) => setHeadersText(e.target.value)}
+                onChange={(e) => {
+                  setHeadersText(e.target.value);
+                  setHeadersErr(null);
+                }}
                 rows={4}
                 className={`form-textarea mono !text-[12.5px] ${headersErr ? 'border-danger' : ''}`}
                 placeholder='{"X-Request-Id": "{{req.headers[\"x-request-id\"]}}"}'
               />
               {headersErr && <div className="text-[11px] text-danger">{headersErr}</div>}
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={() => setHeadersText(prettyJson(headersText))}>
-                  格式化
-                </Button>
-                <Button size="sm" variant="secondary" onClick={applyHeaders}>
-                  <Check className="h-3 w-3" />
-                  应用
-                </Button>
-              </div>
             </div>
           </FormField>
         </div>
@@ -153,17 +144,6 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
           <>
             响应体 <span className="font-normal text-ink-subtle">· 支持变量插值</span>
           </>
-        }
-        extra={
-          <div className="flex gap-3 text-[12px]">
-            <button
-              type="button"
-              className="tool-link"
-              onClick={() => setBodyText(prettyJson(bodyText))}
-            >
-              格式化
-            </button>
-          </div>
         }
       >
         <div className="info-tip">
@@ -186,7 +166,10 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
         >
           <textarea
             value={bodyText}
-            onChange={(e) => setBodyText(e.target.value)}
+            onChange={(e) => {
+              setBodyText(e.target.value);
+              setBodyErr(null);
+            }}
             rows={14}
             className="block w-full resize-y border-0 bg-transparent font-mono text-[12.5px] leading-[1.75] text-[#E4E4E7] outline-none focus:outline-none"
             spellCheck={false}
@@ -194,15 +177,14 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
         </CodeBlock>
 
         {bodyErr && <div className="mt-2 text-[11px] text-danger">{bodyErr}</div>}
-        <div className="mt-2 flex items-center justify-end gap-2">
-          <Button size="sm" variant="secondary" onClick={applyBody}>
-            <Check className="h-3 w-3" />
-            应用
-          </Button>
-        </div>
       </Card>
 
-      <PanelActions hint="下次请求生效" onSave={onSave} saving={saving} />
+      <PanelActions
+        hint={bodyErr || headersErr ? '请修正 JSON 格式错误后再保存' : '下次请求生效'}
+        onSave={handleSave}
+        saving={saving}
+        disabled={!!bodyErr || !!headersErr}
+      />
     </div>
   );
 }
@@ -212,13 +194,5 @@ function safeStringify(v: unknown): string {
     return JSON.stringify(v, null, 2);
   } catch {
     return String(v);
-  }
-}
-
-function prettyJson(text: string): string {
-  try {
-    return JSON.stringify(JSON.parse(text), null, 2);
-  } catch {
-    return text;
   }
 }
