@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { ApiError } from '@/lib/api';
-import { Breadcrumb, Button, Modal } from '@/components/ui';
+import { Button, Modal } from '@/components/ui';
 import {
   type MockApiPayload,
   useCreateMockApi,
@@ -14,9 +13,8 @@ import {
 } from '@/hooks/queries/use-mock-apis';
 import { useProject } from '@/hooks/queries/use-projects';
 import { useFeatureGroups } from '@/hooks/queries/use-feature-groups';
-import type { HttpMethod, MockApi } from '@/types/api';
+import type { MockApi } from '@/types/api';
 import { ConfigNav, type ConfigTab } from './ConfigNav';
-import { EndpointUrl } from './EndpointUrl';
 import { BasicPanel, type BasicExtra } from './panels/BasicPanel';
 import { ParamsPanel } from './panels/ParamsPanel';
 import { ResponsePanel } from './panels/ResponsePanel';
@@ -104,6 +102,8 @@ export function ApiEditPage() {
 
   const saving = updateMut.isPending || createMut.isPending;
   const configSummary = {
+    name: summary.name,
+    isEnabled: summary.isEnabled,
     groupName: activeGroup?.name ?? (isNew ? '新建接口' : '未分组'),
     calledCount: api?.mockDataCount,
     lastSavedAt,
@@ -159,56 +159,18 @@ export function ApiEditPage() {
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 54px)' }}>
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-white/70 px-6 py-2.5">
-        <Breadcrumb
-          items={[
-            { label: '项目', to: '/projects' },
-            { label: project?.name ?? '...', to: `/projects/${projectId}` },
-            ...(activeGroup ? [{ label: activeGroup.name, to: `/projects/${projectId}` }] : []),
-            { label: summary.name || '新建接口', current: true },
-          ]}
-        />
-        <div className="flex items-center gap-1.5">
-          <Button
-            variant="secondary"
-            onClick={() => toast.info('调用日志将在 P1 上线')}
-            title="调用日志（P1）"
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            调用日志
-          </Button>
-          <Button variant="primary" onClick={handleSave} loading={saving}>
-            <Save className="h-3.5 w-3.5" />
-            保存配置
-          </Button>
-        </div>
-      </div>
-
-      <section className="flex shrink-0 items-center gap-3.5 border-b border-line bg-white px-5 py-3">
-        <MethodBadge method={summary.method} />
-        <div className="min-w-0 flex-1">
-          <h1 className="mb-0.5 flex items-center gap-2.5 text-[16px] font-semibold leading-tight tracking-[-0.01em] text-ink">
-            {summary.name || '新建接口'}
-            {!isNew && summary.isEnabled && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-success-border bg-success-soft px-2 py-0.5 text-[11px] font-medium text-success-text">
-                <span className="live-dot" />
-                运行中
-              </span>
-            )}
-          </h1>
-          <p className="truncate text-[12.5px] leading-snug text-ink-tertiary">
-            {summary.description || (isNew ? '在左侧面板配置 Mock 接口的完整定义' : '用于模拟接口的请求与响应')}
-          </p>
-        </div>
-        <EndpointUrl method={summary.method} path={summary.path} />
-      </section>
-
       <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: '264px 1fr' }}>
         <ConfigNav
           current={tab}
           onChange={setTab}
           method={summary.method}
           path={summary.path}
+          breadcrumb={[
+            { label: '项目', to: '/projects' },
+            { label: project?.name ?? '...', to: `/projects/${projectId}` },
+            ...(activeGroup ? [{ label: activeGroup.name, to: `/projects/${projectId}` }] : []),
+          ]}
+          onLogClick={() => toast.info('调用日志将在 P1 上线')}
           summary={configSummary}
         />
 
@@ -258,19 +220,6 @@ export function ApiEditPage() {
       </Modal>
     </div>
   );
-}
-
-function MethodBadge({ method }: { method: HttpMethod }) {
-  const variantMap: Record<HttpMethod, string> = {
-    GET: 'method-badge method-GET',
-    POST: 'method-badge method-POST',
-    PUT: 'method-badge method-PUT',
-    DELETE: 'method-badge method-DELETE',
-    PATCH: 'method-badge method-PATCH',
-    WS: 'method-badge method-WS',
-    SSE: 'method-badge method-SSE',
-  };
-  return <span className={variantMap[method]}>{method}</span>;
 }
 
 function newDraft(): MockApiPayload {

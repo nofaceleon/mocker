@@ -1,5 +1,5 @@
-import { Settings, FileText, Check, Shield, Send, Link2, Code2, TestTube } from 'lucide-react';
-import { MethodBadge } from '@/components/ui';
+import { Settings, FileText, Check, Shield, Send, Link2, Code2, TestTube, BookOpen, ChevronLeft } from 'lucide-react';
+import { MethodBadge, Button, Breadcrumb } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { HttpMethod } from '@/types/api';
 
@@ -31,15 +31,23 @@ export const TABS: ReadonlyArray<TabDef> = [
   { value: 'test', label: '在线测试', icon: TestTube },
 ];
 
+type BreadcrumbItem = {
+  label: string;
+  to?: string;
+  current?: boolean;
+};
+
 type ConfigNavProps = {
   current: ConfigTab;
   onChange: (v: ConfigTab) => void;
   method: HttpMethod;
   path: string;
-  summary?: { groupName?: string; calledCount?: number; lastSavedAt?: string; lastCalledAt?: string };
+  breadcrumb?: BreadcrumbItem[];
+  onLogClick?: () => void;
+  summary?: { name?: string; isEnabled?: boolean; groupName?: string; calledCount?: number; lastSavedAt?: string; lastCalledAt?: string };
 };
 
-export function ConfigNav({ current, onChange, method, path, summary }: ConfigNavProps) {
+export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogClick, summary }: ConfigNavProps) {
   const sections: Array<{ title: string; tabs: TabDef[] }> = [
     { title: '基础配置', tabs: TABS.slice(0, 4) },
     { title: '高级特性', tabs: TABS.slice(4, 7) },
@@ -48,14 +56,35 @@ export function ConfigNav({ current, onChange, method, path, summary }: ConfigNa
 
   return (
     <aside className="flex flex-col overflow-y-auto border-r border-line bg-white scrollbar-thin">
-      <div className="border-b border-line-subtle px-4 py-3.5">
-        <div className="mb-1.5 flex items-center gap-2">
-          <MethodBadge method={method} className="!text-[10px] !py-[2.5px] !px-[7px]" />
-          <span className="param-code flex-1 truncate !text-[11.5px]">{path || '/'}</span>
+      <div className="border-b border-line-subtle px-4 py-3">
+        {breadcrumb && breadcrumb.length > 0 && (
+          <div className="mb-2 flex items-center gap-1 text-[11px]">
+            <ChevronLeft className="h-3 w-3 text-ink-tertiary" />
+            <Breadcrumb items={breadcrumb} />
+          </div>
+        )}
+        <div className="mb-1 flex items-center gap-2">
+          <MethodBadge method={method} className="!text-[10px] !py-[2px] !px-[6px]" />
+          <span className="flex-1 truncate text-[13px] font-medium text-ink">
+            {summary?.name || '新建接口'}
+          </span>
+          {summary?.isEnabled && (
+            <span className="inline-flex items-center gap-0.5 rounded-full border border-success-border bg-success-soft px-1.5 py-px text-[9px] font-medium text-success-text">
+              <span className="live-dot" />
+              运行中
+            </span>
+          )}
         </div>
-        <div className="text-[11px] text-ink-tertiary">
-          {summary?.groupName ?? '新建接口'}
-          {summary?.calledCount !== undefined && <> · 已调用 {summary.calledCount} 次</>}
+        <div className="mb-1 param-code truncate !text-[11px]">{path || '/'}</div>
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] text-ink-tertiary">
+            {summary?.groupName ?? '新建接口'}
+            {summary?.calledCount !== undefined && <> · 已调用 {summary.calledCount} 次</>}
+          </div>
+          <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px]" onClick={onLogClick}>
+            <BookOpen className="h-3 w-3" />
+            日志
+          </Button>
         </div>
       </div>
 
