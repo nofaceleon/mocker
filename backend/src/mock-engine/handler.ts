@@ -7,7 +7,14 @@ import { matchBest, type Candidate } from './matcher.js';
 import { registry } from './registry.js';
 import { extractContext } from './request.js';
 import { validate, buildFailResponse } from './validator.js';
-import { renderTemplate, applyDelay, type ResponseContext } from './response.js';
+import {
+  renderTemplate,
+  applyDelay,
+  type ResponseContext,
+  parseSSEConfig,
+  formatSSEEvent,
+  formatSSEComment,
+} from './response.js';
 import { execute } from './db-ops.js';
 import { ensureBusinessTable } from './schema-manager.js';
 
@@ -77,7 +84,7 @@ async function executeMatched(
     writeLogSafely({
       apiId: api.id,
       requestMethod: req.method,
-requestPath: stripMockPrefix(req.path),
+      requestPath: stripMockPrefix(req.path),
       requestParams: reqCtx.query,
       requestBody: reqCtx.body,
       requestHeaders: reqCtx.headers,
@@ -110,12 +117,178 @@ requestPath: stripMockPrefix(req.path),
     }
   }
 
-  // 4. 渲染响应
+  // 4. 构建渲染上下文
   const renderCtx: ResponseContext = { req: reqCtx, dbResult };
+
+  // 5. 判断是否为SSE请求（根据protocol字段）
+  if (api.protocol === 'SSE') {
+    await handleSSERequest(req, res, api, renderCtx, start);
+    return;
+  }
+
+  // 6. 普通HTTP响应
+  await handleHTTPResponse(req, res, api, renderCtx, start);
+}
+
+/**
+ * 处理SSE请求
+ */
+async function handleSSERequest(
+  req: Request,
+  res: Response,
+  api: MockApi,
+  renderCtx: ResponseContext,
+  start: number,
+): Promise<void> {
+  const responseBody = parseResponseBody(api.responseBody);
+  const sseConfig = parseSSEConfig(responseBody, renderCtx);
+
+  if (!sseConfig || sseConfig.events.length === 0) {
+    // 无效的SSE配置，返回错误
+    res.status(400).json({
+      code: 'INVALID_SSE_CONFIG',
+      message: 'SSE接口需要配置events数组，格式：{ "events": [{ "event": "message", "data": {...} }] }',
+    });
+    writeLogSafely({
+      apiId: api.id,
+      requestMethod: req.method,
+      requestPath: stripMockPrefix(req.path),
+      requestParams: renderCtx.req.query,
+      requestBody: renderCtx.req.body,
+      requestHeaders: renderCtx.req.headers,
+      responseStatus: 400,
+      responseBody: { code: 'INVALID_SSE_CONFIG' },
+      responseTime: Date.now() - start,
+    });
+    return;
+  }
+
+  // 设置SSE响应头
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // 禁用Nginx缓冲
+
+  // 设置自定义响应头（如果有）
+  const headers = parseObjectField(api.responseHeaders) as Record<string, string> | null;
+  if (headers) {
+    for (const [k, v] of Object.entries(headers)) {
+      // 覆盖Content-Type等可能导致问题的头
+      if (k.toLowerCase() !== 'content-type' &&
+          k.toLowerCase() !== 'cache-control' &&
+          k.toLowerCase() !== 'connection') {
+        res.setHeader(k, String(v));
+      }
+    }
+  }
+
+  // 发送初始注释（打开连接）
+  if (sseConfig.comment) {
+    res.write(formatSSEComment(sseConfig.comment));
+  }
+
+  const interval = sseConfig.interval ?? 500;
+  const events = sseConfig.events;
+  let eventIndex = 0;
+  let eventsSent = 0;
+
+  // 发送事件的函数
+  const sendNextEvent = (): boolean => {
+    if (eventIndex >= events.length) {
+      if (sseConfig.loop) {
+        eventIndex = 0; // 循环模式
+      } else {
+        return false; // 非循环模式，发送完毕
+      }
+    }
+
+    const event = events[eventIndex];
+    const sseText = formatSSEEvent(event);
+    res.write(sseText);
+    eventIndex++;
+    eventsSent++;
+    return true;
+  };
+
+  // 处理客户端断开连接
+  let clientDisconnected = false;
+  req.on('close', () => {
+    clientDisconnected = true;
+  });
+
+  // 发送第一个事件（减少首字节延迟）
+  if (events.length > 0) {
+    await applyDelay(api.responseDelay ?? 0, api.responseDelayMax ?? 0);
+    sendNextEvent();
+  }
+
+  // 继续发送剩余事件
+  if (events.length > 1 || sseConfig.loop) {
+    const sendLoop = async () => {
+      // 等待间隔后再发送下一个事件
+      while (!clientDisconnected) {
+        await new Promise((resolve) => setTimeout(resolve, interval));
+        const hasMore = sendNextEvent();
+        if (!hasMore) break;
+      }
+
+      // 发送完毕，关闭连接
+      if (!clientDisconnected) {
+        res.end();
+      }
+
+      // 写日志
+      writeLogSafely({
+        apiId: api.id,
+        requestMethod: req.method,
+        requestPath: stripMockPrefix(req.path),
+        requestParams: renderCtx.req.query,
+        requestBody: renderCtx.req.body,
+        requestHeaders: renderCtx.req.headers,
+        responseStatus: 200,
+        responseBody: { eventsSent, format: 'sse' },
+        responseTime: Date.now() - start,
+      });
+    };
+
+    // 异步执行事件发送循环，不阻塞请求处理
+    sendLoop().catch((err) => {
+      logger.error({ err }, 'SSE send loop failed');
+      if (!clientDisconnected && !res.writableEnded) {
+        res.end();
+      }
+    });
+  } else {
+    // 只有一个事件，发送完毕后关闭
+    res.end();
+    writeLogSafely({
+      apiId: api.id,
+      requestMethod: req.method,
+      requestPath: stripMockPrefix(req.path),
+      requestParams: renderCtx.req.query,
+      requestBody: renderCtx.req.body,
+      requestHeaders: renderCtx.req.headers,
+      responseStatus: 200,
+      responseBody: { eventsSent: 1, format: 'sse' },
+      responseTime: Date.now() - start,
+    });
+  }
+}
+
+/**
+ * 处理普通HTTP响应
+ */
+async function handleHTTPResponse(
+  req: Request,
+  res: Response,
+  api: MockApi,
+  renderCtx: ResponseContext,
+  start: number,
+): Promise<void> {
   const responseBody = parseResponseBody(api.responseBody);
   const rendered = renderTemplate(responseBody, renderCtx);
 
-  // 5. 设置 headers
+  // 设置 headers
   const headers = parseObjectField(api.responseHeaders) as Record<string, string> | null;
   if (headers) {
     for (const [k, v] of Object.entries(headers)) {
@@ -124,20 +297,20 @@ requestPath: stripMockPrefix(req.path),
   }
   res.setHeader('Content-Type', api.responseContentType ?? 'application/json');
 
-  // 6. 应用延迟
+  // 应用延迟
   await applyDelay(api.responseDelay ?? 0, api.responseDelayMax ?? 0);
 
-  // 7. 写响应
+  // 写响应
   res.status(api.responseStatus ?? 200).send(rendered);
 
-  // 8. 写日志
+  // 写日志
   writeLogSafely({
     apiId: api.id,
     requestMethod: req.method,
     requestPath: stripMockPrefix(req.path),
-    requestParams: reqCtx.query,
-    requestBody: reqCtx.body,
-    requestHeaders: reqCtx.headers,
+    requestParams: renderCtx.req.query,
+    requestBody: renderCtx.req.body,
+    requestHeaders: renderCtx.req.headers,
     responseStatus: api.responseStatus ?? 200,
     responseBody: rendered,
     responseTime: Date.now() - start,

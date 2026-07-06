@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { AlertCircle, Clipboard, Play, TestTube } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { AlertCircle, Clipboard, Play, Square, TestTube } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, FormField, Input, Textarea, CopyButton } from '@/components/ui';
 import type { MockApi } from '@/types/api';
@@ -7,15 +7,23 @@ import type { TestApiInput, TestApiOutput } from '@/hooks/queries/use-mock-apis'
 import { config as runtimeConfig } from '@/lib/runtime-config';
 import { PanelHeader } from '../PanelHeader';
 
+type SSEEvent = {
+  id?: string;
+  event?: string;
+  data: string;
+  timestamp: number;
+};
+
 type TestPanelProps = {
   api: MockApi;
   onRun: (input: TestApiInput) => Promise<TestApiOutput>;
 };
 
 export function TestPanel({ api, onRun }: TestPanelProps) {
+  const isSSE = api.protocol === 'SSE';
   const [path, setPath] = useState(api.path);
   const [bodyText, setBodyText] = useState(
-    api.method !== 'GET'
+    api.method !== 'GET' && !isSSE
       ? JSON.stringify({ name: '张三', imageUrl: 'https://example.com/face.jpg' }, null, 2)
       : '',
   );
@@ -25,73 +33,195 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
   const [elapsed, setElapsed] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  // SSE相关状态
+  const [sseEvents, setSseEvents] = useState<SSEEvent[]>([]);
+  const [sseConnected, setSseConnected] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
+
+  // 组件卸载时关闭SSE连接
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
+  }, []);
+
   const run = async () => {
     setErr(null);
     setResult(null);
     setElapsed(null);
-    try {
-      const headers = headersText.trim() ? JSON.parse(headersText) : undefined;
-      const body = api.method !== 'GET' && bodyText.trim() ? JSON.parse(bodyText) : undefined;
-      setRunning(true);
-      const t0 = performance.now();
-      const r = await onRun({ path, body, headers });
-      setElapsed(Math.round(performance.now() - t0));
-      setResult(r);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : '运行失败');
-    } finally {
-      setRunning(false);
+    setSseEvents([]);
+
+    if (isSSE) {
+      // SSE测试：先获取配置信息，然后使用EventSource连接
+      try {
+        setRunning(true);
+        const r = await onRun({ path });
+        setResult(r as unknown as TestApiOutput);
+
+        // 使用EventSource连接SSE
+        const sseUrl = (r as unknown as Record<string, unknown>).fullUrl as string;
+        const sseConfig = (r as unknown as Record<string, unknown>).sseConfig as Record<string, unknown> | undefined;
+        connectSSE(sseUrl, sseConfig);
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : '运行失败');
+        setRunning(false);
+      }
+    } else {
+      // 普通HTTP测试
+      try {
+        const headers = headersText.trim() ? JSON.parse(headersText) : undefined;
+        const body = api.method !== 'GET' && bodyText.trim() ? JSON.parse(bodyText) : undefined;
+        setRunning(true);
+        const t0 = performance.now();
+        const r = await onRun({ path, body, headers });
+        setElapsed(Math.round(performance.now() - t0));
+        setResult(r);
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : '运行失败');
+      } finally {
+        setRunning(false);
+      }
     }
   };
 
-  const curl = result
-    ? buildCurl({
-        method: api.method,
-        baseUrl: runtimeConfig.apiBase,
-        path: result.path,
-        headers: result.responseHeaders,
-        body: null,
-      })
-    : '';
+  const connectSSE = (url: string, sseConfig?: Record<string, unknown>) => {
+    // 关闭之前的连接
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    // 清空之前的事件
+    setSseEvents([]);
+
+    const es = new EventSource(url);
+    eventSourceRef.current = es;
+    setSseConnected(true);
+    const t0 = performance.now();
+
+    es.onopen = () => {
+      setSseConnected(true);
+    };
+
+    // 收集所有需要监听的事件类型
+    const eventTypes = new Set<string>();
+    if (sseConfig?.events && Array.isArray(sseConfig.events)) {
+      const events = sseConfig.events as Array<{ event?: string }>;
+      events.forEach((e) => {
+        if (e.event) eventTypes.add(e.event);
+      });
+    }
+
+    // 如果没有指定事件类型，使用 'message' 作为默认类型
+    if (eventTypes.size === 0) {
+      eventTypes.add('message');
+    }
+
+    // 为每个事件类型添加监听器
+    eventTypes.forEach((eventType) => {
+      es.addEventListener(eventType, (event) => {
+        const messageEvent = event as MessageEvent;
+        const newEvent: SSEEvent = {
+          event: eventType === 'message' ? undefined : eventType,
+          data: messageEvent.data,
+          id: messageEvent.lastEventId || undefined,
+          timestamp: Date.now(),
+        };
+        setSseEvents((prev) => [...prev, newEvent]);
+      });
+    });
+
+    // 不使用 onmessage，避免重复
+
+    es.onerror = () => {
+      setSseConnected(false);
+      setRunning(false);
+      setElapsed(Math.round(performance.now() - t0));
+      es.close();
+    };
+  };
+
+  const stopSSE = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setSseConnected(false);
+    setRunning(false);
+  };
+
+  const curl = isSSE
+    ? `curl -N -H 'Accept: text/event-stream' 'http://localhost:3000/mock${path}'`
+    : result
+      ? buildCurl({
+          method: api.method,
+          baseUrl: runtimeConfig.apiBase,
+          path: result.path,
+          headers: result.responseHeaders,
+          body: null,
+        })
+      : '';
 
   return (
     <div className="mx-auto max-w-[880px] px-8 pb-12 pt-7">
       <PanelHeader
         icon={TestTube}
         title="在线测试"
-        description="在保存前即可发起测试调用：传入请求体 / 头部，查看 Mock 服务的实际响应。便于联调前快速验证。"
+        description={isSSE ? '测试 SSE 事件流连接：使用 EventSource 接收服务器推送的事件。' : '在保存前即可发起测试调用：传入请求体 / 头部，查看 Mock 服务的实际响应。便于联调前快速验证。'}
       />
 
       <Card
         title="请求"
         extra={
-          <Button variant="primary" size="sm" onClick={run} loading={running}>
-            <Play className="h-3 w-3" />
-            发送请求
-          </Button>
+          <div className="flex items-center gap-2">
+            {isSSE && sseConnected ? (
+              <Button variant="danger" size="sm" onClick={stopSSE}>
+                <Square className="h-3 w-3" />
+                断开连接
+              </Button>
+            ) : (
+              <Button variant="primary" size="sm" onClick={run} loading={running}>
+                <Play className="h-3 w-3" />
+                {isSSE ? '连接 SSE' : '发送请求'}
+              </Button>
+            )}
+          </div>
         }
       >
         <FormField label="请求路径">
           <Input className="mono" value={path} onChange={(e) => setPath(e.target.value)} />
         </FormField>
-        <FormField label="自定义 Header" hint="JSON 对象，留空使用默认值">
-          <Textarea
-            className="mono mono-dark !text-[12.5px]"
-            rows={2}
-            value={headersText}
-            onChange={(e) => setHeadersText(e.target.value)}
-            placeholder='{"X-Token": "demo"}'
-          />
-        </FormField>
-        {api.method !== 'GET' && (
-          <FormField label="Body" hint="JSON">
-            <Textarea
-              className="mono mono-dark !text-[12.5px]"
-              rows={8}
-              value={bodyText}
-              onChange={(e) => setBodyText(e.target.value)}
-            />
-          </FormField>
+        {!isSSE && (
+          <>
+            <FormField label="自定义 Header" hint="JSON 对象，留空使用默认值">
+              <Textarea
+                className="mono mono-dark !text-[12.5px]"
+                rows={2}
+                value={headersText}
+                onChange={(e) => setHeadersText(e.target.value)}
+                placeholder='{"X-Token": "demo"}'
+              />
+            </FormField>
+            {api.method !== 'GET' && (
+              <FormField label="Body" hint="JSON">
+                <Textarea
+                  className="mono mono-dark !text-[12.5px]"
+                  rows={8}
+                  value={bodyText}
+                  onChange={(e) => setBodyText(e.target.value)}
+                />
+              </FormField>
+            )}
+          </>
+        )}
+        {isSSE && (
+          <div className="info-tip mt-2">
+            <AlertCircle />
+            <div>
+              SSE 基于 HTTP GET，客户端通过 <code>EventSource</code> API 建立连接，服务器以 <code>text/event-stream</code> 格式推送事件。
+            </div>
+          </div>
         )}
       </Card>
 
@@ -102,7 +232,83 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         </div>
       )}
 
-      {result && (
+      {/* SSE事件流显示 */}
+      {isSSE && (sseEvents.length > 0 || sseConnected) && (
+        <Card
+          className="mt-3"
+          title={
+            <div className="flex items-center gap-2">
+              SSE 事件流
+              {sseConnected && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-success">
+                  <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+                  已连接
+                </span>
+              )}
+            </div>
+          }
+          extra={
+            <div className="flex items-center gap-3 text-[12px]">
+              <span className="text-ink-tertiary">
+                {sseEvents.length} 个事件
+                {elapsed !== null ? ` · ${elapsed}ms` : ''}
+              </span>
+              <button
+                type="button"
+                className="tool-link inline-flex items-center gap-1"
+                onClick={() => {
+                  const text = sseEvents.map((e) => {
+                    const parts = [];
+                    if (e.event) parts.push(`event: ${e.event}`);
+                    if (e.id) parts.push(`id: ${e.id}`);
+                    parts.push(`data: ${e.data}`);
+                    return parts.join('\n') + '\n';
+                  }).join('\n');
+                  navigator.clipboard.writeText(text);
+                  toast.success('事件已复制');
+                }}
+              >
+                <Clipboard className="h-3 w-3" />
+                复制事件
+              </button>
+            </div>
+          }
+        >
+          <div className="max-h-[400px] overflow-y-auto space-y-2">
+            {sseEvents.length === 0 ? (
+              <div className="text-center py-8 text-ink-subtle text-[13px]">
+                等待事件...
+              </div>
+            ) : (
+              sseEvents.map((event, index) => (
+                <div key={index} className="rounded-md border border-line bg-canvas-subtle p-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {event.event && (
+                      <span className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                        {event.event}
+                      </span>
+                    )}
+                    {event.id && (
+                      <span className="text-[11px] text-ink-subtle">
+                        id: {event.id}
+                      </span>
+                    )}
+                    <span className="text-[11px] text-ink-subtle ml-auto">
+                      {new Date(event.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <pre className="font-mono text-[12px] leading-[1.6] text-ink whitespace-pre-wrap break-all">
+                    {formatSSEData(event.data)}
+                  </pre>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* 普通HTTP响应显示 */}
+      {!isSSE && result && (
         <>
           <Card
             className="mt-3"
@@ -145,14 +351,23 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
           >
             <JsonPretty value={result.responseHeaders} />
           </Card>
-
-          <Card className="mt-3" title="cURL" extra={<CopyButton text={curl} label="cURL 已复制" />}>
-            <pre className="font-mono text-[12.5px] leading-[1.75] text-ink">{curl}</pre>
-          </Card>
         </>
       )}
+
+      <Card className="mt-3" title="cURL" extra={<CopyButton text={curl} label="cURL 已复制" />}>
+        <pre className="font-mono text-[12.5px] leading-[1.75] text-ink">{curl}</pre>
+      </Card>
     </div>
   );
+}
+
+function formatSSEData(data: string): string {
+  try {
+    const parsed = JSON.parse(data);
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return data;
+  }
 }
 
 function statusTone(code: number): string {

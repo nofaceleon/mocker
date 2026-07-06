@@ -80,7 +80,11 @@ export function methodVariant(method: string): BadgeVariant {
   if (m === 'PUT') return 'method-put';
   if (m === 'DELETE') return 'method-delete';
   if (m === 'PATCH') return 'method-patch';
-  if (m === 'WS') return 'method-ws';
-  if (m === 'SSE') return 'method-sse';
   return 'neutral';
+}
+
+export function protocolBadge(protocol: string): { variant: BadgeVariant; label: string } {
+  if (protocol === 'SSE') return { variant: 'method-sse', label: 'SSE' };
+  if (protocol === 'WebSocket') return { variant: 'method-ws', label: 'WS' };
+  return { variant: 'neutral', label: protocol };
 }

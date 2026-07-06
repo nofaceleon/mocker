@@ -42,7 +42,7 @@ export function ApiEditPage() {
 
   const [draft, setDraft] = useState<MockApiPayload>(() => newDraft());
   const [extra, setExtra] = useState<BasicExtra>({
-    protocol: 'HTTP / REST',
+    protocol: 'HTTP',
     priority: 'high',
     contentType: 'application/json',
     enabled: true,
@@ -56,6 +56,7 @@ export function ApiEditPage() {
       setDraft(apiToDraft(api));
       setExtra((prev) => ({
         ...prev,
+        protocol: api.protocol ?? 'HTTP',
         contentType: api.responseContentType ?? prev.contentType,
       }));
       setLastSavedAt(api.updatedAt);
@@ -78,6 +79,7 @@ export function ApiEditPage() {
         featureGroupId: gid,
         name: draft.name || '新建接口',
         description: draft.description ?? null,
+        protocol: draft.protocol ?? 'HTTP',
         method: draft.method,
         path: draft.path,
         isEnabled: draft.isEnabled ?? true,
@@ -118,19 +120,22 @@ export function ApiEditPage() {
     );
   }
 
-  const handleSave = async () => {
+  const handleSave = async (data?: Partial<MockApiPayload>) => {
     try {
+      // 合并data到draft
+      const saveData = data ? { ...draft, ...data } : draft;
+
       if (isNew) {
         if (!gid) {
           toast.error('缺少功能组 ID');
           setTab('basic');
           return;
         }
-        const created = await createMut.mutateAsync({ featureGroupId: gid, body: draft });
+        const created = await createMut.mutateAsync({ featureGroupId: gid, body: saveData });
         toast.success('接口已创建');
         navigate(`/projects/${projectId}/apis/${created.id}`);
       } else if (api) {
-        const updated = await updateMut.mutateAsync({ id: api.id, data: draft });
+        const updated = await updateMut.mutateAsync({ id: api.id, data: saveData });
         toast.success('已保存');
         setDraft(apiToDraft(updated));
         setLastSavedAt(updated.updatedAt);
@@ -248,6 +253,7 @@ function apiToDraft(api: MockApi): MockApiPayload {
   return {
     name: api.name,
     description: api.description,
+    protocol: api.protocol,
     method: api.method,
     path: api.path,
     isEnabled: api.isEnabled,

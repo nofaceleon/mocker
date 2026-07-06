@@ -61,8 +61,11 @@ export const featureGroups = sqliteTable(
 );
 
 // ---------------- 3. mock_apis ----------------
-export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'WS', 'SSE'] as const;
+export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const;
 export type HttpMethod = (typeof HTTP_METHODS)[number];
+
+export const PROTOCOLS = ['HTTP', 'WebSocket', 'SSE'] as const;
+export type Protocol = (typeof PROTOCOLS)[number];
 
 export const DATA_OPS = ['none', 'insert', 'select', 'update', 'delete'] as const;
 export type DataOp = (typeof DATA_OPS)[number];
@@ -76,6 +79,7 @@ export const mockApis = sqliteTable(
       .references(() => featureGroups.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     description: text('description'),
+    protocol: text('protocol', { enum: PROTOCOLS }).notNull().default('HTTP'),
     method: text('method', { enum: HTTP_METHODS }).notNull(),
     path: text('path').notNull(),
     isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(true),

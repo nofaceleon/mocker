@@ -1,0 +1,1 @@
+ALTER TABLE `mock_apis` ADD `protocol` text DEFAULT 'HTTP' NOT NULL;

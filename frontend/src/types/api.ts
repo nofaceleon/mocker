@@ -23,7 +23,8 @@ export type FeatureGroup = {
   updatedAt: string;
 };
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WS' | 'SSE';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+export type Protocol = 'HTTP' | 'WebSocket' | 'SSE';
 export type DataOp = 'none' | 'insert' | 'select' | 'update' | 'delete';
 
 export type ParamType = 'string' | 'number' | 'boolean' | 'array' | 'object';
@@ -55,6 +56,7 @@ export type MockApi = {
   featureGroupId: ID;
   name: string;
   description: string | null;
+  protocol: Protocol;
   method: HttpMethod;
   path: string;
   isEnabled: boolean;

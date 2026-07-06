@@ -9,6 +9,7 @@ import {
   type ValidationRules,
   type HttpMethod,
   HTTP_METHODS,
+  PROTOCOLS,
   DATA_OPS,
 } from '../db/schema.js';
 import { ApiError, asyncHandler } from '../middleware/error-handler.js';
@@ -56,6 +57,7 @@ const validationRulesSchema = z
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(2000).optional().nullable(),
+  protocol: z.enum(PROTOCOLS).optional().default('HTTP'),
   method: z.enum(HTTP_METHODS),
   path: z.string().min(1).max(500).startsWith('/'),
   isEnabled: z.boolean().optional().default(true),
@@ -100,6 +102,7 @@ router.get(
         featureGroupId: mockApis.featureGroupId,
         name: mockApis.name,
         description: mockApis.description,
+        protocol: mockApis.protocol,
         method: mockApis.method,
         path: mockApis.path,
         isEnabled: mockApis.isEnabled,
@@ -160,7 +163,9 @@ router.post(
       .get();
     if (!fg) throw new ApiError('NOT_FOUND', `功能组 ${featureGroupId} 不存在`, 404);
 
-    assertNoConflict(db, body.method as HttpMethod, body.path, null);
+    // SSE协议强制使用GET方法
+    const method = body.protocol === 'SSE' ? 'GET' : body.method;
+    assertNoConflict(db, method as HttpMethod, body.path, null);
 
     const [row] = db
       .insert(mockApis)
@@ -168,14 +173,15 @@ router.post(
         featureGroupId,
         name: body.name,
         description: body.description ?? null,
-        method: body.method,
+        protocol: body.protocol,
+        method,
         path: body.path,
         isEnabled: body.isEnabled ?? true,
         sortOrder: body.sortOrder ?? 0,
         responseStatus: body.responseStatus ?? 200,
         responseDelay: body.responseDelay ?? 0,
         responseDelayMax: body.responseDelayMax ?? 0,
-        responseContentType: body.responseContentType ?? 'application/json',
+        responseContentType: body.protocol === 'SSE' ? 'text/event-stream' : (body.responseContentType ?? 'application/json'),
         responseHeaders: body.responseHeaders ?? null,
         responseBody: body.responseBody ?? null,
         validationRules: (body.validationRules as ValidationRules | null) ?? null,
@@ -202,16 +208,20 @@ router.put(
     const existing = db.select().from(mockApis).where(eq(mockApis.id, id)).get();
     if (!existing) throw new ApiError('NOT_FOUND', `接口 ${id} 不存在`, 404);
 
-    if (body.method !== undefined || body.path !== undefined) {
-      const newMethod = (body.method ?? existing.method) as HttpMethod;
+    // 确定最终的protocol和method
+    const finalProtocol = body.protocol ?? existing.protocol;
+    const finalMethod = finalProtocol === 'SSE' ? 'GET' : (body.method ?? existing.method);
+
+    if (body.method !== undefined || body.path !== undefined || body.protocol !== undefined) {
       const newPath = body.path ?? existing.path;
-      assertNoConflict(db, newMethod, newPath, id);
+      assertNoConflict(db, finalMethod as HttpMethod, newPath, id);
     }
 
     const patch = {
       ...(body.name !== undefined ? { name: body.name } : {}),
       ...(body.description !== undefined ? { description: body.description } : {}),
-      ...(body.method !== undefined ? { method: body.method } : {}),
+      ...(body.protocol !== undefined ? { protocol: body.protocol } : {}),
+      ...(body.method !== undefined ? { method: finalMethod } : {}),
       ...(body.path !== undefined ? { path: body.path } : {}),
       ...(body.isEnabled !== undefined ? { isEnabled: body.isEnabled } : {}),
       ...(body.sortOrder !== undefined ? { sortOrder: body.sortOrder } : {}),
@@ -219,7 +229,7 @@ router.put(
       ...(body.responseDelay !== undefined ? { responseDelay: body.responseDelay } : {}),
       ...(body.responseDelayMax !== undefined ? { responseDelayMax: body.responseDelayMax } : {}),
       ...(body.responseContentType !== undefined
-        ? { responseContentType: body.responseContentType }
+        ? { responseContentType: finalProtocol === 'SSE' ? 'text/event-stream' : body.responseContentType }
         : {}),
       ...(body.responseHeaders !== undefined ? { responseHeaders: body.responseHeaders } : {}),
       ...(body.responseBody !== undefined ? { responseBody: body.responseBody } : {}),
@@ -277,7 +287,22 @@ router.post(
     const api = db.select().from(mockApis).where(eq(mockApis.id, id)).get();
     if (!api) throw new ApiError('NOT_FOUND', `接口 ${id} 不存在`, 404);
 
-    // 构造一个伪 Express req/res，调用 handler
+    // SSE协议特殊处理：返回SSE配置信息，由前端使用EventSource测试
+    if (api.protocol === 'SSE') {
+      const sseConfig = api.responseBody as Record<string, unknown> | null;
+      res.success({
+        apiId: api.id,
+        protocol: 'SSE',
+        method: 'GET',
+        path: input.path ?? api.path,
+        fullUrl: `http://localhost:${config.port}/mock${input.path ?? api.path}`,
+        sseConfig: sseConfig ?? { events: [] },
+        responseHeaders: api.responseHeaders ?? {},
+      });
+      return;
+    }
+
+    // 普通HTTP请求处理
     const headers: Record<string, string> = { 'content-type': 'application/json', ...(input.headers ?? {}) };
     const fakeReq = {
       method: api.method,

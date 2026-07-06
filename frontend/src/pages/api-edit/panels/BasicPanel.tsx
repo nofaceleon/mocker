@@ -1,12 +1,16 @@
 import { Settings } from 'lucide-react';
 import { Card, FormField, Input, Select, Switch } from '@/components/ui';
-import type { HttpMethod } from '@/types/api';
+import type { HttpMethod, Protocol } from '@/types/api';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
 import { PanelHeader } from '../PanelHeader';
 import { PanelActions } from '../PanelActions';
 
-const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'WS', 'SSE'];
-const PROTOCOLS = ['HTTP / REST', 'WebSocket', 'SSE'] as const;
+const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+const PROTOCOLS: { value: Protocol; label: string }[] = [
+  { value: 'HTTP', label: 'HTTP / REST' },
+  { value: 'WebSocket', label: 'WebSocket' },
+  { value: 'SSE', label: 'SSE' },
+];
 const PRIORITIES = [
   { value: 'high', label: '高（精确匹配）' },
   { value: 'mid', label: '中（参数匹配）' },
@@ -21,7 +25,7 @@ const CONTENT_TYPES = [
 ] as const;
 
 type Extra = {
-  protocol?: (typeof PROTOCOLS)[number];
+  protocol?: Protocol;
   priority?: (typeof PRIORITIES)[number]['value'];
   contentType?: string;
   enabled?: boolean;
@@ -48,9 +52,20 @@ export function BasicPanel({
   extra,
   onExtraChange,
 }: BasicPanelProps) {
-  const protocol = extra?.protocol ?? 'HTTP / REST';
+  const protocol = extra?.protocol ?? 'HTTP';
   const priority = extra?.priority ?? 'high';
   const contentType = extra?.contentType ?? draft.responseContentType ?? 'application/json';
+  const isSSE = protocol === 'SSE';
+
+  const handleProtocolChange = (newProtocol: Protocol) => {
+    onExtraChange?.({ ...(extra ?? {}), protocol: newProtocol });
+    // SSE协议强制使用GET方法
+    if (newProtocol === 'SSE') {
+      onChange({ ...draft, protocol: newProtocol, method: 'GET', responseContentType: 'text/event-stream' });
+    } else {
+      onChange({ ...draft, protocol: newProtocol });
+    }
+  };
 
   return (
     <div className="mx-auto max-w-[880px] px-8 pb-12 pt-7">
@@ -76,26 +91,27 @@ export function BasicPanel({
         </div>
 
         <div className="form-row three-col">
-          <FormField label="HTTP 方法" required>
+          <FormField label="协议">
             <Select
-              value={draft.method}
-              onChange={(e) => onChange({ ...draft, method: e.target.value as HttpMethod })}
+              value={protocol}
+              onChange={(e) => handleProtocolChange(e.target.value as Protocol)}
             >
-              {HTTP_METHODS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
+              {PROTOCOLS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
                 </option>
               ))}
             </Select>
           </FormField>
-          <FormField label="协议">
+          <FormField label="HTTP 方法" required>
             <Select
-              value={protocol}
-              onChange={(e) => onExtraChange?.({ ...(extra ?? {}), protocol: e.target.value as Extra['protocol'] })}
+              value={isSSE ? 'GET' : draft.method}
+              onChange={(e) => onChange({ ...draft, method: e.target.value as HttpMethod })}
+              disabled={isSSE}
             >
-              {PROTOCOLS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
+              {HTTP_METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
                 </option>
               ))}
             </Select>
@@ -116,16 +132,18 @@ export function BasicPanel({
 
         <FormField label="路由路径" required>
           <div className="input-group">
-            <span className="input-group-text">{draft.method}</span>
+            <span className="input-group-text">{isSSE ? 'GET' : draft.method}</span>
             <Input
               className="mono"
               value={draft.path}
               onChange={(e) => onChange({ ...draft, path: e.target.value })}
-              placeholder="/api/face/add"
+              placeholder="/api/events"
             />
           </div>
           <div className="form-helper">
-            支持 <code>:id</code> 占位符、<code>*</code> 通配符；匹配优先级：精确 &gt; 参数 &gt; 通配符
+            {isSSE
+              ? 'SSE 基于 HTTP GET，客户端通过 EventSource API 建立连接'
+              : '支持 <code>:id</code> 占位符、<code>*</code> 通配符；匹配优先级：精确 &gt; 参数 &gt; 通配符'}
           </div>
         </FormField>
 
@@ -141,22 +159,29 @@ export function BasicPanel({
         </FormField>
 
         <div className="form-row">
-          <FormField label="Content-Type">
-            <Select
-              value={contentType}
-              onChange={(e) => {
-                const v = e.target.value;
-                onChange({ ...draft, responseContentType: v });
-                onExtraChange?.({ ...(extra ?? {}), contentType: v });
-              }}
-            >
-              {CONTENT_TYPES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+          {!isSSE && (
+            <FormField label="Content-Type">
+              <Select
+                value={contentType}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  onChange({ ...draft, responseContentType: v });
+                  onExtraChange?.({ ...(extra ?? {}), contentType: v });
+                }}
+              >
+                {CONTENT_TYPES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
+          {isSSE && (
+            <FormField label="Content-Type">
+              <Input value="text/event-stream" disabled />
+            </FormField>
+          )}
           <FormField label="启用接口">
             <div className="flex items-center gap-2 pt-1.5">
               <Switch

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
-import type { HttpMethod, ID, MockApi, ValidationRules } from '@/types/api';
+import type { HttpMethod, Protocol, ID, MockApi, ValidationRules } from '@/types/api';
 
 const KEYS = {
   byGroup: (gid: ID) => ['mock-apis', 'group', gid] as const,
@@ -10,6 +10,7 @@ const KEYS = {
 export type MockApiPayload = {
   name: string;
   description?: string | null;
+  protocol?: Protocol;
   method: HttpMethod;
   path: string;
   isEnabled?: boolean;
