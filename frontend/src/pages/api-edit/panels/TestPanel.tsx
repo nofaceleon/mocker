@@ -153,6 +153,38 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
 
       const decoder = new TextDecoder();
       let buffer = '';
+      let currentEvent: Partial<SSEEvent> = {};
+
+      const processLine = (line: string) => {
+        // 移除行尾的回车符
+        line = line.replace(/\r$/, '');
+
+        if (line.startsWith('data: ')) {
+          // 多行data需要连接，使用换行符
+          const dataContent = line.slice(6);
+          currentEvent.data = currentEvent.data
+            ? currentEvent.data + '\n' + dataContent
+            : dataContent;
+        } else if (line.startsWith('event: ')) {
+          currentEvent.event = line.slice(7);
+        } else if (line.startsWith('id: ')) {
+          currentEvent.id = line.slice(4);
+        } else if (line.startsWith('retry: ')) {
+          // 忽略retry字段
+        } else if (line === '') {
+          // 空行表示事件结束
+          if (currentEvent.data !== undefined) {
+            const newEvent: SSEEvent = {
+              event: currentEvent.event,
+              data: currentEvent.data,
+              id: currentEvent.id,
+              timestamp: Date.now(),
+            };
+            setSseEvents((prev) => [...prev, newEvent]);
+          }
+          currentEvent = {};
+        }
+      };
 
       while (true) {
         const { done, value } = await reader.read();
@@ -160,31 +192,27 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
+        // 保留最后一行（可能不完整）
         buffer = lines.pop() || '';
 
-        let currentEvent: Partial<SSEEvent> = {};
-
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            currentEvent.data = line.slice(6);
-          } else if (line.startsWith('event: ')) {
-            currentEvent.event = line.slice(7);
-          } else if (line.startsWith('id: ')) {
-            currentEvent.id = line.slice(4);
-          } else if (line === '') {
-            // 空行表示事件结束
-            if (currentEvent.data) {
-              const newEvent: SSEEvent = {
-                event: currentEvent.event,
-                data: currentEvent.data,
-                id: currentEvent.id,
-                timestamp: Date.now(),
-              };
-              setSseEvents((prev) => [...prev, newEvent]);
-            }
-            currentEvent = {};
-          }
+          processLine(line);
         }
+      }
+
+      // 处理buffer中剩余的数据
+      if (buffer.trim()) {
+        processLine(buffer);
+      }
+      // 处理最后一个事件（如果没有以空行结尾）
+      if (currentEvent.data !== undefined) {
+        const newEvent: SSEEvent = {
+          event: currentEvent.event,
+          data: currentEvent.data,
+          id: currentEvent.id,
+          timestamp: Date.now(),
+        };
+        setSseEvents((prev) => [...prev, newEvent]);
       }
 
       setSseConnected(false);
