@@ -182,6 +182,9 @@ async function handleSSERequest(
     }
   }
 
+  // 立即发送响应头，不等待缓冲
+  res.flushHeaders();
+
   // 发送初始注释（打开连接）
   if (sseConfig.comment) {
     res.write(formatSSEComment(sseConfig.comment));
@@ -259,19 +262,23 @@ async function handleSSERequest(
       }
     });
   } else {
-    // 只有一个事件，发送完毕后关闭
-    res.end();
-    writeLogSafely({
-      apiId: api.id,
-      requestMethod: req.method,
-      requestPath: stripMockPrefix(req.path),
-      requestParams: renderCtx.req.query,
-      requestBody: renderCtx.req.body,
-      requestHeaders: renderCtx.req.headers,
-      responseStatus: 200,
-      responseBody: { eventsSent: 1, format: 'sse' },
-      responseTime: Date.now() - start,
-    });
+    // 只有一个事件，等待一小段时间后再关闭（确保客户端能接收到）
+    setTimeout(() => {
+      if (!clientDisconnected) {
+        res.end();
+      }
+      writeLogSafely({
+        apiId: api.id,
+        requestMethod: req.method,
+        requestPath: stripMockPrefix(req.path),
+        requestParams: renderCtx.req.query,
+        requestBody: renderCtx.req.body,
+        requestHeaders: renderCtx.req.headers,
+        responseStatus: 200,
+        responseBody: { eventsSent: 1, format: 'sse' },
+        responseTime: Date.now() - start,
+      });
+    }, 100);
   }
 }
 
