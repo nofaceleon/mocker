@@ -23,7 +23,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
   const isSSE = api.protocol === 'SSE';
   const [path, setPath] = useState(api.path);
   const [bodyText, setBodyText] = useState(
-    api.method !== 'GET' && !isSSE
+    api.method !== 'GET'
       ? JSON.stringify({ name: '张三', imageUrl: 'https://example.com/face.jpg' }, null, 2)
       : '',
   );
@@ -37,12 +37,16 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
   const [sseEvents, setSseEvents] = useState<SSEEvent[]>([]);
   const [sseConnected, setSseConnected] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // 组件卸载时关闭SSE连接
   useEffect(() => {
     return () => {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
   }, []);
@@ -54,16 +58,23 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
     setSseEvents([]);
 
     if (isSSE) {
-      // SSE测试：先获取配置信息，然后使用EventSource连接
+      // SSE测试：先获取配置信息，然后连接
       try {
         setRunning(true);
-        const r = await onRun({ path });
+        const headers = headersText.trim() ? JSON.parse(headersText) : undefined;
+        const body = api.method !== 'GET' && bodyText.trim() ? JSON.parse(bodyText) : undefined;
+        const r = await onRun({ path, body, headers });
         setResult(r as unknown as TestApiOutput);
 
-        // 使用EventSource连接SSE
         const sseUrl = (r as unknown as Record<string, unknown>).fullUrl as string;
         const sseConfig = (r as unknown as Record<string, unknown>).sseConfig as Record<string, unknown> | undefined;
-        connectSSE(sseUrl, sseConfig);
+
+        // GET方法使用EventSource，其他方法使用fetch
+        if (api.method === 'GET') {
+          connectSSEWithEventSource(sseUrl, sseConfig);
+        } else {
+          connectSSEWithFetch(sseUrl, body, headers, sseConfig);
+        }
       } catch (e) {
         setErr(e instanceof Error ? e.message : '运行失败');
         setRunning(false);
@@ -86,13 +97,11 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
     }
   };
 
-  const connectSSE = (url: string, sseConfig?: Record<string, unknown>) => {
-    // 关闭之前的连接
+  // 使用EventSource连接SSE（仅支持GET）
+  const connectSSEWithEventSource = (url: string, sseConfig?: Record<string, unknown>) => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
-
-    // 清空之前的事件
     setSseEvents([]);
 
     const es = new EventSource(url);
@@ -104,7 +113,95 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
       setSseConnected(true);
     };
 
-    // 收集所有需要监听的事件类型
+    setupSSEEventListeners(es, sseConfig, t0);
+  };
+
+  // 使用fetch连接SSE（支持所有HTTP方法）
+  const connectSSEWithFetch = async (
+    url: string,
+    body?: unknown,
+    headers?: Record<string, string>,
+    sseConfig?: Record<string, unknown>,
+  ) => {
+    setSseEvents([]);
+    setSseConnected(true);
+    const t0 = performance.now();
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    try {
+      const response = await fetch(url, {
+        method: api.method,
+        headers: {
+          'Accept': 'text/event-stream',
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        signal: abortController.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('无法读取响应流');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        let currentEvent: Partial<SSEEvent> = {};
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            currentEvent.data = line.slice(6);
+          } else if (line.startsWith('event: ')) {
+            currentEvent.event = line.slice(7);
+          } else if (line.startsWith('id: ')) {
+            currentEvent.id = line.slice(4);
+          } else if (line === '') {
+            // 空行表示事件结束
+            if (currentEvent.data) {
+              const newEvent: SSEEvent = {
+                event: currentEvent.event,
+                data: currentEvent.data,
+                id: currentEvent.id,
+                timestamp: Date.now(),
+              };
+              setSseEvents((prev) => [...prev, newEvent]);
+            }
+            currentEvent = {};
+          }
+        }
+      }
+
+      setSseConnected(false);
+      setRunning(false);
+      setElapsed(Math.round(performance.now() - t0));
+    } catch (e: unknown) {
+      if ((e as Error).name !== 'AbortError') {
+        setErr(e instanceof Error ? e.message : '连接失败');
+      }
+      setSseConnected(false);
+      setRunning(false);
+      setElapsed(Math.round(performance.now() - t0));
+    }
+  };
+
+  // 设置SSE事件监听器（用于EventSource）
+  const setupSSEEventListeners = (es: EventSource, sseConfig?: Record<string, unknown>, t0?: number) => {
     const eventTypes = new Set<string>();
     if (sseConfig?.events && Array.isArray(sseConfig.events)) {
       const events = sseConfig.events as Array<{ event?: string }>;
@@ -112,13 +209,10 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         if (e.event) eventTypes.add(e.event);
       });
     }
-
-    // 如果没有指定事件类型，使用 'message' 作为默认类型
     if (eventTypes.size === 0) {
       eventTypes.add('message');
     }
 
-    // 为每个事件类型添加监听器
     eventTypes.forEach((eventType) => {
       es.addEventListener(eventType, (event) => {
         const messageEvent = event as MessageEvent;
@@ -132,12 +226,10 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
       });
     });
 
-    // 不使用 onmessage，避免重复
-
     es.onerror = () => {
       setSseConnected(false);
       setRunning(false);
-      setElapsed(Math.round(performance.now() - t0));
+      if (t0) setElapsed(Math.round(performance.now() - t0));
       es.close();
     };
   };
@@ -147,12 +239,22 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     setSseConnected(false);
     setRunning(false);
   };
 
   const curl = isSSE
-    ? `curl -N -H 'Accept: text/event-stream' 'http://localhost:3000/mock${path}'`
+    ? buildCurl({
+        method: api.method,
+        baseUrl: 'http://localhost:3000',
+        path: path,
+        headers: { 'Accept': 'text/event-stream' },
+        body: api.method !== 'GET' ? { example: 'data' } : null,
+      })
     : result
       ? buildCurl({
           method: api.method,
@@ -168,7 +270,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
       <PanelHeader
         icon={TestTube}
         title="在线测试"
-        description={isSSE ? '测试 SSE 事件流连接：使用 EventSource 接收服务器推送的事件。' : '在保存前即可发起测试调用：传入请求体 / 头部，查看 Mock 服务的实际响应。便于联调前快速验证。'}
+        description={isSSE ? '测试 SSE 事件流连接：接收服务器推送的事件。' : '在保存前即可发起测试调用：传入请求体 / 头部，查看 Mock 服务的实际响应。便于联调前快速验证。'}
       />
 
       <Card
@@ -192,34 +294,32 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         <FormField label="请求路径">
           <Input className="mono" value={path} onChange={(e) => setPath(e.target.value)} />
         </FormField>
-        {!isSSE && (
-          <>
-            <FormField label="自定义 Header" hint="JSON 对象，留空使用默认值">
-              <Textarea
-                className="mono mono-dark !text-[12.5px]"
-                rows={2}
-                value={headersText}
-                onChange={(e) => setHeadersText(e.target.value)}
-                placeholder='{"X-Token": "demo"}'
-              />
-            </FormField>
-            {api.method !== 'GET' && (
-              <FormField label="Body" hint="JSON">
-                <Textarea
-                  className="mono mono-dark !text-[12.5px]"
-                  rows={8}
-                  value={bodyText}
-                  onChange={(e) => setBodyText(e.target.value)}
-                />
-              </FormField>
-            )}
-          </>
+        <FormField label="自定义 Header" hint="JSON 对象，留空使用默认值">
+          <Textarea
+            className="mono mono-dark !text-[12.5px]"
+            rows={2}
+            value={headersText}
+            onChange={(e) => setHeadersText(e.target.value)}
+            placeholder='{"X-Token": "demo"}'
+          />
+        </FormField>
+        {api.method !== 'GET' && (
+          <FormField label="Body" hint="JSON">
+            <Textarea
+              className="mono mono-dark !text-[12.5px]"
+              rows={8}
+              value={bodyText}
+              onChange={(e) => setBodyText(e.target.value)}
+            />
+          </FormField>
         )}
         {isSSE && (
           <div className="info-tip mt-2">
             <AlertCircle />
             <div>
-              SSE 基于 HTTP GET，客户端通过 <code>EventSource</code> API 建立连接，服务器以 <code>text/event-stream</code> 格式推送事件。
+              {api.method === 'GET'
+                ? 'SSE 使用 GET 方法，通过 EventSource API 建立连接。'
+                : `SSE 使用 ${api.method} 方法，通过 fetch API 建立连接，支持发送请求体。`}
             </div>
           </div>
         )}
