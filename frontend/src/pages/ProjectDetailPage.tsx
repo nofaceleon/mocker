@@ -1,16 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  CheckCircle,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   Copy,
+  ExternalLink,
   FolderTree,
+  Loader2,
   MoreVertical,
   Pencil,
   Play,
   Plus,
   Search,
+  SquareCheck,
   Trash2,
   Upload,
+  XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -46,8 +53,8 @@ import { useProject } from '@/hooks/queries/use-projects';
 import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/cn';
 import type { FeatureGroup, MockApi } from '@/types/api';
-import { CheckCircle, XCircle, Loader2, SquareCheck } from 'lucide-react';
 import { SwaggerImportModal } from '@/components/SwaggerImportModal';
+import { buildMockRequestSample } from '@/lib/mock-request-sample';
 
 export function ProjectDetailPage() {
   const { projectId } = useParams();
@@ -483,15 +490,72 @@ function ApiListPanel({
       toast.warning('没有已启用的接口');
       return;
     }
+    // 仅 HTTP 接口可走批量"运行测试"：SSE 是流式响应无单一结果，
+    // WS 后端未注册路由调用必然 404，两者都跳过避免误报失败。
+    const httpApis = enabledApis.filter((a) => a.protocol === 'HTTP');
+    const skippedApis = enabledApis.filter((a) => a.protocol !== 'HTTP');
+    if (httpApis.length === 0) {
+      toast.warning('没有可批量测试的 HTTP 接口');
+      return;
+    }
     setTesting(true);
     setTestResults(null);
     try {
       const results = await Promise.all(
-        enabledApis.map((api) => testMut.mutateAsync({ id: api.id, input: {} })),
+        httpApis.map((api) => {
+          // 按接口的 validationRules 生成示例请求参数，避免必填字段缺失导致校验失败
+          const sample = buildMockRequestSample(api);
+          // 注意：path 必须保持干净（不能拼 query），否则 mock-engine 的 matcher
+          // 会因 `?xxx` 而无法匹配到路由 → 404。query 必须作为独立字段传，
+          // 后端 mock-apis.ts 的 fakeReq 会把 input.query 放到 req.query。
+          const body = api.method === 'GET' ? undefined : sample.body;
+          // insert 接口若 body 规则为空会自动得到 {}，后端会因
+          // "insert requires non-empty body" 抛 500。这里兜底塞一个最小占位，
+          // 让批量测试能正常跑通（具体字段以实际 schema 为准）。
+          const finalBody =
+            api.dataOp === 'insert' &&
+            body &&
+            typeof body === 'object' &&
+            Object.keys(body as Record<string, unknown>).length === 0
+              ? { _demo: '1' }
+              : body;
+          const input = {
+            path: sample.path,
+            query: sample.query,
+            body: finalBody,
+            headers: sample.headers,
+          };
+          // 调试日志：批量测试时方便定位哪个接口的 input 有问题
+          // eslint-disable-next-line no-console
+          console.debug('[runAllTests]', api.id, api.method, api.path, '→', input);
+          return testMut.mutateAsync({ id: api.id, input }).then((r) => {
+            // eslint-disable-next-line no-console
+            if (r.responseStatus >= 400) {
+              console.warn(
+                '[runAllTests] failed',
+                api.id,
+                api.method,
+                api.path,
+                'status=',
+                r.responseStatus,
+                'body=',
+                r.responseBody,
+              );
+            }
+            return r;
+          });
+        }),
       );
       setTestResults(results);
-      const passed = results.filter((r) => r.responseStatus >= 200 && r.responseStatus < 300).length;
-      toast.success(`测试完成：${passed}/${results.length} 通过`);
+      const passed = results.filter(
+        (r) => r.responseStatus >= 200 && r.responseStatus < 300,
+      ).length;
+      const skippedNote = skippedApis.length > 0 ? `，跳过 ${skippedApis.length} 个非 HTTP 接口` : '';
+      toast.success(`测试完成：${passed}/${results.length} 通过${skippedNote}`);
+      if (skippedApis.length > 0) {
+        const names = skippedApis.map((a) => a.name).join('、');
+        toast.info(`已跳过非 HTTP 接口：${names}`, { duration: 4000 });
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '测试失败');
     } finally {
@@ -753,7 +817,11 @@ function ApiListPanel({
       </div>
 
       {testResults && (
-        <TestResultsModal results={testResults} onClose={() => setTestResults(null)} />
+        <TestResultsModal
+          results={testResults}
+          projectId={projectId}
+          onClose={() => setTestResults(null)}
+        />
       )}
 
       {swaggerOpen && (
@@ -904,13 +972,20 @@ function FeatureGroupModal({
 
 function TestResultsModal({
   results,
+  projectId,
   onClose,
 }: {
   results: TestApiOutput[];
+  projectId: number;
   onClose: () => void;
 }) {
   const passed = results.filter((r) => r.responseStatus >= 200 && r.responseStatus < 300).length;
   const failed = results.length - passed;
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+
+  const toggleExpand = (idx: number) => {
+    setExpandedIdx((prev) => (prev === idx ? null : idx));
+  };
 
   return (
     <Modal open onClose={onClose} title="测试结果" width="lg">
@@ -931,48 +1006,114 @@ function TestResultsModal({
           </span>
         </div>
 
-        <div className="max-h-[400px] overflow-auto rounded border border-line">
+        <div className="max-h-[500px] overflow-auto rounded border border-line">
           <table className="params-table w-full">
             <thead>
               <tr>
-                <th style={{ width: 60 }}>状态</th>
-                <th style={{ width: 80 }}>方法</th>
+                <th style={{ width: 50 }}>状态</th>
+                <th style={{ width: 70 }}>方法</th>
                 <th>路径</th>
-                <th style={{ width: 100 }}>状态码</th>
-                <th style={{ width: 200 }}>响应</th>
+                <th style={{ width: 90 }}>状态码</th>
+                <th>响应摘要</th>
+                <th style={{ width: 140 }}>操作</th>
               </tr>
             </thead>
             <tbody>
               {results.map((result, idx) => {
                 const ok = result.responseStatus >= 200 && result.responseStatus < 300;
+                const isExpanded = expandedIdx === idx;
+                const bodyText =
+                  typeof result.responseBody === 'string'
+                    ? result.responseBody
+                    : JSON.stringify(result.responseBody);
+                const bodySummary =
+                  bodyText.length > 80 ? bodyText.slice(0, 80) + '…' : bodyText;
                 return (
-                  <tr key={idx}>
-                    <td>
-                      {ok ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      )}
-                    </td>
-                    <td>
-                      <MethodBadge method={result.method} />
-                    </td>
-                    <td>
-                      <span className="param-code">{result.path}</span>
-                    </td>
-                    <td>
-                      <TagPill className={ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}>
-                        {result.responseStatus}
-                      </TagPill>
-                    </td>
-                    <td>
-                      <span className="block max-w-[200px] truncate text-[12px] text-ink-secondary">
-                        {typeof result.responseBody === 'string'
-                          ? result.responseBody
-                          : JSON.stringify(result.responseBody)}
-                      </span>
-                    </td>
-                  </tr>
+                  <Fragment key={idx}>
+                    <tr>
+                      <td>
+                        {ok ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-500" />
+                        )}
+                      </td>
+                      <td>
+                        <MethodBadge method={result.method} />
+                      </td>
+                      <td>
+                        <span className="param-code">{result.path}</span>
+                      </td>
+                      <td>
+                        <TagPill
+                          className={
+                            ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                          }
+                        >
+                          {result.responseStatus}
+                        </TagPill>
+                      </td>
+                      <td>
+                        <span className="block max-w-[360px] truncate text-[12px] text-ink-secondary">
+                          {bodySummary}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleExpand(idx)}
+                            className="grid h-7 w-7 place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
+                            title={isExpanded ? '收起详情' : '展开详情'}
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="h-3.5 w-3.5" />
+                            ) : (
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              window.open(
+                                `/projects/${projectId}/apis/${result.apiId}?tab=test`,
+                                '_blank',
+                              );
+                            }}
+                            className="grid h-7 w-7 place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
+                            title="在新标签页打开测试面板"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="bg-canvas-subtle/50">
+                        <td colSpan={6} className="px-3 py-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-[12px] text-ink-secondary">
+                              <strong className="text-ink">完整响应</strong>
+                              <span className="text-ink-subtle">
+                                ({prettyBytes(byteSize(result.responseBody))})
+                              </span>
+                            </div>
+                            <pre className="max-h-[280px] overflow-auto rounded border border-line bg-white p-2 font-mono text-[12px] leading-[1.6] text-ink">
+                              {typeof result.responseBody === 'string'
+                                ? result.responseBody
+                                : JSON.stringify(result.responseBody, null, 2)}
+                            </pre>
+                            {!ok && (
+                              <FailureHints
+                                responseBody={result.responseBody}
+                                status={result.responseStatus}
+                              />
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -987,4 +1128,94 @@ function TestResultsModal({
       </div>
     </Modal>
   );
+}
+
+/**
+ * 针对常见失败原因给出可读的提示（不做实际修复，仅给用户方向）。
+ */
+function FailureHints({
+  responseBody,
+  status,
+}: {
+  responseBody: unknown;
+  status: number;
+}) {
+  const hints: string[] = [];
+  const fieldErrors: Array<{ location: string; field: string; message: string; rule?: string }> = [];
+
+  if (status === 404) {
+    hints.push('404：mock-engine matcher 未匹配到路由。');
+    hints.push(
+      '常见原因：① 接口已被禁用；② 接口 path 是字面量但 mock 引擎路由表里只有不同 method 的同名 path；③ 后端 /mock-apis/:id/test 路由接收的 path 不正确（看下方的完整响应）。',
+    );
+  }
+  if (status === 500) {
+    hints.push('500：mock-engine 内部异常。');
+    hints.push('常见原因：dataOp=insert 但 body 缺字段、script 脚本抛错、dataTable 是保留名等。');
+  }
+  if (status === 400) {
+    hints.push('400：参数校验失败。详见下方字段级错误。');
+  }
+
+  if (responseBody && typeof responseBody === 'object') {
+    const body = responseBody as Record<string, unknown>;
+    if (body.code === 'VALIDATION_ERROR' && Array.isArray(body.errors)) {
+      const errs = body.errors as Array<{
+        location: string;
+        field: string;
+        message: string;
+        rule?: string;
+      }>;
+      errs.forEach((e) => fieldErrors.push(e));
+    }
+    if (typeof body.message === 'string' && body.message && status !== 400) {
+      hints.push(`后端消息：${body.message}`);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {hints.length > 0 && (
+        <div className="rounded-md border border-danger-border bg-danger-soft px-3 py-2 text-[12px] text-danger">
+          <ul className="list-disc space-y-0.5 pl-4">
+            {hints.map((h, i) => (
+              <li key={i}>{h}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {fieldErrors.length > 0 && (
+        <div className="rounded-md border border-danger-border bg-danger-soft px-3 py-2 text-[12px] text-danger">
+          <div className="mb-1 font-semibold">
+            字段级错误（共 {fieldErrors.length} 项）：
+          </div>
+          <ul className="list-disc space-y-0.5 pl-4">
+            {fieldErrors.map((e, i) => (
+              <li key={i}>
+                <span className="font-mono">
+                  [{e.location}] {e.field}
+                  {e.rule ? <span className="text-ink-subtle">（{e.rule}）</span> : null}
+                </span>
+                ：{e.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function prettyBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function byteSize(v: unknown): number {
+  try {
+    return new Blob([JSON.stringify(v)]).size;
+  } catch {
+    return 0;
+  }
 }

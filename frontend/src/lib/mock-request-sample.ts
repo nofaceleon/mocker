@@ -59,6 +59,10 @@ function sampleString(rule: ValidationParamRule): string {
 /**
  * 把 path 中的 `:name` 占位符按 pathRules 替换成示例值
  * 例如 `/users/:id` → `/users/1`
+ *
+ * 兜底：即使 pathRules 为空（或某个占位符没匹配到规则），
+ * 也用通用默认值替换，否则批量测试时 matcher 会因 `:xxx`
+ * 残留在 path 中而匹配不到路由。
  */
 export function buildPathFromTemplate(
   pathTemplate: string,
@@ -66,8 +70,9 @@ export function buildPathFromTemplate(
 ): string {
   return pathTemplate.replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, (_match, name) => {
     const rule = pathRules.find((r) => r.name === name);
-    if (!rule) return _match;
-    return String(buildSampleFromRule(rule));
+    if (rule) return String(buildSampleFromRule(rule));
+    const fallback = String(buildSampleFromRule({ name, type: 'string' }));
+    return fallback || '1';
   });
 }
 
