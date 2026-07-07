@@ -5,6 +5,7 @@ import { mockApisRouter } from './mock-apis.js';
 import { mockDataRouter } from './mock-data.js';
 import { dataBrowserRouter } from './data-browser.js';
 import { adminRouter } from './admin.js';
+import { swaggerImportRouter } from './swagger-import.js';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.use('/', featureGroupsRouter); // 路径形如 /projects/:pid/feature-gro
 router.use('/', mockApisRouter); // 路径形如 /feature-groups/:fgid/mock-apis 与 /mock-apis/:id
 router.use('/', mockDataRouter); // /mock-apis/:apiId/data 与 /mock-data/:id
 router.use('/', dataBrowserRouter); // /projects/:pid/data-browser 与 /data-browser/...
+router.use('/', swaggerImportRouter); // /feature-groups/:fgid/swagger/parse 与 /commit
 router.use('/admin', adminRouter);
 
 export { router as apiRouter };

@@ -10,6 +10,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -46,6 +47,7 @@ import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/cn';
 import type { FeatureGroup, MockApi } from '@/types/api';
 import { CheckCircle, XCircle, Loader2, SquareCheck } from 'lucide-react';
+import { SwaggerImportModal } from '@/components/SwaggerImportModal';
 
 export function ProjectDetailPage() {
   const { projectId } = useParams();
@@ -329,6 +331,7 @@ function ApiListPanel({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [testResults, setTestResults] = useState<TestApiOutput[] | null>(null);
   const [testing, setTesting] = useState(false);
+  const [swaggerOpen, setSwaggerOpen] = useState(false);
 
   const filtered = useMemo(() => {
     if (!apis) return [];
@@ -552,6 +555,13 @@ function ApiListPanel({
         }
       />
 
+      <div className="mb-3 flex items-center gap-2">
+        <Button variant="secondary" onClick={() => setSwaggerOpen(true)}>
+          <Upload className="h-3.5 w-3.5" />
+          导入 Swagger
+        </Button>
+      </div>
+
       <div className="mb-3.5 flex items-center gap-2">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-subtle" />
@@ -744,6 +754,14 @@ function ApiListPanel({
 
       {testResults && (
         <TestResultsModal results={testResults} onClose={() => setTestResults(null)} />
+      )}
+
+      {swaggerOpen && (
+        <SwaggerImportModal
+          open={swaggerOpen}
+          featureGroupId={group.id}
+          onClose={() => setSwaggerOpen(false)}
+        />
       )}
     </div>
   );

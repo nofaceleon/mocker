@@ -1,10 +1,15 @@
-import { useState, useRef, useEffect } from 'react';
-import { AlertCircle, Clipboard, Play, Square, TestTube } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { AlertCircle, Clipboard, Play, Square, TestTube, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, FormField, Input, Textarea, CopyButton } from '@/components/ui';
 import type { MockApi } from '@/types/api';
 import type { TestApiInput, TestApiOutput } from '@/hooks/queries/use-mock-apis';
 import { config as runtimeConfig } from '@/lib/runtime-config';
+import {
+  buildMockRequestSample,
+  appendQueryToPath,
+  type MockRequestSample,
+} from '@/lib/mock-request-sample';
 import { PanelHeader } from '../PanelHeader';
 
 type SSEEvent = {
@@ -21,17 +26,51 @@ type TestPanelProps = {
 
 export function TestPanel({ api, onRun }: TestPanelProps) {
   const isSSE = api.protocol === 'SSE';
-  const [path, setPath] = useState(api.path);
+  // 根据 api.validationRules 生成默认请求参数示例
+  const initialSample = useMemo<MockRequestSample>(() => buildMockRequestSample(api), [api]);
+
+  const [path, setPath] = useState(initialSample.path);
+  const [queryText, setQueryText] = useState(
+    JSON.stringify(initialSample.query ?? {}, null, 2),
+  );
   const [bodyText, setBodyText] = useState(
     api.method !== 'GET'
-      ? JSON.stringify({ name: '张三', imageUrl: 'https://example.com/face.jpg' }, null, 2)
+      ? JSON.stringify(initialSample.body ?? {}, null, 2)
       : '',
   );
-  const [headersText, setHeadersText] = useState('{}');
+  const [headersText, setHeadersText] = useState(
+    JSON.stringify(initialSample.headers ?? {}, null, 2),
+  );
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<TestApiOutput | null>(null);
   const [elapsed, setElapsed] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  // 当 api 变化（如切换接口或保存后）时同步刷新默认示例
+  useEffect(() => {
+    const sample = buildMockRequestSample(api);
+    setPath(sample.path);
+    setQueryText(JSON.stringify(sample.query ?? {}, null, 2));
+    setBodyText(
+      api.method !== 'GET' ? JSON.stringify(sample.body ?? {}, null, 2) : '',
+    );
+    setHeadersText(JSON.stringify(sample.headers ?? {}, null, 2));
+    setResult(null);
+    setErr(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api.id, api.path, api.method, JSON.stringify(api.validationRules)]);
+
+  // 重新生成示例值
+  const regenerateSample = () => {
+    const sample = buildMockRequestSample(api);
+    setPath(sample.path);
+    setQueryText(JSON.stringify(sample.query ?? {}, null, 2));
+    setBodyText(
+      api.method !== 'GET' ? JSON.stringify(sample.body ?? {}, null, 2) : '',
+    );
+    setHeadersText(JSON.stringify(sample.headers ?? {}, null, 2));
+    toast.success('已按接口定义重新生成示例');
+  };
 
   // SSE相关状态
   const [sseEvents, setSseEvents] = useState<SSEEvent[]>([]);
@@ -57,13 +96,29 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
     setElapsed(null);
     setSseEvents([]);
 
+    // 验证 query JSON 格式
+    let parsedQuery: Record<string, string> = {};
+    if (queryText.trim()) {
+      try {
+        const v = JSON.parse(queryText);
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          parsedQuery = v as Record<string, string>;
+        }
+      } catch (e) {
+        setErr('Query JSON 解析失败：' + (e instanceof Error ? e.message : '未知错误'));
+        return;
+      }
+    }
+
+    const finalPath = appendQueryToPath(path, parsedQuery);
+
     if (isSSE) {
       // SSE测试：先获取配置信息，然后连接
       try {
         setRunning(true);
         const headers = headersText.trim() ? JSON.parse(headersText) : undefined;
         const body = api.method !== 'GET' && bodyText.trim() ? JSON.parse(bodyText) : undefined;
-        const r = await onRun({ path, body, headers });
+        const r = await onRun({ path: finalPath, body, headers });
         setResult(r as unknown as TestApiOutput);
 
         const sseUrl = (r as unknown as Record<string, unknown>).fullUrl as string;
@@ -86,7 +141,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         const body = api.method !== 'GET' && bodyText.trim() ? JSON.parse(bodyText) : undefined;
         setRunning(true);
         const t0 = performance.now();
-        const r = await onRun({ path, body, headers });
+        const r = await onRun({ path: finalPath, body, headers });
         setElapsed(Math.round(performance.now() - t0));
         setResult(r);
       } catch (e) {
@@ -305,6 +360,10 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         title="请求"
         extra={
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={regenerateSample} title="按接口的 validationRules 重新生成示例">
+              <Wand2 className="h-3 w-3" />
+              生成示例
+            </Button>
             {isSSE && sseConnected ? (
               <Button variant="danger" size="sm" onClick={stopSSE}>
                 <Square className="h-3 w-3" />
@@ -322,20 +381,53 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         <FormField label="请求路径">
           <Input className="mono" value={path} onChange={(e) => setPath(e.target.value)} />
         </FormField>
-        <FormField label="自定义 Header" hint="JSON 对象，留空使用默认值">
+        {((api.validationRules?.query?.length ?? 0) > 0) && (
+          <FormField
+            label="Query 参数"
+            hint={
+              <span>
+                按接口定义的 query 规则（含 default）生成示例；可手动编辑（JSON 对象）。
+                发送请求时会自动拼接到 path 末尾。
+              </span>
+            }
+          >
+            <Textarea
+              className="mono mono-dark !text-[12.5px]"
+              rows={Math.max(2, (api.validationRules?.query?.length ?? 0))}
+              value={queryText}
+              onChange={(e) => setQueryText(e.target.value)}
+              placeholder='{"pageIndex":"1","pageNum":"20"}'
+            />
+          </FormField>
+        )}
+        <FormField label="自定义 Header" hint="按 header 规则生成示例；可手动编辑（JSON 对象）">
           <Textarea
             className="mono mono-dark !text-[12.5px]"
-            rows={2}
+            rows={Math.max(2, (api.validationRules?.header?.length ?? 0) || 2)}
             value={headersText}
             onChange={(e) => setHeadersText(e.target.value)}
             placeholder='{"X-Token": "demo"}'
           />
         </FormField>
         {api.method !== 'GET' && (
-          <FormField label="Body" hint="JSON">
+          <FormField
+            label="Body"
+            hint={
+              <span>
+                按 body 规则（含 default / example）生成示例；可手动编辑。
+                {((api.validationRules?.body?.length ?? 0) > 0) && (
+                  <>
+                    {' '}当前接口有{' '}
+                    <strong>{api.validationRules?.body?.length ?? 0}</strong>
+                    {' '}个字段规则。
+                  </>
+                )}
+              </span>
+            }
+          >
             <Textarea
               className="mono mono-dark !text-[12.5px]"
-              rows={8}
+              rows={Math.max(8, (api.validationRules?.body?.length ?? 0) * 2)}
               value={bodyText}
               onChange={(e) => setBodyText(e.target.value)}
             />

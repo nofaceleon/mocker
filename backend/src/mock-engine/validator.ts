@@ -40,7 +40,10 @@ function validateLocation(
     : {});
 
   for (const rule of ruleList) {
-    const fieldValue = data[rule.name];
+    // mock 引擎 request.ts 的 normalizeKeys 把所有 key 转成了 camelCase，
+    // 所以校验时也要尝试 camelCase 版本的 key 才能匹配上
+    const camelKey = toCamel(rule.name);
+    const fieldValue = data[rule.name] ?? data[camelKey];
     const result = buildSchema(rule).safeParse(fieldValue);
     if (!result.success) {
       errors.push({
@@ -51,6 +54,10 @@ function validateLocation(
       });
     }
   }
+}
+
+function toCamel(s: string): string {
+  return s.replace(/[-_]([a-zA-Z0-9])/g, (_match, c: string) => c.toUpperCase());
 }
 
 function buildSchema(rule: ParamRule): ZodTypeAny {

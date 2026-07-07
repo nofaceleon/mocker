@@ -122,3 +122,63 @@ export type BackupFile = {
   size: number;
   mtime: string;
 };
+
+// ---------- Swagger 导入相关 ----------
+export type SwaggerImportOpenApiVersion = '2.0' | '3.0' | 'unknown';
+
+export type SwaggerImportConflict = {
+  kind: 'route' | 'name';
+  existingId: ID;
+  existingName: string;
+  existingMethod: HttpMethod;
+  existingPath: string;
+};
+
+export type SwaggerImportItem = {
+  index: number;
+  name: string;
+  description: string;
+  method: HttpMethod;
+  path: string;
+  isSupported: boolean;
+  unsupportedReason?: string;
+  validationRules: ValidationRules | null;
+  responseStatus: number;
+  responseContentType: string;
+  responseBody: unknown;
+  isEnabled: boolean;
+  conflict: SwaggerImportConflict | null;
+};
+
+export type SwaggerImportSpecInfo = {
+  title: string;
+  version: string;
+  openApiVersion: SwaggerImportOpenApiVersion;
+  baseUrl: string;
+};
+
+export type SwaggerImportParseResponse = {
+  specInfo: SwaggerImportSpecInfo;
+  items: SwaggerImportItem[];
+  summary: {
+    total: number;
+    supported: number;
+    conflicts: number;
+  };
+};
+
+export type SwaggerImportDecisionAction = 'create' | 'overwrite' | 'skip';
+
+export type SwaggerImportDecision = {
+  index: number;
+  action: SwaggerImportDecisionAction;
+  name?: string;
+  path?: string;
+};
+
+export type SwaggerImportCommitResponse = {
+  created: number;
+  overwritten: number;
+  skipped: number;
+  errors: Array<{ index: number; reason: string }>;
+};
