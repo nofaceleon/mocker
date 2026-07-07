@@ -374,7 +374,7 @@ function ApiListPanel({
   );
 
   const buildCurlCommand = useCallback((api: MockApi): string => {
-    const url = api.fullUrl || `${window.location.origin}/mock${api.path}`;
+    const url = api.fullUrl || `${window.location.origin}${api.path}`;
     const parts = [`curl -X ${api.method}`];
 
     if (api.responseContentType) {
@@ -658,8 +658,8 @@ function ApiListPanel({
                     <td>
                       <MethodBadge method={api.method} />
                       <div className="mt-1">
-                        <span className="param-code" title={api.fullPath || `/mock${api.path}`}>
-                          {api.fullPath || `/mock${api.path}`}
+                        <span className="param-code" title={api.fullPath || api.path}>
+                          {api.fullPath || api.path}
                         </span>
                       </div>
                     </td>

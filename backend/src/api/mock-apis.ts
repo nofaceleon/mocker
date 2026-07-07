@@ -128,8 +128,8 @@ router.get(
     const baseUrl = `${protocol}://${host}`;
     const result = rows.map((row) => ({
       ...row,
-      fullPath: `/mock${row.path}`,
-      fullUrl: `${baseUrl}/mock${row.path}`,
+      fullPath: row.path,
+      fullUrl: `${baseUrl}${row.path}`,
     }));
 
     res.success(result);
@@ -292,7 +292,7 @@ router.post(
         protocol: 'SSE',
         method: 'GET',
         path: input.path ?? api.path,
-        fullUrl: `http://localhost:${config.port}/mock${input.path ?? api.path}`,
+        fullUrl: `http://localhost:${config.port}${input.path ?? api.path}`,
         sseConfig: sseConfig ?? { events: [] },
         responseHeaders: api.responseHeaders ?? {},
       });

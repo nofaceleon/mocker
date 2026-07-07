@@ -325,9 +325,6 @@ async function handleHTTPResponse(
 }
 
 function stripMockPrefix(p: string): string {
-  // app.use('/mock', ...) 已自动剥 /mock 前缀，req.path 已是相对路径
-  // 若仍包含 /mock（边界 case），再做一次兜底
-  if (p.startsWith('/mock')) return p.slice(4) || '/';
   return p;
 }
 

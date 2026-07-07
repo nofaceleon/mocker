@@ -37,8 +37,8 @@ export function createApp(): Express {
   // 管理 API：/api/*
   app.use('/api', apiRouter);
 
-  // Mock 引擎入口：/mock/*
-  app.use('/mock', handleMockRequest as unknown as express.RequestHandler);
+  // Mock 引擎入口（根路径，用户自定义路由原样生效）
+  app.use('/', handleMockRequest as unknown as express.RequestHandler);
 
   // 404
   app.use((req: Request, res: Response) => {
