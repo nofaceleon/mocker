@@ -34,11 +34,13 @@ import {
   useProjects,
   useUpdateProject,
 } from '@/hooks/queries/use-projects';
+import { useCallbackStats } from '@/hooks/queries/use-callback-tasks';
 import type { Project } from '@/types/api';
 
 export function ProjectsPage() {
   const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
+  const { data: callbackStats } = useCallbackStats();
   const deleteMut = useDeleteProject();
   const [tab, setTab] = useState<'all' | 'recent' | 'pinned'>('all');
   const [sort, setSort] = useState<'updated' | 'created' | 'name'>('updated');
@@ -76,9 +78,9 @@ export function ProjectsPage() {
       projects: projects.length,
       apis: projects.reduce((sum, p) => sum + (p.apiCount ?? 0), 0),
       calls: projects.reduce((sum, p) => sum + (p.apiCount ?? 0) * 8, 0), // 占位估算
-      pending: 12,
+      pending: callbackStats?.pending ?? 0,
     };
-  }, [projects]);
+  }, [projects, callbackStats]);
 
   const handleDelete = async (p: Project) => {
     const ok = await confirm({

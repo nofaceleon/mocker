@@ -322,7 +322,7 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
               </div>
             ))}
 
-            <Button variant="outline" onClick={addSSEEvent} className="w-full">
+            <Button variant="secondary" onClick={addSSEEvent} className="w-full">
               <Plus className="mr-2 h-4 w-4" />
               添加事件
             </Button>

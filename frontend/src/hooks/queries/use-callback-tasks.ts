@@ -1,0 +1,80 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api, unwrap } from '@/lib/api';
+import type { CallbackStats, CallbackTask, CallbackTaskPage, CallbackTaskStatus, ID } from '@/types/api';
+
+type QueryParams = {
+  apiId?: ID;
+  status?: CallbackTaskStatus | 'all';
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+const KEYS = {
+  list: (q: QueryParams) => ['callback-tasks', 'list', q] as const,
+  detail: (id: ID) => ['callback-tasks', 'detail', id] as const,
+  stats: ['callback-tasks', 'stats'] as const,
+};
+
+function buildQuery(q: QueryParams): Record<string, string | number> {
+  const out: Record<string, string | number> = {};
+  if (q.apiId) out.apiId = q.apiId;
+  if (q.status && q.status !== 'all') out.status = q.status;
+  if (q.keyword) out.keyword = q.keyword;
+  if (q.page) out.page = q.page;
+  if (q.pageSize) out.pageSize = q.pageSize;
+  return out;
+}
+
+export function useCallbackTasks(query: QueryParams = {}) {
+  return useQuery({
+    queryKey: KEYS.list(query),
+    queryFn: async () =>
+      unwrap(
+        await api.get<CallbackTaskPage>('/callback-tasks', {
+          params: buildQuery(query),
+        }),
+      ),
+    refetchInterval: 3_000,
+  });
+}
+
+export function useCallbackTask(taskId: ID | undefined) {
+  return useQuery({
+    queryKey: taskId ? KEYS.detail(taskId) : (['callback-tasks', 'detail', 'none'] as const),
+    queryFn: async () => unwrap(await api.get<CallbackTask>(`/callback-tasks/${taskId}`)),
+    enabled: !!taskId,
+  });
+}
+
+export function useCallbackStats() {
+  return useQuery({
+    queryKey: KEYS.stats,
+    queryFn: async () => unwrap(await api.get<CallbackStats>('/callback-tasks/stats')),
+    refetchInterval: 5_000,
+  });
+}
+
+export function useRetryCallbackTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: ID) =>
+      unwrap(await api.post<{ taskId: ID; retrying: true }>(`/callback-tasks/${taskId}/retry`)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['callback-tasks'] });
+    },
+  });
+}
+
+export function useCancelCallbackTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: ID) =>
+      unwrap(
+        await api.post<{ taskId: ID; cancelled: boolean }>(`/callback-tasks/${taskId}/cancel`),
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['callback-tasks'] });
+    },
+  });
+}

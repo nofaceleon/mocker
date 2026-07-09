@@ -152,12 +152,14 @@ export const requestLogs = sqliteTable(
 export const DELAY_TYPES = ['fixed', 'random'] as const;
 export const RETRY_STRATEGIES = ['fixed', 'exponential'] as const;
 
-export const callbackConfigs = sqliteTable('callback_configs', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  apiId: integer('api_id')
-    .notNull()
-    .references(() => mockApis.id, { onDelete: 'cascade' }),
-  isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(false),
+export const callbackConfigs = sqliteTable(
+  'callback_configs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    apiId: integer('api_id')
+      .notNull()
+      .references(() => mockApis.id, { onDelete: 'cascade' }),
+    isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(false),
   callbackUrl: text('callback_url'),
   callbackMethod: text('callback_method').notNull().default('POST'),
   callbackHeaders: text('callback_headers', { mode: 'json' }).$type<Record<string, string>>(),
@@ -170,7 +172,9 @@ export const callbackConfigs = sqliteTable('callback_configs', {
   retryStrategy: text('retry_strategy', { enum: RETRY_STRATEGIES }).notNull().default('fixed'),
   retryCondition: text('retry_condition'),
   ...timestamps,
-});
+  },
+  (t) => [uniqueIndex('uniq_callback_api').on(t.apiId)],
+);
 
 // ---------------- 7. callback_tasks (P0 schema only) ----------------
 export const CALLBACK_STATUS = ['pending', 'sent', 'failed'] as const;
@@ -241,6 +245,10 @@ export type MockDataRow = typeof mockData.$inferSelect;
 export type NewMockDataRow = typeof mockData.$inferInsert;
 export type RequestLog = typeof requestLogs.$inferSelect;
 export type NewRequestLog = typeof requestLogs.$inferInsert;
+export type CallbackConfig = typeof callbackConfigs.$inferSelect;
+export type NewCallbackConfig = typeof callbackConfigs.$inferInsert;
+export type CallbackTask = typeof callbackTasks.$inferSelect;
+export type NewCallbackTask = typeof callbackTasks.$inferInsert;
 
 // ---------------- 参数校验规则 TS 类型 ----------------
 export type ValidationRules = {

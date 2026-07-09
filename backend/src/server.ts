@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { config } from './config/index.js';
 import { getDb } from './db/index.js';
 import { logger } from './utils/logger.js';
+import { callbackScheduler } from './mock-engine/callback/callback-scheduler.js';
 
 // 预热数据库：建库 + 应用迁移，失败则快速退出
 getDb();
@@ -19,8 +20,12 @@ const server = app.listen(config.port, () => {
   );
 });
 
+// 启动回调调度器（持久化扫描 + 兜底重排）
+callbackScheduler.start();
+
 function shutdown(signal: string): void {
   logger.info({ signal }, 'shutting down');
+  callbackScheduler.stop();
   server.close((err) => {
     if (err) {
       logger.error({ err }, 'error during shutdown');

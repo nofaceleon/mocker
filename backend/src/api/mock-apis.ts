@@ -121,6 +121,7 @@ router.get(
         createdAt: mockApis.createdAt,
         updatedAt: mockApis.updatedAt,
         mockDataCount: sql<number>`(SELECT COUNT(*) FROM mock_data WHERE mock_data.api_id = ${mockApis.id})`,
+        hasCallback: sql<number>`(SELECT COUNT(*) FROM callback_configs WHERE callback_configs.api_id = ${mockApis.id} AND callback_configs.is_enabled = 1)`,
       })
       .from(mockApis)
       .where(eq(mockApis.featureGroupId, featureGroupId))
@@ -135,6 +136,7 @@ router.get(
       ...row,
       fullPath: row.path,
       fullUrl: `${baseUrl}${row.path}`,
+      hasCallback: Number(row.hasCallback ?? 0) > 0,
     }));
 
     res.success(result);

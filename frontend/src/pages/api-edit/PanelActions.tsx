@@ -4,7 +4,8 @@ import { Button } from '@/components/ui';
 
 type PanelActionsProps = {
   hint?: ReactNode;
-  onSave?: (data?: unknown) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onSave?: (data?: any) => void;
   saving?: boolean;
   saveLabel?: string;
   right?: ReactNode;

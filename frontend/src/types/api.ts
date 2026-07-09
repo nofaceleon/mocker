@@ -77,6 +77,7 @@ export type MockApi = {
   mockDataCount?: number;
   fullPath?: string;
   fullUrl?: string;
+  hasCallback?: boolean;
 };
 
 export type MockDataRow = {
@@ -181,4 +182,63 @@ export type SwaggerImportCommitResponse = {
   overwritten: number;
   skipped: number;
   errors: Array<{ index: number; reason: string }>;
+};
+
+// ---------- 延迟回调 ----------
+
+export type CallbackConditionPreset = 'always' | 'server_error' | 'success_only' | 'custom';
+
+export type CallbackConfig = {
+  isEnabled: boolean;
+  callbackUrl: string;
+  callbackMethod: HttpMethod;
+  callbackHeaders: Record<string, string>;
+  callbackBody: string;
+  delayType: 'fixed' | 'random';
+  delayValue: string; // "5000" 或 "3000-8000"
+  retryEnabled: boolean;
+  maxRetries: number;
+  retryInterval: number;
+  retryStrategy: 'fixed' | 'exponential';
+  retryCondition: CallbackConditionPreset;
+  /** 当 retryCondition === 'custom' 时生效；如 "statusCode != 200" */
+  retryConditionExpr?: string;
+};
+
+export type CallbackTaskStatus = 'pending' | 'sent' | 'failed';
+
+export type CallbackTask = {
+  id: number;
+  apiId: number;
+  apiName: string | null;
+  apiMethod: string | null;
+  apiPath: string | null;
+  callbackUrl: string;
+  callbackMethod: string;
+  callbackHeaders: Record<string, string> | null;
+  callbackBody: string | null;
+  status: CallbackTaskStatus;
+  retryCount: number;
+  maxRetries: number;
+  responseStatus: number | null;
+  responseBody: string | null;
+  errorMessage: string | null;
+  scheduledAt: string;
+  sentAt: string | null;
+  createdAt: string;
+  requestId: string | null;
+};
+
+export type CallbackTaskPage = {
+  items: CallbackTask[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type CallbackStats = {
+  pending: number;
+  sent: number;
+  failed: number;
+  total: number;
 };

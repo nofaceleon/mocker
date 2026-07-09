@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `uniq_callback_api` ON `callback_configs` (`api_id`);

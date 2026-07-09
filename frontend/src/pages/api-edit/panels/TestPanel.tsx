@@ -176,7 +176,9 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
     url: string,
     body?: unknown,
     headers?: Record<string, string>,
-    sseConfig?: Record<string, unknown>,
+    // sseConfig 保留参数占位（SSE 内部数据流不再通过 fetch 解析，使用 EventSource 路径）
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _sseConfig?: Record<string, unknown>,
   ) => {
     setSseEvents([]);
     setSseConnected(true);

@@ -739,7 +739,7 @@ function ApiListPanel({
                     </td>
                     <td>
                       <div className="flex flex-wrap gap-1">
-                        {api.responseDelay > 0 && (
+                        {api.hasCallback && (
                           <span className="tag tag-orange">延迟回调</span>
                         )}
                         {api.dataOp !== 'none' && api.dataTable && (

@@ -295,7 +295,7 @@ export function ValidatePanel({ draft, onChange, onSave, saving }: ValidatePanel
         onSave={onSave}
         saving={saving}
         right={
-          <Button variant="primary" onClick={onSave} loading={saving}>
+          <Button variant="primary" onClick={() => onSave?.()} loading={saving}>
             保存
           </Button>
         }

@@ -1,21 +1,21 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Activity,
   CheckCircle2,
   Clock,
-  Edit3,
-  Eye,
   Inbox,
   RotateCw,
   Search,
   Send,
-  Trash2,
   X,
   XCircle,
+  Eye,
 } from 'lucide-react';
 import {
   Button,
   Card,
+  Drawer,
   Empty,
   MethodBadge,
   PageHeader,
@@ -23,411 +23,256 @@ import {
   StatusBadge,
   Tabs,
 } from '@/components/ui';
+import {
+  useCallbackStats,
+  useCallbackTask,
+  useCallbackTasks,
+  useCancelCallbackTask,
+  useRetryCallbackTask,
+} from '@/hooks/queries/use-callback-tasks';
+import type { CallbackTaskStatus } from '@/types/api';
 
-type TaskStatus = 'sent' | 'pending' | 'retry' | 'failed' | 'cancelled';
-
-type CallbackTask = {
-  id: string;
-  apiName: string;
-  apiPath: string;
-  method: string;
-  callbackUrl: string;
-  callbackMethod: string;
-  requestId: string;
-  status: TaskStatus;
-  retries: number;
-  maxRetries: number;
-  scheduledAt: string;
-  sentAt?: string;
-  lastError?: string;
-  timeline?: Array<{ time: string; label: string; detail: string; status: 'success' | 'warning' | 'failed' | 'pending' }>;
-};
-
-const DEMO_TASKS: CallbackTask[] = [
-  {
-    id: 'T-1001',
-    apiName: '人脸注册',
-    apiPath: '/api/face/add',
-    method: 'POST',
-    callbackUrl: 'https://app.example.com/hooks/face',
-    callbackMethod: 'POST',
-    requestId: 'req_demo_001',
-    status: 'sent',
-    retries: 0,
-    maxRetries: 3,
-    scheduledAt: '13:35:42',
-    sentAt: '13:35:47',
-    timeline: [
-      { time: '13:35:42', label: '创建任务', detail: '已加入待发送队列', status: 'success' },
-      { time: '13:35:47', label: '发送成功', detail: '200 OK · 14ms', status: 'success' },
-    ],
-  },
-  {
-    id: 'T-1002',
-    apiName: '人脸对比',
-    apiPath: '/api/face/compare',
-    method: 'POST',
-    callbackUrl: 'https://app.example.com/hooks/compare',
-    callbackMethod: 'POST',
-    requestId: 'req_compare_002',
-    status: 'retry',
-    retries: 2,
-    maxRetries: 3,
-    scheduledAt: '13:42:00',
-    sentAt: '13:42:00',
-    lastError: '500 Internal Server Error',
-    timeline: [
-      { time: '13:42:00', label: '首次发送', detail: '500 Internal Server Error', status: 'failed' },
-      { time: '13:42:15', label: '第 1 次重试', detail: '502 Bad Gateway', status: 'failed' },
-      { time: '13:42:35', label: '第 2 次重试', detail: '500 Internal Server Error', status: 'warning' },
-      { time: '13:42:55', label: '等待第 3 次重试', detail: '将在 20 秒后重试', status: 'pending' },
-    ],
-  },
-  {
-    id: 'T-1003',
-    apiName: '订单支付',
-    apiPath: '/api/order/pay',
-    method: 'POST',
-    callbackUrl: 'https://app.example.com/hooks/pay',
-    callbackMethod: 'POST',
-    requestId: 'req_pay_003',
-    status: 'pending',
-    retries: 0,
-    maxRetries: 3,
-    scheduledAt: '14:00:00',
-    timeline: [
-      { time: '13:59:30', label: '创建任务', detail: '已加入待发送队列', status: 'pending' },
-    ],
-  },
-  {
-    id: 'T-0995',
-    apiName: '微信支付',
-    apiPath: '/api/pay/wechat/create',
-    method: 'POST',
-    callbackUrl: 'https://app.example.com/hooks/wechat',
-    callbackMethod: 'POST',
-    requestId: 'req_wxpay_995',
-    status: 'failed',
-    retries: 3,
-    maxRetries: 3,
-    scheduledAt: '13:18:00',
-    sentAt: '13:18:42',
-    lastError: '503 Service Unavailable',
-    timeline: [
-      { time: '13:18:00', label: '首次发送', detail: '503 Service Unavailable', status: 'failed' },
-      { time: '13:18:15', label: '第 1 次重试', detail: '503 Service Unavailable', status: 'failed' },
-      { time: '13:18:35', label: '第 2 次重试', detail: '503 Service Unavailable', status: 'failed' },
-      { time: '13:19:00', label: '第 3 次重试（已用尽）', detail: '503 Service Unavailable · 任务失败', status: 'failed' },
-    ],
-  },
-  {
-    id: 'T-0998',
-    apiName: '活体检测',
-    apiPath: '/api/face/liveness',
-    method: 'POST',
-    callbackUrl: 'https://app.example.com/hooks/liveness',
-    callbackMethod: 'POST',
-    requestId: 'req_live_998',
-    status: 'sent',
-    retries: 0,
-    maxRetries: 3,
-    scheduledAt: '13:25:00',
-    sentAt: '13:25:02',
-  },
-  {
-    id: 'T-0992',
-    apiName: '短信回执',
-    apiPath: '/api/sms/send',
-    method: 'POST',
-    callbackUrl: 'https://app.example.com/hooks/sms',
-    callbackMethod: 'POST',
-    requestId: 'req_sms_992',
-    status: 'sent',
-    retries: 0,
-    maxRetries: 3,
-    scheduledAt: '12:55:14',
-    sentAt: '12:55:16',
-  },
-  {
-    id: 'T-0988',
-    apiName: '活体检测',
-    apiPath: '/api/face/liveness',
-    method: 'POST',
-    callbackUrl: 'https://app.example.com/hooks/liveness',
-    callbackMethod: 'POST',
-    requestId: 'req_live_988',
-    status: 'sent',
-    retries: 0,
-    maxRetries: 3,
-    scheduledAt: '12:31:09',
-    sentAt: '12:31:12',
-  },
+const STATUS_TABS: { value: CallbackTaskStatus | 'all'; label: string }[] = [
+  { value: 'all', label: '全部' },
+  { value: 'pending', label: '待发送' },
+  { value: 'sent', label: '已发送' },
+  { value: 'failed', label: '失败' },
 ];
 
-const STATUS_LABEL: Record<TaskStatus, { label: string; status: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }> = {
+const STATUS_MAP: Record<
+  CallbackTaskStatus,
+  { label: string; status: 'success' | 'warning' | 'danger' | 'neutral' }
+> = {
   sent: { label: '已发送', status: 'success' },
-  pending: { label: '待发送', status: 'neutral' },
-  retry: { label: '重试中', status: 'warning' },
   failed: { label: '失败', status: 'danger' },
-  cancelled: { label: '已取消', status: 'neutral' },
+  pending: { label: '待发送', status: 'neutral' },
 };
 
 export function CallbackTasksPage() {
-  const [range, setRange] = useState<'today' | '7d' | '30d' | 'custom'>('7d');
-  const [search, setSearch] = useState('');
-  const [projectFilter, setProjectFilter] = useState('all');
-  const [apiFilter, setApiFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [selected, setSelected] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const initialApiId = params.get('apiId') ? Number(params.get('apiId')) : undefined;
+  const [apiId, setApiId] = useState<number | undefined>(initialApiId);
+  const [status, setStatus] = useState<CallbackTaskStatus | 'all'>('all');
+  const [keyword, setKeyword] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
 
-  const tasks = useMemo(() => {
-    return DEMO_TASKS.filter((t) => {
-      if (statusFilter !== 'all' && t.status !== statusFilter) return false;
-      if (search && !t.id.toLowerCase().includes(search.toLowerCase()) && !t.apiName.toLowerCase().includes(search.toLowerCase())) {
-        return false;
-      }
-      return true;
-    });
-  }, [search, statusFilter]);
+  // 写入 url 参数保持可分享
+  useEffect(() => {
+    const next = new URLSearchParams(params);
+    if (apiId !== undefined) next.set('apiId', String(apiId));
+    else next.delete('apiId');
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiId]);
 
-  const stats = useMemo(() => {
-    return {
-      pending: DEMO_TASKS.filter((t) => t.status === 'pending').length + 11,
-      retry: DEMO_TASKS.filter((t) => t.status === 'retry').length + 2,
-      sent: DEMO_TASKS.filter((t) => t.status === 'sent').length + 480,
-      failed: DEMO_TASKS.filter((t) => t.status === 'failed').length + 7,
-      successRate: '98.4%',
-    };
-  }, []);
+  const { data: page1, isLoading } = useCallbackTasks({
+    apiId,
+    status: status === 'all' ? undefined : status,
+    keyword: keyword || undefined,
+    page,
+    pageSize,
+  });
+  const { data: stats } = useCallbackStats();
+  const retryMut = useRetryCallbackTask();
+  const cancelMut = useCancelCallbackTask();
 
-  const selectedTask = tasks.find((t) => t.id === selected) ?? null;
+  const [selected, setSelected] = useState<number | null>(null);
+
+  const total = page1?.total ?? 0;
+  const items = page1?.items ?? [];
+
+  const successRate = useMemo(() => {
+    if (!stats || stats.total === 0) return '—';
+    const rate = (stats.sent / stats.total) * 100;
+    return `${rate.toFixed(0)}%`;
+  }, [stats]);
 
   return (
     <div className="page-container">
       <PageHeader
         title="回调任务管理"
         description="查看、管理所有 Mock 接口产生的异步回调任务"
-        actions={
-          <>
-            <Button variant="secondary">
-              <Trash2 className="h-3.5 w-3.5" />
-              清理已完成
-            </Button>
-            <Button variant="secondary" className="!border-warning-border !text-warning hover:!bg-warning-soft">
-              <RotateCw className="h-3.5 w-3.5" />
-              批量重发失败
-            </Button>
-          </>
-        }
       />
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard label="待发送" value={stats.pending} icon={<Clock />} />
-        <StatCard label="重试中" value={stats.retry} icon={<RotateCw />} />
-        <StatCard label="今日已发送" value={stats.sent} icon={<CheckCircle2 />} />
-        <StatCard label="失败任务" value={stats.failed} icon={<XCircle />} />
-        <StatCard label="成功率" value={stats.successRate} icon={<Activity />} />
-      </div>
-
-      <div className="mb-3.5 space-y-2.5">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-subtle" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="按任务 ID、接口名搜索…"
-              className="form-input h-8 pl-8"
-            />
-          </div>
-          <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="form-select h-8 w-auto min-w-[120px] text-[12px]">
-            <option value="all">全部项目</option>
-            <option>人脸识别平台</option>
-            <option>支付网关</option>
-          </select>
-          <select value={apiFilter} onChange={(e) => setApiFilter(e.target.value)} className="form-select h-8 w-auto min-w-[120px] text-[12px]">
-            <option value="all">全部接口</option>
-            <option>人脸注册</option>
-            <option>人脸对比</option>
-            <option>订单支付</option>
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="form-select h-8 w-auto min-w-[120px] text-[12px]">
-            <option value="all">全部状态</option>
-            <option value="pending">待发送</option>
-            <option value="retry">重试中</option>
-            <option value="sent">已发送</option>
-            <option value="failed">失败</option>
-          </select>
-          <Button variant="ghost" size="sm">
-            重置
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <span className="text-[12px] text-ink-tertiary">时间范围：</span>
-          <Tabs<'today' | '7d' | '30d' | 'custom'>
-            variant="pill"
-            value={range}
-            onChange={setRange}
-            items={[
-              { value: 'today', label: '今天' },
-              { value: '7d', label: '最近 7 天' },
-              { value: '30d', label: '最近 30 天' },
-              { value: 'custom', label: '自定义' },
-            ]}
-          />
-          <div className="ml-2 flex items-center gap-1.5">
-            <input
-              type="text"
-              defaultValue="2026-06-30"
-              className="form-input h-8 w-[120px] font-mono text-[12px]"
-            />
-            <span className="text-ink-subtle">至</span>
-            <input
-              type="text"
-              defaultValue="2026-07-06"
-              className="form-input h-8 w-[120px] font-mono text-[12px]"
-            />
-          </div>
-        </div>
+      <div className="mb-4 grid grid-cols-5 gap-3">
+        <StatCard label="待发送" value={stats?.pending ?? 0} icon={<Clock />} />
+        <StatCard label="今日已发送" value={stats?.sent ?? 0} icon={<CheckCircle2 />} />
+        <StatCard label="失败任务" value={stats?.failed ?? 0} icon={<XCircle />} />
+        <StatCard label="累计" value={stats?.total ?? 0} icon={<Inbox />} />
+        <StatCard label="成功率" value={successRate} icon={<Activity />} />
       </div>
 
       <Card
         title="回调任务"
         extra={
-          <div className="text-[12px] text-ink-tertiary">共 {tasks.length} 条任务 · 已选 0 条</div>
+          <div className="flex items-center gap-2">
+            {apiId !== undefined && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-line bg-canvas-subtle px-2 py-px text-[11px] text-ink-secondary">
+                API #{apiId}
+                <button
+                  type="button"
+                  className="ml-1 text-ink-tertiary hover:text-ink"
+                  onClick={() => {
+                    setApiId(undefined);
+                    setPage(1);
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-subtle" />
+              <input
+                type="text"
+                value={keyword}
+                onChange={(e) => {
+                  setKeyword(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="搜索 URL / 接口 / body"
+                className="h-8 w-[220px] rounded-md border border-line bg-white pl-8 pr-3 text-[13px] outline-none focus:border-ink"
+              />
+            </div>
+            <Tabs<'all' | CallbackTaskStatus>
+              variant="pill"
+              value={status}
+              onChange={(v) => {
+                setStatus(v);
+                setPage(1);
+              }}
+              items={STATUS_TABS.map((t) => ({
+                value: t.value === 'all' ? ('all' as const) : (t.value as CallbackTaskStatus),
+                label: t.label,
+              }))}
+            />
+            <span className="text-[11px] text-ink-subtle">每 3s 自动刷新</span>
+          </div>
         }
-        noBody
       >
-        {tasks.length === 0 ? (
+        {isLoading ? (
+          <div className="py-12 text-center text-[13px] text-ink-tertiary">加载中…</div>
+        ) : items.length === 0 ? (
           <Empty
-            icon={<Inbox className="h-10 w-10 text-ink-subtle" />}
+            icon={<Send className="h-10 w-10 text-ink-subtle" />}
             title="暂无回调任务"
-            description="启用接口的「延迟回调」后，调用会生成回调任务"
+            description={
+              total === 0
+                ? '启用接口的「延迟回调」后，调用会生成回调任务'
+                : '当前筛选条件下没有任务'
+            }
           />
         ) : (
-          <>
-            <table className="params-table">
+          <div className="overflow-x-auto">
+            <table className="table">
               <thead>
                 <tr>
-                  <th style={{ width: 32 }}>
-                    <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer rounded accent-ink" />
-                  </th>
-                  <th>任务 ID</th>
-                  <th>所属接口</th>
+                  <th>任务</th>
+                  <th>接口</th>
                   <th>回调 URL · 方法</th>
-                  <th>关联请求</th>
                   <th>状态</th>
+                  <th>计划发送时间</th>
+                  <th>实际响应</th>
                   <th>重试</th>
-                  <th>计划发送</th>
-                  <th>实际发送</th>
-                  <th>操作</th>
+                  <th className="text-right">操作</th>
                 </tr>
               </thead>
               <tbody>
-                {tasks.map((t) => {
-                  const st = STATUS_LABEL[t.status];
+                {items.map((t) => {
+                  const sm = STATUS_MAP[t.status];
                   return (
-                    <tr
-                      key={t.id}
-                      onClick={() => setSelected(t.id === selected ? null : t.id)}
-                      className={cn(
-                        'cursor-pointer transition-colors hover:bg-canvas',
-                        selected === t.id && t.status === 'retry' && '!bg-warning-soft',
-                        selected === t.id && t.status !== 'retry' && '!bg-canvas-subtle/50',
-                      )}
-                    >
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer rounded accent-ink" />
+                    <tr key={t.id}>
+                      <td>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[12.5px] font-medium text-ink">#{t.id}</span>
+                          <button
+                            type="button"
+                            onClick={() => setSelected(t.id)}
+                            className="rounded p-1 text-ink-tertiary hover:bg-canvas-subtle hover:text-ink"
+                            title="查看详情"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        {t.requestId && (
+                          <div className="mt-0.5 text-[10.5px] text-ink-subtle">req: {t.requestId}</div>
+                        )}
                       </td>
                       <td>
-                        <span className="param-code !text-[12px]">{t.id}</span>
-                      </td>
-                      <td>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-medium text-ink">{t.apiName}</span>
-                          <span className="param-code !text-[11px]">{t.apiPath}</span>
+                        <div className="text-[12.5px]">
+                          <div className="font-medium text-ink">{t.apiName ?? `API #${t.apiId}`}</div>
+                          <div className="mono text-[10.5px] text-ink-tertiary">
+                            {t.apiMethod} {t.apiPath}
+                          </div>
                         </div>
                       </td>
                       <td>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="max-w-[200px] truncate text-[12.5px] text-ink-secondary">{t.callbackUrl}</span>
+                        <span className="max-w-[260px] truncate text-[12.5px] text-ink-secondary" title={t.callbackUrl}>
+                          {t.callbackUrl}
+                        </span>
+                        <div className="mt-0.5">
                           <MethodBadge method={t.callbackMethod as any} />
                         </div>
                       </td>
                       <td>
-                        <span className="param-code !text-[11.5px]">{t.requestId}</span>
+                        <StatusBadge status={sm.status}>{sm.label}</StatusBadge>
                       </td>
-                      <td>
-                        <StatusBadge status={st.status}>
-                          {t.status === 'retry' ? '重试中 · 第 ' + t.retries + ' 次' : st.label}
-                        </StatusBadge>
+                      <td className="text-[12px] text-ink-secondary">
+                        {formatTime(t.scheduledAt)}
                       </td>
-                      <td>
-                        <span
-                          className={cn(
-                            'rounded px-1.5 py-0.5 text-[11px] font-medium',
-                            t.retries === 0
-                              ? 'bg-canvas-subtle text-ink-tertiary'
-                              : t.retries >= t.maxRetries
-                              ? 'bg-danger-soft text-danger'
-                              : 'bg-warning-soft text-warning',
-                          )}
-                        >
-                          {t.retries}/{t.maxRetries}
-                        </span>
-                        {t.status === 'retry' && (
-                          <div className="mt-1 h-1 w-14 overflow-hidden rounded-full bg-canvas-subtle">
-                            <div
-                              className="h-full rounded-full bg-warning transition-all"
-                              style={{ width: `${(t.retries / t.maxRetries) * 100}%` }}
-                            />
-                          </div>
-                        )}
-                      </td>
-                      <td className="font-mono text-[12px] text-ink-tertiary">{t.scheduledAt}</td>
-                      <td>
-                        {t.sentAt ? (
+                      <td className="text-[12px]">
+                        {t.responseStatus != null ? (
                           <span
-                            className={cn(
-                              'rounded px-1.5 py-0.5 font-mono text-[11.5px]',
-                              t.status === 'failed'
-                                ? 'bg-danger-soft text-danger'
-                                : t.status === 'sent'
-                                ? 'bg-success-soft text-success-text'
-                                : 'bg-canvas-subtle text-ink-tertiary',
-                            )}
+                            className={
+                              t.responseStatus >= 200 && t.responseStatus < 300
+                                ? 'text-success-text'
+                                : 'text-danger-text'
+                            }
                           >
-                            {t.sentAt} {t.status === 'sent' ? '(200)' : t.status === 'failed' ? '(503)' : '(500)'}
+                            {t.responseStatus}
                           </span>
                         ) : (
                           <span className="text-ink-subtle">—</span>
                         )}
+                        {t.sentAt && (
+                          <div className="text-[10.5px] text-ink-subtle">→ {formatTime(t.sentAt)}</div>
+                        )}
                       </td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1">
-                          {t.status === 'failed' ? (
-                            <>
-                              <button className="rounded px-1.5 py-0.5 text-[12px] font-medium text-warning transition-colors hover:bg-warning-soft">
-                                重发
-                              </button>
-                              <button className="rounded p-1 text-ink-subtle transition-colors hover:bg-canvas-subtle">
-                                <Eye className="h-3 w-3" />
-                              </button>
-                            </>
-                          ) : t.status === 'pending' ? (
-                            <>
-                              <button className="rounded p-1 text-ink-subtle transition-colors hover:bg-canvas-subtle" title="编辑">
-                                <Edit3 className="h-3 w-3" />
-                              </button>
-                              <button className="rounded p-1 text-ink-subtle transition-colors hover:bg-danger-soft hover:text-danger" title="取消">
-                                <X className="h-3 w-3" />
-                              </button>
-                            </>
-                          ) : (
-                            <button className="rounded p-1 text-ink-subtle transition-colors hover:bg-canvas-subtle" title="详情">
-                              <Eye className="h-3 w-3" />
-                            </button>
+                      <td className="text-[12px] text-ink-secondary">
+                        {t.retryCount} / {t.maxRetries}
+                      </td>
+                      <td className="text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="查看详情"
+                            onClick={() => setSelected(t.id)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          {t.status === 'failed' && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              title="手动重发"
+                              onClick={() => retryMut.mutate(t.id)}
+                              disabled={retryMut.isPending}
+                            >
+                              <RotateCw className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {t.status === 'pending' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="取消任务"
+                              onClick={() => cancelMut.mutate(t.id)}
+                              disabled={cancelMut.isPending}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
                           )}
                         </div>
                       </td>
@@ -436,125 +281,139 @@ export function CallbackTasksPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
 
-            {selectedTask && (
-              <div className="border-t border-line bg-canvas px-5 py-4">
-                <TaskDetail task={selectedTask} onClose={() => setSelected(null)} />
-              </div>
-            )}
-
-            <div className="flex items-center justify-between border-t border-line bg-canvas px-4 py-2.5 text-[12px] text-ink-tertiary">
-              <span>共 {tasks.length} 条任务 · 已选 0 条</span>
-              <div className="flex items-center gap-0.5">
-                <button className="page-btn">‹</button>
-                <button className="page-btn active">1</button>
-                <button className="page-btn">2</button>
-                <button className="page-btn">3</button>
-                <button className="page-btn">4</button>
-                <button className="page-btn">5</button>
-                <button className="page-btn">›</button>
-              </div>
+        {total > pageSize && (
+          <div className="mt-3 flex items-center justify-between border-t border-line-subtle pt-3 text-[12px] text-ink-tertiary">
+            <span>
+              共 {total} 条 · 第 {page} / {Math.ceil(total / pageSize)} 页
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+              >
+                上一页
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPage((p) => (p * pageSize < total ? p + 1 : p))}
+                disabled={page * pageSize >= total}
+              >
+                下一页
+              </Button>
             </div>
-          </>
+          </div>
         )}
       </Card>
+
+      <TaskDetailDrawer
+        taskId={selected}
+        onClose={() => setSelected(null)}
+      />
     </div>
   );
 }
 
-function TaskDetail({ task }: { task: CallbackTask; onClose: () => void }) {
+function TaskDetailDrawer({ taskId, onClose }: { taskId: number | null; onClose: () => void }) {
+  const { data: task, isLoading } = useCallbackTask(taskId ?? undefined);
+  const open = taskId !== null;
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <div>
-        <h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold tracking-[-0.005em] text-ink">
-          <Clock className="h-3.5 w-3.5 text-ink-tertiary" />
-          执行时间线
-        </h3>
-        <ol className="relative ml-1.5 space-y-3 border-l border-dashed border-line-strong pl-5">
-          {(task.timeline ?? []).map((ev, i) => (
-            <li key={i} className="relative">
-              <span
-                className={cn(
-                  'absolute -left-[26px] grid h-2.5 w-2.5 place-items-center rounded-full ring-2 ring-white',
-                  ev.status === 'success' && 'bg-success',
-                  ev.status === 'warning' && 'bg-warning',
-                  ev.status === 'failed' && 'bg-danger',
-                  ev.status === 'pending' && 'bg-ink-subtle',
-                )}
-              />
-              <div className="font-mono text-[11.5px] text-ink-tertiary">{ev.time}</div>
-              <div className="mt-0.5 text-[13px] font-medium text-ink">{ev.label}</div>
-              <div className="mt-0.5 text-[12px] text-ink-secondary">{ev.detail}</div>
-            </li>
-          ))}
-        </ol>
-      </div>
+    <Drawer open={open} onClose={onClose} title={task ? `任务 #${task.id} 详情` : '任务详情'} width="md">
+      {isLoading || !task ? (
+        <div className="py-8 text-center text-[13px] text-ink-tertiary">加载中…</div>
+      ) : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 text-[12.5px]">
+            <Field label="状态">
+              <StatusBadge status={STATUS_MAP[task.status].status}>
+                {STATUS_MAP[task.status].label}
+              </StatusBadge>
+            </Field>
+            <Field label="接口">
+              <span className="font-medium">{task.apiName}</span>
+              <div className="mono text-[11px] text-ink-tertiary">
+                {task.apiMethod} {task.apiPath}
+              </div>
+            </Field>
+            <Field label="回调 URL">
+              <code className="mono break-all text-[11.5px]">{task.callbackUrl}</code>
+            </Field>
+            <Field label="方法">{task.callbackMethod}</Field>
+            <Field label="计划发送">{formatTime(task.scheduledAt)}</Field>
+            <Field label="实际发送">{task.sentAt ? formatTime(task.sentAt) : '—'}</Field>
+            <Field label="重试次数">
+              {task.retryCount} / {task.maxRetries}
+            </Field>
+            <Field label="响应状态">
+              {task.responseStatus != null ? (
+                <span
+                  className={
+                    task.responseStatus >= 200 && task.responseStatus < 300
+                      ? 'text-success-text'
+                      : 'text-danger-text'
+                  }
+                >
+                  {task.responseStatus}
+                </span>
+              ) : (
+                '—'
+              )}
+            </Field>
+          </div>
 
-      <div>
-        <h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold tracking-[-0.005em] text-ink">
-          <Send className="h-3.5 w-3.5 text-ink-tertiary" />
-          最近一次请求 / 响应
-        </h3>
-        <pre className="code-content !rounded-md">
-          <span className="com"># REQUEST</span>
-          {'\n'}
-          {task.callbackMethod} {task.callbackUrl}
-          {'\n'}
-          Content-Type: application/json
-          {'\n'}
-          X-Request-Id: {task.requestId}
-          {'\n\n'}
-          <span className="brkt">{'{'}</span>
-          {'\n  '}
-          <span className="key">"event"</span>: <span className="str">"callback.delivered"</span>,
-          {'\n  '}
-          <span className="key">"requestId"</span>: <span className="str">"{task.requestId}"</span>,
-          {'\n  '}
-          <span className="key">"code"</span>: <span className="num">0</span>,
-          {'\n  '}
-          <span className="key">"data"</span>: <span className="brkt">{'{ /* 业务数据 */ }'}</span>
-          {'\n'}
-          <span className="brkt">{'}'}</span>
-          {'\n\n'}
-          <span className="com"># RESPONSE</span>
-          {'\n'}
-          {task.status === 'failed' ? (
-            <>
-              <span className="kw" style={{ color: '#F87171' }}>503 Service Unavailable</span>
-              {'\n'}
-              <span className="brkt">{'{'}</span>
-              {'\n  '}
-              <span className="key">"error"</span>: <span className="str">"upstream temporarily unavailable"</span>
-              {'\n'}
-              <span className="brkt">{'}'}</span>
-            </>
-          ) : task.status === 'retry' ? (
-            <>
-              <span className="kw" style={{ color: '#F87171' }}>500 Internal Server Error</span>
-              {'\n'}
-              <span className="brkt">{'{'}</span>
-              {'\n  '}
-              <span className="key">"error"</span>: <span className="str">"internal server error"</span>
-              {'\n'}
-              <span className="brkt">{'}'}</span>
-            </>
-          ) : (
-            <>
-              <span className="kw" style={{ color: '#86EFAC' }}>200 OK</span>
-              {'\n'}
-              <span className="brkt">{'{'}</span>
-              {'\n  '}
-              <span className="key">"success"</span>: <span className="kw">true</span>
-              {'\n'}
-              <span className="brkt">{'}'}</span>
-            </>
+          <div>
+            <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">请求头</div>
+            <pre className="mono rounded-md bg-canvas-deep p-3 text-[11.5px] text-ink-secondary">
+              {task.callbackHeaders ? JSON.stringify(task.callbackHeaders, null, 2) : '—'}
+            </pre>
+          </div>
+
+          <div>
+            <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">请求体</div>
+            <pre className="mono rounded-md bg-canvas-deep p-3 text-[11.5px] text-ink-secondary">
+              {task.callbackBody ?? '—'}
+            </pre>
+          </div>
+
+          <div>
+            <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">响应体</div>
+            <pre className="mono rounded-md bg-canvas-deep p-3 text-[11.5px] text-ink-secondary">
+              {task.responseBody ?? '—'}
+            </pre>
+          </div>
+
+          {task.errorMessage && (
+            <div>
+              <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-danger-text">错误信息</div>
+              <pre className="mono rounded-md border border-danger-border bg-danger-soft p-3 text-[11.5px] text-danger-text">
+                {task.errorMessage}
+              </pre>
+            </div>
           )}
-        </pre>
-      </div>
+        </div>
+      )}
+    </Drawer>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">{label}</div>
+      <div className="text-[12.5px] text-ink">{children}</div>
     </div>
   );
 }
 
-function cn(...args: Array<string | false | null | undefined>) {
-  return args.filter(Boolean).join(' ');
+function formatTime(iso: string): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }

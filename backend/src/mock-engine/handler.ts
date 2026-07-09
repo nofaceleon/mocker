@@ -1,11 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { requestLogs, type MockApi } from '../db/schema.js';
+import { requestLogs, callbackConfigs, type MockApi } from '../db/schema.js';
 import { logger } from '../utils/logger.js';
 import { matchBest, type Candidate } from './matcher.js';
 import { registry } from './registry.js';
-import { extractContext } from './request.js';
+import { extractContext, type RequestContext } from './request.js';
 import { validate, buildFailResponse } from './validator.js';
 import {
   renderTemplate,
@@ -17,6 +17,8 @@ import {
 } from './response.js';
 import { execute } from './db-ops.js';
 import { ensureBusinessTable } from './schema-manager.js';
+import { callbackScheduler } from './callback/callback-scheduler.js';
+import { enqueueCallbackTask, renderCallbackEnqueueInput } from './callback/callback-engine.js';
 
 /**
  * Mock 引擎主入口：所有 /mock/* 请求都走这里。
@@ -322,6 +324,9 @@ async function handleHTTPResponse(
     responseBody: rendered,
     responseTime: Date.now() - start,
   });
+
+  // 响应已落盘后再入队回调（不影响主链路时延）
+  scheduleCallback(api, renderCtx.req, rendered);
 }
 
 function stripMockPrefix(p: string): string {
@@ -436,4 +441,46 @@ function sanitizeHeaders(
     out[k] = Array.isArray(v) ? v.join(', ') : v;
   }
   return out;
+}
+
+/**
+ * 响应写出后，异步入队该接口的回调任务。
+ * - 仅普通 HTTP 协议触发（SSE 跳过）
+ * - 仅 callback_config.isEnabled 时触发
+ * - 任何错误都不应影响主链路
+ */
+function scheduleCallback(
+  api: MockApi,
+  reqCtxForTemplate: RequestContext,
+  responseBody: unknown,
+): void {
+  try {
+    const db = getDb();
+    const cfg = db
+      .select()
+      .from(callbackConfigs)
+      .where(eq(callbackConfigs.apiId, api.id))
+      .get();
+    if (!cfg || !cfg.isEnabled) return;
+    const input = renderCallbackEnqueueInput(cfg, {
+      req: reqCtxForTemplate,
+      response: responseBody,
+    });
+    if (!input) {
+      logger.warn({ apiId: api.id }, 'callback config enabled but url rendered empty, skip');
+      return;
+    }
+    const task = enqueueCallbackTask({
+      ...input,
+      apiId: api.id,
+      callbackConfigId: cfg.id,
+      requestId:
+        reqCtxForTemplate.headers['xRequestId'] ??
+        reqCtxForTemplate.headers['xrequestid'] ??
+        null,
+    });
+    if (task) callbackScheduler.scheduleExisting(task.id);
+  } catch (err) {
+    logger.warn({ err, apiId: api.id }, 'scheduleCallback failed');
+  }
 }
