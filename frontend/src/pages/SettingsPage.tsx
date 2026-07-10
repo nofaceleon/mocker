@@ -109,12 +109,12 @@ export function SettingsPage() {
           <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <StatCard
               label="数据库文件"
-              value={<span className="truncate font-mono text-[14px]">{config.dbPath}</span>}
+              value={<span className="break-all font-mono text-[14px] leading-[1.4]" title={config.dbPath}>{config.dbPath}</span>}
               icon={<Database />}
             />
             <StatCard
               label="备份目录"
-              value={<span className="truncate font-mono text-[14px]">{config.backupDir}</span>}
+              value={<span className="break-all font-mono text-[14px] leading-[1.4]" title={config.backupDir}>{config.backupDir}</span>}
               icon={<HardDrive />}
             />
             <StatCard
