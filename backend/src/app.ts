@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express, { type Express, type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import { config } from './config/index.js';
@@ -6,6 +8,9 @@ import { apiRouter } from './api/index.js';
 import { responseMiddleware } from './middleware/response.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { logger } from './utils/logger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export function createApp(): Express {
   const app = express();
@@ -36,6 +41,25 @@ export function createApp(): Express {
 
   // 管理 API：/api/*
   app.use('/api', apiRouter);
+
+  // 生产环境：托管前端静态文件 + SPA 兜底
+  //   - express.static 只服务实际存在的文件（JS/CSS/图片等），不存在的路径调用 next()
+  //   - 对于浏览器导航（Accept 含 text/html）且非 API 路径，返回 index.html 给 SPA
+  //   - 放在 mock 引擎前，保证浏览器导航不走 mock 引擎的 404 JSON
+  if (config.env === 'production') {
+    const frontendDist = path.resolve(__dirname, '../../frontend/dist');
+    app.use(express.static(frontendDist));
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.method === 'GET') {
+        const accept = req.headers.accept || '';
+        if (accept.includes('text/html')) {
+          res.sendFile(path.resolve(frontendDist, 'index.html'));
+          return;
+        }
+      }
+      next();
+    });
+  }
 
   // Mock 引擎入口（根路径，用户自定义路由原样生效）
   app.use('/', handleMockRequest as unknown as express.RequestHandler);

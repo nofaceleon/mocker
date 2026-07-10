@@ -28,6 +28,17 @@ ensure_deps() {
   fi
 }
 
+read_env() {
+  local key=$1 fallback=$2
+  if [ -f ".env" ]; then
+    local val
+    val=$(grep -E "^${key}=" .env | head -1 | cut -d= -f2 | tr -d '[:space:]')
+    [ -n "$val" ] && echo "$val" || echo "$fallback"
+  else
+    echo "$fallback"
+  fi
+}
+
 do_start() {
   local daemon=$1
 
@@ -39,11 +50,26 @@ do_start() {
   ensure_deps
   rm -f "$PID_FILE"
 
+  local node_env
+  node_env=$(read_env NODE_ENV development)
+
+  local run_cmd
+  local port_msg
+  if [ "$node_env" = "production" ]; then
+    # 生产模式：后端托管前端静态文件，只需一个进程
+    run_cmd="pnpm start"
+    port_msg="启动服务 (localhost:3000)"
+  else
+    # 开发模式：前后端独立热重载
+    run_cmd="pnpm dev"
+    port_msg="启动后端 (localhost:3000) + 前端 (localhost:5173)"
+  fi
+
   if [ "$daemon" = true ]; then
     echo "========================================"
     echo "  MockHub - 守护模式启动"
     echo "========================================"
-    nohup pnpm dev >> "$LOG_FILE" 2>&1 &
+    nohup $run_cmd >> "$LOG_FILE" 2>&1 &
     local pid=$!
     echo "$pid" > "$PID_FILE"
 
@@ -60,8 +86,8 @@ do_start() {
     echo "========================================"
     echo "  MockHub - 通用接口 Mock 服务平台"
     echo "========================================"
-    echo ">> 启动后端 (localhost:3000) + 前端 (localhost:5173)"
-    pnpm dev
+    echo ">> $port_msg"
+    $run_cmd
   fi
 }
 
@@ -91,24 +117,28 @@ do_stop() {
     set -e
   fi
 
-  # 2) 兜底：清理所有 MockHub 相关进程
+  # 2) 兜底：清理 MockHub 相关进程
   echo ">> 清理 MockHub 相关进程..."
   set +e
-  pkill -f "concurrently.*backend.*frontend" 2>/dev/null
-  pkill -f "pnpm.*--filter.*@mockhub/(backend|frontend)" 2>/dev/null
+  local node_env
+  node_env=$(read_env NODE_ENV development)
   pkill -f "@mockhub/backend" 2>/dev/null
-  pkill -f "@mockhub/frontend" 2>/dev/null
+  if [ "$node_env" != "production" ]; then
+    pkill -f "concurrently.*backend.*frontend" 2>/dev/null
+    pkill -f "pnpm.*--filter.*@mockhub/(backend|frontend)" 2>/dev/null
+    pkill -f "@mockhub/frontend" 2>/dev/null
+  fi
   set -e
 
-  # 3) 兜底：清理监听 mock 端口的进程
+  # 3) 兜底：清理监听端口的进程
   if command -v lsof >/dev/null 2>&1; then
     local ports=()
-    if [ -f ".env" ]; then
-      local env_port
-      env_port=$(grep -E "^PORT=" .env | head -1 | cut -d= -f2 | tr -d '[:space:]')
-      [ -n "$env_port" ] && ports+=("$env_port")
+    local env_port
+    env_port=$(read_env PORT 3000)
+    ports+=("$env_port")
+    if [ "$node_env" != "production" ]; then
+      ports+=(5173)
     fi
-    ports+=(3000 5173)
 
     set +e
     for port in "${ports[@]}"; do

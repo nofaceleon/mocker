@@ -1,0 +1,20 @@
+services:
+  mockhub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mockhub
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=data/mock.db
+      - CORS_ORIGIN=*
+      - LOG_LEVEL=info
+    volumes:
+      - mockhub-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  mockhub-data:
