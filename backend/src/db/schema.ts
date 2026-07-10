@@ -141,11 +141,17 @@ export const requestLogs = sqliteTable(
     responseStatus: integer('response_status'),
     responseBody: text('response_body'),
     responseTime: integer('response_time'), // ms
+    clientIp: text('client_ip'),
+    requestId: text('request_id'),
+    format: text('format'), // 'http' | 'sse'
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (t) => [index('idx_rl_api_created').on(t.apiId, t.createdAt)],
+  (t) => [
+    index('idx_rl_api_created').on(t.apiId, t.createdAt),
+    index('idx_rl_created').on(t.createdAt),
+  ],
 );
 
 // ---------------- 6. callback_configs (P0 schema only) ----------------

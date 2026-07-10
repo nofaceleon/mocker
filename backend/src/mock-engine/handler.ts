@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import crypto from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { requestLogs, callbackConfigs, type MockApi } from '../db/schema.js';
@@ -20,6 +21,8 @@ import { ensureBusinessTable } from './schema-manager.js';
 import { callbackScheduler } from './callback/callback-scheduler.js';
 import { enqueueCallbackTask, renderCallbackEnqueueInput } from './callback/callback-engine.js';
 
+const MAX_LOG_BODY_SIZE = 32 * 1024;
+
 /**
  * Mock 引擎主入口：所有 /mock/* 请求都走这里。
  * 不属于 mock 平台的请求会通过 Express 的 404 处理。
@@ -30,6 +33,7 @@ export async function handleMockRequest(
   _next: NextFunction,
 ): Promise<void> {
   const start = Date.now();
+  const meta = extractRequestMeta(req);
 
   // 进入 try/catch 守护，绝不让引擎崩溃（PRD 11.3 稳定性）
   try {
@@ -51,11 +55,14 @@ export async function handleMockRequest(
         responseStatus: 404,
         responseBody: { code: 'NOT_FOUND', message: `No mock matched ${method} ${path}` },
         responseTime: Date.now() - start,
+        clientIp: meta.clientIp,
+        requestId: meta.requestId,
+        format: 'http',
       });
       return;
     }
 
-    await executeMatched(req, res, matched.api, matched.params, start);
+    await executeMatched(req, res, matched.api, matched.params, start, meta);
   } catch (err) {
     logger.error({ err, path: req.path, method: req.method }, 'mock engine crashed');
     if (!res.headersSent) {
@@ -73,6 +80,7 @@ async function executeMatched(
   api: MockApi,
   pathParams: Record<string, string>,
   start: number,
+  meta: RequestMeta,
 ): Promise<void> {
   // 1. 提取参数
   const reqCtx = extractContext(req, pathParams);
@@ -93,6 +101,9 @@ async function executeMatched(
       responseStatus: fail.status,
       responseBody: fail.body,
       responseTime: Date.now() - start,
+      clientIp: meta.clientIp,
+      requestId: meta.requestId,
+      format: 'http',
     });
     return;
   }
@@ -124,12 +135,12 @@ async function executeMatched(
 
   // 5. 判断是否为SSE请求（根据protocol字段）
   if (api.protocol === 'SSE') {
-    await handleSSERequest(req, res, api, renderCtx, start);
+    await handleSSERequest(req, res, api, renderCtx, start, meta);
     return;
   }
 
   // 6. 普通HTTP响应
-  await handleHTTPResponse(req, res, api, renderCtx, start);
+  await handleHTTPResponse(req, res, api, renderCtx, start, meta);
 }
 
 /**
@@ -141,6 +152,7 @@ async function handleSSERequest(
   api: MockApi,
   renderCtx: ResponseContext,
   start: number,
+  meta: RequestMeta,
 ): Promise<void> {
   const responseBody = parseResponseBody(api.responseBody);
   const sseConfig = parseSSEConfig(responseBody, renderCtx);
@@ -161,6 +173,9 @@ async function handleSSERequest(
       responseStatus: 400,
       responseBody: { code: 'INVALID_SSE_CONFIG' },
       responseTime: Date.now() - start,
+      clientIp: meta.clientIp,
+      requestId: meta.requestId,
+      format: 'sse',
     });
     return;
   }
@@ -253,6 +268,9 @@ async function handleSSERequest(
         responseStatus: 200,
         responseBody: { eventsSent, format: 'sse' },
         responseTime: Date.now() - start,
+        clientIp: meta.clientIp,
+        requestId: meta.requestId,
+        format: 'sse',
       });
     };
 
@@ -279,6 +297,9 @@ async function handleSSERequest(
         responseStatus: 200,
         responseBody: { eventsSent: 1, format: 'sse' },
         responseTime: Date.now() - start,
+        clientIp: meta.clientIp,
+        requestId: meta.requestId,
+        format: 'sse',
       });
     }, 100);
   }
@@ -293,6 +314,7 @@ async function handleHTTPResponse(
   api: MockApi,
   renderCtx: ResponseContext,
   start: number,
+  meta: RequestMeta,
 ): Promise<void> {
   const responseBody = parseResponseBody(api.responseBody);
   const rendered = renderTemplate(responseBody, renderCtx);
@@ -323,6 +345,9 @@ async function handleHTTPResponse(
     responseStatus: api.responseStatus ?? 200,
     responseBody: rendered,
     responseTime: Date.now() - start,
+    clientIp: meta.clientIp,
+    requestId: meta.requestId,
+    format: 'http',
   });
 
   // 响应已落盘后再入队回调（不影响主链路时延）
@@ -400,22 +425,49 @@ type LogPayload = {
   responseStatus: number;
   responseBody: unknown;
   responseTime: number;
+  clientIp: string;
+  requestId: string;
+  format: 'http' | 'sse';
 };
+
+type RequestMeta = {
+  clientIp: string;
+  requestId: string;
+};
+
+function extractRequestMeta(req: Request): RequestMeta {
+  const headerVal = req.headers['x-request-id'];
+  const headerId = Array.isArray(headerVal) ? headerVal[0] : headerVal;
+  const requestId =
+    typeof headerId === 'string' && headerId.trim().length > 0
+      ? headerId.trim().slice(0, 64)
+      : crypto.randomBytes(8).toString('hex');
+  const clientIp =
+    (typeof req.ip === 'string' && req.ip) ||
+    req.socket?.remoteAddress ||
+    'unknown';
+  return { clientIp, requestId };
+}
 
 function writeLogSafely(payload: LogPayload): void {
   try {
     const db = getDb();
+    // drizzle 0.38 的 json mode 字段在 TS 类型上分别推断为 unknown / Record<string,string>
+    // 这里统一以 string 形式写入（drizzle 内部会再次 stringify），用 as never 绕过严格类型
     db.insert(requestLogs)
       .values({
         apiId: payload.apiId,
         requestMethod: payload.requestMethod,
         requestPath: payload.requestPath,
-        requestParams: payload.requestParams as never,
-        requestBody: payload.requestBody as never,
-        requestHeaders: payload.requestHeaders as never,
+        requestParams: truncateForLog(payload.requestParams, false) as never,
+        requestBody: truncateForLog(payload.requestBody, false) as never,
+        requestHeaders: JSON.stringify(payload.requestHeaders ?? {}) as never,
         responseStatus: payload.responseStatus,
-        responseBody: serializeForLog(payload.responseBody),
+        responseBody: truncateForLog(payload.responseBody, true),
         responseTime: payload.responseTime,
+        clientIp: payload.clientIp,
+        requestId: payload.requestId,
+        format: payload.format,
       })
       .run();
   } catch (err) {
@@ -424,11 +476,25 @@ function writeLogSafely(payload: LogPayload): void {
   }
 }
 
-function serializeForLog(v: unknown): string {
+function truncateForLog(v: unknown, asString: true): string;
+function truncateForLog(v: unknown, asString: false): string;
+function truncateForLog(v: unknown, asString = false): string {
   try {
-    return JSON.stringify(v);
+    const json = JSON.stringify(v);
+    if (!json) return '';
+    if (json.length > MAX_LOG_BODY_SIZE) {
+      const sliced = json.slice(0, MAX_LOG_BODY_SIZE);
+      return asString
+        ? `${sliced}...<truncated ${json.length - MAX_LOG_BODY_SIZE} bytes>`
+        : JSON.stringify({
+            __truncated: true,
+            preview: sliced,
+            originalSize: json.length,
+          });
+    }
+    return json;
   } catch {
-    return String(v);
+    return asString ? String(v) : '';
   }
 }
 
