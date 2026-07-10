@@ -164,7 +164,7 @@ export function ProjectsPage() {
         />
         <div className="flex items-center gap-2">
           <select
-            className="form-select h-8 w-auto min-w-[120px] text-[12px]"
+            className="form-select w-auto min-w-[120px] text-[12px]"
             value={sort}
             onChange={(e) => setSort(e.target.value as typeof sort)}
           >

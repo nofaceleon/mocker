@@ -639,7 +639,7 @@ function ApiListPanel({
         <select
           value={methodFilter}
           onChange={(e) => setMethodFilter(e.target.value)}
-          className="form-select h-8 w-auto min-w-[110px] text-[12px]"
+          className="form-select w-auto min-w-[110px] text-[12px]"
         >
           <option value="all">全部方法</option>
           <option value="GET">GET</option>
@@ -651,7 +651,7 @@ function ApiListPanel({
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="form-select h-8 w-auto min-w-[110px] text-[12px]"
+          className="form-select w-auto min-w-[110px] text-[12px]"
         >
           <option value="all">全部状态</option>
           <option value="enabled">已启用</option>
