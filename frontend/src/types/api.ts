@@ -242,3 +242,67 @@ export type CallbackStats = {
   failed: number;
   total: number;
 };
+
+// ---------- 调用日志 ----------
+export type RequestLogStatusKind = 'success' | 'warning' | 'danger' | 'info';
+
+export type RequestLog = {
+  id: ID;
+  apiId: ID | null;
+  apiName: string | null;
+  apiMethod: string | null;
+  apiPath: string | null;
+  featureGroupId: ID | null;
+  projectId: ID | null;
+  projectName: string | null;
+  method: string;
+  path: string;
+  status: number;
+  statusKind: RequestLogStatusKind;
+  responseTime: number;
+  responseSize: number;
+  clientIp: string | null;
+  requestId: string | null;
+  format: 'http' | 'sse' | null;
+  createdAt: string;
+  requestParams: unknown;
+  requestBody: unknown;
+  requestHeaders: Record<string, string> | null;
+  responseBody: string | null;
+};
+
+export type RequestLogPage = {
+  items: RequestLog[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type RequestLogStatusDistribution = {
+  '2xx': number;
+  '3xx': number;
+  '4xx': number;
+  '5xx': number;
+  other: number;
+};
+
+export type RequestLogTrendPoint = {
+  date: string; // MM-DD
+  http: number;
+  ws: number;
+  sse: number;
+};
+
+export type RequestLogStats = {
+  total: number;
+  today: number;
+  avgMs: number;
+  successRate: number;
+  statusDistribution: RequestLogStatusDistribution;
+  trendPoints: RequestLogTrendPoint[];
+};
+
+export type RequestLogFilters = {
+  projects: Array<{ id: ID; name: string }>;
+  apis: Array<{ id: ID; name: string; method: string; path: string; projectId: ID | null }>;
+};

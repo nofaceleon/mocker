@@ -1,80 +1,161 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   Calendar,
+  ChevronLeft,
   ChevronRight,
   Clock,
   Download,
   Inbox,
+  RotateCcw,
   Search,
   Server,
-  TrendingUp,
   TrendingDown,
   Trash2,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Button,
   Card,
   Empty,
   LiveDot,
   MethodBadge,
+  Modal,
   PageHeader,
   StatCard,
   Tabs,
 } from '@/components/ui';
+import { cn } from '@/lib/cn';
+import {
+  buildRequestLogExportUrl,
+  useClearRequestLogs,
+  useRequestLog,
+  useRequestLogFilters,
+  useRequestLogStats,
+  useRequestLogs,
+  type RequestLogQuery,
+  type RequestLogRange,
+  type RequestLogStatusClass,
+  type RequestLogHttpMethod,
+} from '@/hooks/queries/use-request-logs';
+import type { RequestLog, RequestLogStatusKind } from '@/types/api';
 
-type LogStatus = 'success' | 'warning' | 'danger' | 'info';
-type HttpMethod_ = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-
-type LogRow = {
-  id: string;
-  time: string;
-  ms: string;
-  method: HttpMethod_;
-  path: string;
-  api: string;
-  group: string;
-  request: string;
-  status: number;
-  statusKind: LogStatus;
-  responseMs: number;
-  ip: string;
-  requestId: string;
-};
-
-const DEMO_LOGS: LogRow[] = [
-  { id: 'L-2401', time: '2026-07-06 13:35:42', ms: '.128', method: 'POST', path: '/api/face/add', api: '人脸注册', group: '人脸管理', request: '{ name, imageUrl, requestId, callbackUrl }', status: 200, statusKind: 'success', responseMs: 12, ip: '192.168.1.10', requestId: 'req_demo_001' },
-  { id: 'L-2400', time: '2026-07-06 13:35:38', ms: '.204', method: 'GET', path: '/api/face/list?page=1&size=10', api: '人脸查询', group: '人脸管理', request: '{ page: 1, size: 10 }', status: 200, statusKind: 'success', responseMs: 28, ip: '192.168.1.10', requestId: 'req_query_002' },
-  { id: 'L-2399', time: '2026-07-06 13:35:31', ms: '.512', method: 'POST', path: '/api/face/notfound', api: '异常：人脸未找到', group: '人脸管理', request: '{ faceId: "missing_001" }', status: 404, statusKind: 'danger', responseMs: 102, ip: '192.168.1.10', requestId: 'req_err_003' },
-  { id: 'L-2398', time: '2026-07-06 13:35:18', ms: '.704', method: 'POST', path: '/api/face/compare', api: '人脸对比', group: '人脸管理', request: '{ source, target }', status: 200, statusKind: 'success', responseMs: 1502, ip: '192.168.1.10', requestId: 'req_compare_004' },
-  { id: 'L-2397', time: '2026-07-06 13:35:11', ms: '.083', method: 'POST', path: '/api/pay/wechat/create', api: '微信支付', group: '支付网关', request: '{ orderId, amount: 99 }', status: 400, statusKind: 'warning', responseMs: 8, ip: '192.168.1.12', requestId: 'req_wxpay_005' },
-  { id: 'L-2396', time: '2026-07-06 13:34:58', ms: '.245', method: 'DELETE', path: '/api/face/face_1720109876', api: '人脸删除', group: '人脸管理', request: '{ faceId: "face_1720109876" }', status: 204, statusKind: 'success', responseMs: 15, ip: '192.168.1.10', requestId: 'req_del_006' },
-  { id: 'L-2395', time: '2026-07-06 13:34:42', ms: '.901', method: 'GET', path: '/api/sms/send?phone=13800...', api: '短信发送', group: '短信通知', request: '{ phone, template, vars }', status: 200, statusKind: 'success', responseMs: 45, ip: '192.168.1.15', requestId: 'req_sms_007' },
-];
+const METHOD_OPTIONS: Array<RequestLogHttpMethod | 'all'> = ['all', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+const STATUS_OPTIONS: Array<RequestLogStatusClass | 'all'> = ['all', '2xx', '4xx', '5xx'];
+const PAGE_SIZE = 20;
 
 export function LogsPage() {
-  const [range, setRange] = useState<'1h' | '24h' | '7d' | 'custom'>('24h');
+  const [range, setRange] = useState<RequestLogRange>('24h');
   const [search, setSearch] = useState('');
-  const [projectFilter, setProjectFilter] = useState('all');
-  const [apiFilter, setApiFilter] = useState('all');
-  const [methodFilter, setMethodFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [selected, setSelected] = useState<string | null>(null);
+  const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [apiFilter, setApiFilter] = useState<string>('all');
+  const [methodFilter, setMethodFilter] = useState<RequestLogHttpMethod | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<RequestLogStatusClass | 'all'>('all');
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [checkedIds, setCheckedIds] = useState<number[]>([]);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [confirmClearSelected, setConfirmClearSelected] = useState(false);
 
-  const logs = useMemo(() => {
-    return DEMO_LOGS.filter((l) => {
-      if (search && !l.path.toLowerCase().includes(search.toLowerCase()) && !l.api.toLowerCase().includes(search.toLowerCase())) return false;
-      if (methodFilter !== 'all' && l.method !== methodFilter) return false;
-      if (statusFilter !== 'all') {
-        if (statusFilter === '2xx' && l.status >= 300) return false;
-        if (statusFilter === '4xx' && (l.status < 400 || l.status >= 500)) return false;
-        if (statusFilter === '5xx' && l.status < 500) return false;
-      }
-      return true;
-    });
-  }, [search, methodFilter, statusFilter]);
+  // 项目切换时清空接口筛选
+  useEffect(() => {
+    setApiFilter('all');
+    setPage(1);
+  }, [projectFilter]);
 
+  // 搜索词变化时重置页码
+  useEffect(() => {
+    setPage(1);
+  }, [search, methodFilter, statusFilter, range]);
+
+  const filtersQuery = useMemo(() => ({ projectId: projectFilter === 'all' ? undefined : Number(projectFilter) }), [projectFilter]);
+  const filters = useRequestLogFilters(filtersQuery);
+  const projectOptions = useMemo(() => filters.data?.projects ?? [], [filters.data]);
+  const apiOptions = useMemo(() => {
+    const all = filters.data?.apis ?? [];
+    if (projectFilter === 'all') return all;
+    return all.filter((a) => String(a.projectId ?? '') === projectFilter);
+  }, [filters.data, projectFilter]);
+
+  const listQuery = useMemo<RequestLogQuery>(
+    () => ({
+      projectId: projectFilter === 'all' ? undefined : Number(projectFilter),
+      apiId: apiFilter === 'all' ? undefined : Number(apiFilter),
+      method: methodFilter === 'all' ? undefined : methodFilter,
+      statusClass: statusFilter === 'all' ? undefined : statusFilter,
+      keyword: search.trim() || undefined,
+      range,
+      page,
+      pageSize: PAGE_SIZE,
+    }),
+    [projectFilter, apiFilter, methodFilter, statusFilter, search, range, page],
+  );
+
+  const stats = useRequestLogStats(range);
+  const logs = useRequestLogs(listQuery);
+  const detail = useRequestLog(selected ?? undefined);
+  const clearMut = useClearRequestLogs();
+
+  const total = logs.data?.total ?? 0;
+  const items = logs.data?.items ?? [];
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const allChecked = items.length > 0 && items.every((it) => checkedIds.includes(it.id));
+  const someChecked = checkedIds.length > 0;
+
+  function toggleCheckAll() {
+    if (allChecked) {
+      setCheckedIds((prev) => prev.filter((id) => !items.some((it) => it.id === id)));
+    } else {
+      setCheckedIds((prev) => Array.from(new Set([...prev, ...items.map((it) => it.id)])));
+    }
+  }
+
+  function toggleCheckOne(id: number) {
+    setCheckedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function handleReset() {
+    setSearch('');
+    setProjectFilter('all');
+    setApiFilter('all');
+    setMethodFilter('all');
+    setStatusFilter('all');
+    setRange('24h');
+    setPage(1);
+    setCheckedIds([]);
+  }
+
+  async function handleClearAll() {
+    try {
+      const res = await clearMut.mutateAsync({ all: true });
+      toast.success(`已清除 ${res.deleted} 条日志`);
+      setConfirmClearAll(false);
+      setCheckedIds([]);
+      setSelected(null);
+    } catch (e) {
+      toast.error(`清除失败: ${(e as Error).message}`);
+    }
+  }
+
+  async function handleClearSelected() {
+    try {
+      const res = await clearMut.mutateAsync({ ids: checkedIds });
+      toast.success(`已删除 ${res.deleted} 条日志`);
+      setConfirmClearSelected(false);
+      setCheckedIds([]);
+    } catch (e) {
+      toast.error(`删除失败: ${(e as Error).message}`);
+    }
+  }
+
+  function handleExport() {
+    const url = buildRequestLogExportUrl(listQuery);
+    window.open(url, '_blank');
+  }
+
+  // ---------- 渲染 ----------
   return (
     <div className="page-container">
       <PageHeader
@@ -82,11 +163,11 @@ export function LogsPage() {
         description="所有 Mock 接口的请求记录，便于调试和回溯问题"
         actions={
           <>
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={handleExport}>
               <Download className="h-3.5 w-3.5" />
               导出日志
             </Button>
-            <Button variant="danger">
+            <Button variant="danger" onClick={() => setConfirmClearAll(true)}>
               <Trash2 className="h-3.5 w-3.5" />
               清除全部
             </Button>
@@ -97,46 +178,27 @@ export function LogsPage() {
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="总调用次数"
-          value="12,847"
-          hint={
-            <span className="inline-flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" /> +12.5% 较上周
-            </span>
-          }
-          trend="up"
+          value={stats.data ? formatNumber(stats.data.total) : '—'}
           icon={<Activity />}
         />
         <StatCard
           label="今日调用"
-          value="2,431"
-          hint={
-            <span className="inline-flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" /> +8.3% 较昨日
-            </span>
-          }
-          trend="up"
+          value={stats.data ? formatNumber(stats.data.today) : '—'}
           icon={<Calendar />}
         />
         <StatCard
           label="平均响应时间"
-          value="42ms"
+          value={stats.data ? `${stats.data.avgMs}ms` : '—'}
           hint={
             <span className="inline-flex items-center gap-1">
-              <TrendingDown className="h-3 w-3" /> -3ms 优化中
+              <TrendingDown className="h-3 w-3" /> 实时计算
             </span>
           }
-          trend="up"
           icon={<Clock />}
         />
         <StatCard
           label="成功率"
-          value="98.7%"
-          hint={
-            <span className="inline-flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" /> +0.2% 较上周
-            </span>
-          }
-          trend="up"
+          value={stats.data ? `${stats.data.successRate}%` : '—'}
           icon={<Server />}
         />
       </div>
@@ -161,10 +223,13 @@ export function LogsPage() {
             </div>
           }
         >
-          <TrendChart />
+          <TrendChart data={stats.data?.trendPoints ?? null} />
         </Card>
         <Card title="状态码分布">
-          <StatusPieChart />
+          <StatusPieChart
+            distribution={stats.data?.statusDistribution ?? null}
+            total={stats.data?.total ?? 0}
+          />
         </Card>
       </div>
 
@@ -175,43 +240,72 @@ export function LogsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="按路径、接口名、IP 搜索…"
+              placeholder="按路径、接口名、IP、Request ID 搜索…"
               className="form-input h-8 pl-8"
             />
           </div>
-          <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="form-select h-8 w-auto min-w-[120px] text-[12px]">
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className="form-select h-8 w-auto min-w-[120px] text-[12px]"
+          >
             <option value="all">全部项目</option>
+            {projectOptions.map((p) => (
+              <option key={p.id} value={String(p.id)}>
+                {p.name}
+              </option>
+            ))}
           </select>
-          <select value={apiFilter} onChange={(e) => setApiFilter(e.target.value)} className="form-select h-8 w-auto min-w-[120px] text-[12px]">
+          <select
+            value={apiFilter}
+            onChange={(e) => setApiFilter(e.target.value)}
+            className="form-select h-8 w-auto min-w-[140px] text-[12px]"
+          >
             <option value="all">全部接口</option>
+            {apiOptions.map((a) => (
+              <option key={a.id} value={String(a.id)}>
+                {a.name} · {a.method} {a.path}
+              </option>
+            ))}
           </select>
-          <select value={methodFilter} onChange={(e) => setMethodFilter(e.target.value)} className="form-select h-8 w-auto min-w-[110px] text-[12px]">
-            <option value="all">全部方法</option>
-            <option>GET</option>
-            <option>POST</option>
-            <option>PUT</option>
-            <option>DELETE</option>
+          <select
+            value={methodFilter}
+            onChange={(e) => setMethodFilter(e.target.value as RequestLogHttpMethod | 'all')}
+            className="form-select h-8 w-auto min-w-[110px] text-[12px]"
+          >
+            {METHOD_OPTIONS.map((m) => (
+              <option key={m} value={m}>
+                {m === 'all' ? '全部方法' : m}
+              </option>
+            ))}
           </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="form-select h-8 w-auto min-w-[110px] text-[12px]">
-            <option value="all">全部状态</option>
-            <option value="2xx">2xx</option>
-            <option value="4xx">4xx</option>
-            <option value="5xx">5xx</option>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as RequestLogStatusClass | 'all')}
+            className="form-select h-8 w-auto min-w-[110px] text-[12px]"
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s === 'all' ? '全部状态' : s}
+              </option>
+            ))}
           </select>
-          <Button variant="ghost" size="sm">重置</Button>
+          <Button variant="ghost" size="sm" onClick={handleReset}>
+            <RotateCcw className="h-3.5 w-3.5" />
+            重置
+          </Button>
         </div>
 
         <div className="flex items-center gap-2.5">
           <span className="text-[12px] text-ink-tertiary">时间：</span>
-          <Tabs<'1h' | '24h' | '7d' | 'custom'>
+          <Tabs<RequestLogRange>
             variant="pill"
             value={range}
-            onChange={setRange}
+            onChange={(v) => setRange(v)}
             items={[
               { value: '1h', label: '最近 1 小时' },
               { value: '24h', label: '最近 24 小时' },
               { value: '7d', label: '最近 7 天' },
-              { value: 'custom', label: '自定义' },
             ]}
           />
           <div className="ml-auto inline-flex items-center gap-1.5 text-[12px] text-ink-tertiary">
@@ -221,11 +315,25 @@ export function LogsPage() {
         </div>
       </div>
 
-      <Card
-        title={`调用日志 · ${logs.length} 条`}
-        noBody
-      >
-        {logs.length === 0 ? (
+      <Card title={`调用日志 · ${formatNumber(total)} 条`} noBody>
+        {someChecked && (
+          <div className="flex items-center justify-between border-b border-line bg-canvas-subtle px-4 py-2 text-[12px]">
+            <span className="text-ink-secondary">已选 {checkedIds.length} 条</span>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setCheckedIds([])}>
+                取消选择
+              </Button>
+              <Button variant="danger" size="sm" onClick={() => setConfirmClearSelected(true)}>
+                <Trash2 className="h-3.5 w-3.5" />
+                批量删除
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {logs.isLoading && items.length === 0 ? (
+          <div className="px-4 py-10 text-center text-[12px] text-ink-tertiary">加载中…</div>
+        ) : items.length === 0 ? (
           <Empty
             icon={<Inbox className="h-10 w-10 text-ink-subtle" />}
             title="暂无调用日志"
@@ -237,133 +345,196 @@ export function LogsPage() {
               <thead>
                 <tr>
                   <th style={{ width: 32 }}>
-                    <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer rounded accent-ink" />
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 cursor-pointer rounded accent-ink"
+                      checked={allChecked}
+                      onChange={toggleCheckAll}
+                    />
                   </th>
                   <th>调用时间</th>
                   <th>方法</th>
                   <th>路径</th>
                   <th>所属接口</th>
-                  <th>请求参数</th>
+                  <th>客户端</th>
                   <th>状态</th>
                   <th>响应时间</th>
-                  <th>操作</th>
+                  <th className="text-right">操作</th>
                 </tr>
               </thead>
               <tbody>
-                {logs.map((l) => (
-                  <tr
+                {items.map((l) => (
+                  <LogRowView
                     key={l.id}
-                    onClick={() => setSelected(l.id === selected ? null : l.id)}
-                    className="cursor-pointer hover:bg-canvas"
-                  >
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer rounded accent-ink" />
-                    </td>
-                    <td>
-                      <div className="flex flex-col leading-tight">
-                        <span className="text-ink">{l.time.split(' ')[0]}</span>
-                        <span className="font-mono text-[11px] text-ink-subtle">
-                          {l.time.split(' ')[1]}
-                          <span className="text-ink-disabled">{l.ms}</span>
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <MethodBadge method={l.method} />
-                    </td>
-                    <td>
-                      <span className="param-code max-w-[260px] truncate">{l.path}</span>
-                    </td>
-                    <td>
-                      <div className="flex flex-col leading-tight">
-                        <span className="text-ink">{l.api}</span>
-                        <span className="text-[11px] text-ink-subtle">（{l.group}）</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="font-mono text-[11.5px] text-ink-tertiary">{l.request}</span>
-                    </td>
-                    <td>
-                      <span
-                        className={cn(
-                          'rounded px-1.5 py-0.5 font-mono text-[11.5px] font-semibold',
-                          l.statusKind === 'success' && 'bg-success-soft text-success',
-                          l.statusKind === 'warning' && 'bg-warning-soft text-warning',
-                          l.statusKind === 'danger' && 'bg-danger-soft text-danger',
-                          l.statusKind === 'info' && 'bg-info-soft text-info',
-                        )}
-                      >
-                        {l.status}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={cn(
-                          'rounded px-1.5 py-0.5 font-mono text-[11.5px] font-medium',
-                          l.responseMs < 100
-                            ? 'bg-success-soft text-success'
-                            : l.responseMs < 500
-                            ? 'bg-canvas-subtle text-ink-secondary'
-                            : l.responseMs < 1500
-                            ? 'bg-warning-soft text-warning'
-                            : 'bg-danger-soft text-danger',
-                        )}
-                      >
-                        {l.responseMs} ms
-                      </span>
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm">
-                        查看
-                        <ChevronRight className="h-3 w-3" />
-                      </Button>
-                    </td>
-                  </tr>
+                    log={l}
+                    checked={checkedIds.includes(l.id)}
+                    onToggleCheck={() => toggleCheckOne(l.id)}
+                    expanded={selected === l.id}
+                    onToggleExpand={() => setSelected(selected === l.id ? null : l.id)}
+                  />
                 ))}
               </tbody>
             </table>
 
-            {selected && (
+            {selected && detail.data && (
               <div className="border-t border-line bg-canvas px-5 py-4">
-                <LogDetail log={logs.find((l) => l.id === selected)!} onClose={() => setSelected(null)} />
+                <LogDetail log={detail.data} onClose={() => setSelected(null)} />
               </div>
             )}
 
             <div className="flex items-center justify-between border-t border-line bg-canvas px-4 py-2.5 text-[12px] text-ink-tertiary">
-              <span>显示 1 - {Math.min(logs.length, 8)} 条 / 共 2,431 条 · 已选 0 条</span>
-              <div className="flex items-center gap-0.5">
-                <button className="page-btn">‹</button>
-                <button className="page-btn active">1</button>
-                <button className="page-btn">2</button>
-                <button className="page-btn">3</button>
-                <button className="page-btn">4</button>
-                <button className="page-btn">5</button>
-                <span className="px-1 text-ink-disabled">…</span>
-                <button className="page-btn">305</button>
-                <button className="page-btn">›</button>
-              </div>
+              <span>
+                显示 {(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)} 条 / 共 {formatNumber(total)} 条
+                {someChecked ? ` · 已选 ${checkedIds.length} 条` : ''}
+              </span>
+              <Pagination page={page} totalPages={totalPages} onChange={setPage} />
             </div>
           </>
         )}
       </Card>
+
+      {/* 二次确认：清除全部 */}
+      <Modal
+        open={confirmClearAll}
+        onClose={() => setConfirmClearAll(false)}
+        title="清除全部调用日志？"
+        width="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmClearAll(false)}>
+              取消
+            </Button>
+            <Button variant="danger" onClick={handleClearAll} disabled={clearMut.isPending}>
+              {clearMut.isPending ? '清除中…' : '确认清除'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[13px] text-ink-secondary">
+          此操作不可恢复，将删除所有 Mock 接口的请求记录。当前共 <strong className="text-ink">{formatNumber(total)}</strong> 条。
+        </p>
+      </Modal>
+
+      {/* 二次确认：批量删除 */}
+      <Modal
+        open={confirmClearSelected}
+        onClose={() => setConfirmClearSelected(false)}
+        title={`删除选中的 ${checkedIds.length} 条日志？`}
+        width="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmClearSelected(false)}>
+              取消
+            </Button>
+            <Button variant="danger" onClick={handleClearSelected} disabled={clearMut.isPending}>
+              {clearMut.isPending ? '删除中…' : '确认删除'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[13px] text-ink-secondary">删除后无法恢复。</p>
+      </Modal>
     </div>
   );
 }
 
-function LogDetail({ log, onClose }: { log: LogRow; onClose: () => void }) {
-  const [tab, setTab] = useState<'request' | 'response' | 'headers' | 'script'>('request');
+// ---------- 单行 ----------
+function LogRowView({
+  log,
+  checked,
+  onToggleCheck,
+  expanded,
+  onToggleExpand,
+}: {
+  log: RequestLog;
+  checked: boolean;
+  onToggleCheck: () => void;
+  expanded: boolean;
+  onToggleExpand: () => void;
+}) {
+  const { dateStr, timeStr, msStr } = formatDateParts(log.createdAt);
+  return (
+    <tr
+      onClick={onToggleExpand}
+      className="cursor-pointer hover:bg-canvas"
+    >
+      <td onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          className="h-3.5 w-3.5 cursor-pointer rounded accent-ink"
+          checked={checked}
+          onChange={onToggleCheck}
+        />
+      </td>
+      <td>
+        <div className="flex flex-col leading-tight">
+          <span className="text-ink">{dateStr}</span>
+          <span className="font-mono text-[11px] text-ink-subtle">
+            {timeStr}
+            <span className="text-ink-disabled">{msStr}</span>
+          </span>
+        </div>
+      </td>
+      <td>
+        <MethodBadge method={log.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'} />
+      </td>
+      <td>
+        <span className="param-code max-w-[260px] truncate" title={log.path}>
+          {log.path}
+        </span>
+      </td>
+      <td>
+        <div className="flex flex-col leading-tight">
+          <span className="text-ink">{log.apiName ?? '—'}</span>
+          {log.projectName && (
+            <span className="text-[11px] text-ink-subtle">（{log.projectName}）</span>
+          )}
+        </div>
+      </td>
+      <td>
+        <span className="font-mono text-[11.5px] text-ink-tertiary">{log.clientIp ?? '—'}</span>
+      </td>
+      <td>
+        <span className={cn(statusKindClass(log.statusKind))}>{log.status}</span>
+      </td>
+      <td>
+        <span className={cn(responseTimeClass(log.responseTime))}>{log.responseTime} ms</span>
+      </td>
+      <td onClick={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="sm">
+          {expanded ? '收起' : '查看'}
+          <ChevronRight className="h-3 w-3" />
+        </Button>
+      </td>
+    </tr>
+  );
+}
+
+// ---------- 详情面板 ----------
+function LogDetail({ log, onClose }: { log: RequestLog; onClose: () => void }) {
+  const [tab, setTab] = useState<'request' | 'response' | 'headers' | 'server'>('request');
+  const timeMs = log.createdAt ? new Date(log.createdAt).getTime() : Date.now();
+
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-[13px] font-semibold tracking-[-0.005em] text-ink">
-          <span className="font-mono">{log.method}</span>
+          <MethodBadge method={log.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'} />
           <span className="font-mono text-ink-secondary">{log.path}</span>
+          {log.format === 'sse' && (
+            <span className="rounded bg-warning-soft px-1.5 py-0.5 font-mono text-[10.5px] font-semibold text-warning">
+              SSE
+            </span>
+          )}
         </h3>
-        <button onClick={onClose} className="rounded p-1 text-ink-tertiary hover:bg-canvas-subtle hover:text-ink">
+        <button
+          onClick={onClose}
+          className="rounded p-1 text-ink-tertiary hover:bg-canvas-subtle hover:text-ink"
+        >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-      <Tabs<'request' | 'response' | 'headers' | 'script'>
+      <Tabs<'request' | 'response' | 'headers' | 'server'>
         value={tab}
         onChange={setTab}
         className="mb-3"
@@ -371,58 +542,59 @@ function LogDetail({ log, onClose }: { log: LogRow; onClose: () => void }) {
           { value: 'request', label: 'Request' },
           { value: 'response', label: 'Response' },
           { value: 'headers', label: 'Headers' },
-          { value: 'script', label: '脚本执行日志' },
+          { value: 'server', label: '服务端日志' },
         ]}
       />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div>
-          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">终端日志</h4>
-          <pre className="code-content !rounded-md !p-3 !text-[12px]">
-            <span className="ts" style={{ color: '#6B7280' }}>[13:35:42.128]</span> <span style={{ color: '#93C5FD' }}>INFO</span>  接收请求 <span style={{ color: '#C4B5FD' }}>POST /api/face/add</span>
-            {'\n'}
-            <span className="ts" style={{ color: '#6B7280' }}>[13:35:42.130]</span> <span style={{ color: '#93C5FD' }}>INFO</span>  客户端 IP: 192.168.1.10
-            {'\n'}
-            <span className="ts" style={{ color: '#6B7280' }}>[13:35:42.131]</span> <span style={{ color: '#93C5FD' }}>INFO</span>  加载脚本 mock-script.js (3.2 KB)
-            {'\n'}
-            <span className="ts" style={{ color: '#6B7280' }}>[13:35:42.135]</span> <span style={{ color: '#FBBF24' }}>WARN</span>  参数校验: imageUrl 长度 &gt; 256，已截断
-            {'\n'}
-            <span className="ts" style={{ color: '#6B7280' }}>[13:35:42.137]</span> <span style={{ color: '#93C5FD' }}>INFO</span>  数据联动: db.insert(face_data) → 42 rows
-            {'\n'}
-            <span className="ts" style={{ color: '#6B7280' }}>[13:35:42.138]</span> <span style={{ color: '#86EFAC' }}>SUCCESS</span>  创建回调任务 <span style={{ color: '#C4B5FD' }}>T-1001</span>
-            {'\n'}
-            <span className="ts" style={{ color: '#6B7280' }}>[13:35:42.139]</span> <span style={{ color: '#93C5FD' }}>INFO</span>  调度器: 5 秒后执行回调
-            {'\n'}
-            <span className="ts" style={{ color: '#6B7280' }}>[13:35:42.140]</span> <span style={{ color: '#86EFAC' }}>SUCCESS</span>  响应已发送 · 14ms
-            {'\n'}
-            <span className="ts" style={{ color: '#6B7280' }}>[13:35:42.140]</span> <span style={{ color: '#86EFAC' }}>SUCCESS</span>  <span style={{ color: '#86EFAC' }}>200</span> (12ms)
-          </pre>
+          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">
+            {tab === 'request' && '请求参数 / Body'}
+            {tab === 'response' && '响应内容'}
+            {tab === 'headers' && '请求 / 响应头'}
+            {tab === 'server' && '服务端处理时间线'}
+          </h4>
+          {tab === 'request' && (
+            <pre className="code-content !rounded-md !p-3 !text-[12px]">
+              {renderCodeBlock([
+                { label: 'Query', value: log.requestParams },
+                { label: 'Body', value: log.requestBody },
+              ])}
+            </pre>
+          )}
+          {tab === 'response' && (
+            <pre className="code-content !rounded-md !p-3 !text-[12px]">
+              {renderResponseBody(log)}
+            </pre>
+          )}
+          {tab === 'headers' && (
+            <pre className="code-content !rounded-md !p-3 !text-[12px]">
+              {log.requestHeaders
+                ? Object.entries(log.requestHeaders)
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join('\n')
+                : '—'}
+            </pre>
+          )}
+          {tab === 'server' && (
+            <pre className="code-content !rounded-md !p-3 !text-[12px]">
+              {renderServerTimeline(log, timeMs)}
+            </pre>
+          )}
         </div>
         <div>
           <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">请求摘要</h4>
-          <div className="space-y-2 rounded-md border border-line bg-white p-3 text-[12.5px]">
-            <Row k="Method" v={log.method} mono />
-            <Row k="URL" v={`http://localhost:3001${log.path}`} mono />
-            <Row k="Client IP" v={log.ip} mono />
-            <Row k="User-Agent" v="MockStudio-CLI/0.1.0" mono />
-            <Row k="Request ID" v={log.requestId} mono />
-            <Row k="HTTP Ver." v="HTTP/1.1" mono />
-            <Row
-              k="Status"
-              v={
-                <span
-                  className={cn(
-                    'rounded px-1.5 py-0.5 font-mono text-[11.5px] font-semibold',
-                    log.statusKind === 'success' && 'bg-success-soft text-success',
-                    log.statusKind === 'warning' && 'bg-warning-soft text-warning',
-                    log.statusKind === 'danger' && 'bg-danger-soft text-danger',
-                  )}
-                >
-                  {log.status} {log.status === 200 ? 'OK' : log.status === 404 ? 'Not Found' : ''}
-                </span>
-              }
-            />
-            <Row k="Response Size" v="248 B" mono />
-            <Row k="Total Time" v={`${log.responseMs} ms`} mono />
+          <div className="rounded-md border border-line bg-elevated p-3">
+            <KV k="Method" v={log.method} />
+            <KV k="URL" v={log.path} mono />
+            <KV k="Client IP" v={log.clientIp ?? '—'} mono />
+            <KV k="Request ID" v={log.requestId ?? '—'} mono />
+            <KV k="格式" v={log.format === 'sse' ? 'SSE' : 'HTTP'} />
+            <KV k="状态" v={`${log.status} ${statusText(log.status)}`} valueClass={log.statusKind === 'success' ? 'text-success' : log.statusKind === 'warning' || log.statusKind === 'danger' ? 'text-warning' : ''} />
+            <KV k="响应时间" v={`${log.responseTime} ms`} mono />
+            <KV k="响应大小" v={`${log.responseSize} B`} mono />
+            <KV k="所属接口" v={log.apiName ?? '—'} />
+            <KV k="所属项目" v={log.projectName ?? '—'} />
+            <KV k="调用时间" v={new Date(log.createdAt).toLocaleString()} mono />
           </div>
         </div>
       </div>
@@ -430,30 +602,138 @@ function LogDetail({ log, onClose }: { log: LogRow; onClose: () => void }) {
   );
 }
 
-function Row({ k, v, mono }: { k: string; v: React.ReactNode; mono?: boolean }) {
+function KV({ k, v, mono, valueClass }: { k: string; v: string; mono?: boolean; valueClass?: string }) {
   return (
-    <div className="flex items-start gap-3">
-      <span className="w-[90px] flex-shrink-0 text-ink-tertiary">{k}</span>
-      <span className={mono ? 'font-mono' : ''}>{v}</span>
+    <div className="grid grid-cols-[90px_1fr] gap-2 py-1 text-[12px]">
+      <span className="text-ink-tertiary">{k}</span>
+      <span className={cn('text-ink', mono && 'font-mono', valueClass)}>{v}</span>
     </div>
   );
 }
 
-// 简易 SVG 折线图（按设计稿）
-function TrendChart() {
-  const data = [
-    { x: '06-30', http: 320, ws: 80, sse: 40 },
-    { x: '07-01', http: 410, ws: 95, sse: 50 },
-    { x: '07-02', http: 380, ws: 110, sse: 45 },
-    { x: '07-03', http: 480, ws: 130, sse: 60 },
-    { x: '07-04', http: 520, ws: 140, sse: 70 },
-    { x: '07-05', http: 460, ws: 120, sse: 65 },
-    { x: '07-06', http: 580, ws: 160, sse: 80 },
-  ];
-  const W = 720, H = 180, pad = 24;
-  const max = 600;
-  const xStep = (W - pad * 2) / (data.length - 1);
+// ---------- 服务端时间线 ----------
+function renderServerTimeline(log: RequestLog, startedAt: number): string {
+  const fmt = (delta: number) => {
+    const d = new Date(startedAt + delta);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    const ms = String(d.getMilliseconds()).padStart(3, '0');
+    return `${hh}:${mm}:${ss}.${ms}`;
+  };
+  const lines: string[] = [];
+  lines.push(`[${fmt(0)}] [INFO]    接收请求 ${log.method} ${log.path}`);
+  lines.push(`[${fmt(0)}] [INFO]    客户端 IP: ${log.clientIp ?? 'unknown'}`);
+  if (log.requestId) lines.push(`[${fmt(0)}] [INFO]    Request ID: ${log.requestId}`);
+  if (log.format === 'sse') {
+    lines.push(`[${fmt(1)}] [INFO]    检测到 SSE 协议，准备事件流`);
+  } else {
+    lines.push(`[${fmt(1)}] [INFO]    校验请求参数`);
+  }
+  lines.push(`[${fmt(log.responseTime)}] [${log.statusKind === 'success' ? 'SUCCESS' : log.statusKind === 'danger' ? 'ERROR' : 'WARN'}] 响应已返回 ${log.status} (${log.responseTime}ms)`);
+  if (log.format === 'sse') {
+    lines.push(`[${fmt(log.responseTime)}] [INFO]    SSE 流已结束`);
+  }
+  return lines.join('\n');
+}
 
+function renderCodeBlock(items: Array<{ label: string; value: unknown }>): string {
+  const out: string[] = [];
+  for (const it of items) {
+    out.push(`${it.label}:`);
+    out.push(safeStringify(it.value));
+    out.push('');
+  }
+  return out.join('\n').trimEnd();
+}
+
+function renderResponseBody(log: RequestLog): string {
+  if (!log.responseBody) return '—';
+  // 后端在 response_body 中：SSE 分支写的是 {eventsSent,format:'sse'}，HTTP 分支写的是模板渲染后的内容
+  // 如果内容是 JSON 字符串，尝试格式化
+  const raw = log.responseBody;
+  try {
+    const obj = JSON.parse(raw);
+    return safeStringify(obj);
+  } catch {
+    return raw;
+  }
+}
+
+function safeStringify(v: unknown): string {
+  try {
+    return JSON.stringify(v, null, 2);
+  } catch {
+    return String(v);
+  }
+}
+
+function statusText(status: number): string {
+  const map: Record<number, string> = {
+    200: 'OK',
+    201: 'Created',
+    204: 'No Content',
+    301: 'Moved Permanently',
+    302: 'Found',
+    304: 'Not Modified',
+    400: 'Bad Request',
+    401: 'Unauthorized',
+    403: 'Forbidden',
+    404: 'Not Found',
+    405: 'Method Not Allowed',
+    409: 'Conflict',
+    422: 'Unprocessable Entity',
+    429: 'Too Many Requests',
+    500: 'Internal Server Error',
+    502: 'Bad Gateway',
+    503: 'Service Unavailable',
+    504: 'Gateway Timeout',
+  };
+  return map[status] ?? '';
+}
+
+function statusKindClass(kind: RequestLogStatusKind): string {
+  const base = 'rounded px-1.5 py-0.5 font-mono text-[11.5px] font-semibold';
+  if (kind === 'success') return cn(base, 'bg-success-soft text-success');
+  if (kind === 'warning') return cn(base, 'bg-warning-soft text-warning');
+  if (kind === 'danger') return cn(base, 'bg-danger-soft text-danger');
+  return cn(base, 'bg-info-soft text-info');
+}
+
+function responseTimeClass(ms: number): string {
+  const base = 'rounded px-1.5 py-0.5 font-mono text-[11.5px] font-medium';
+  if (ms < 100) return cn(base, 'bg-success-soft text-success');
+  if (ms < 500) return cn(base, 'bg-canvas-subtle text-ink-secondary');
+  if (ms < 1500) return cn(base, 'bg-warning-soft text-warning');
+  return cn(base, 'bg-danger-soft text-danger');
+}
+
+function formatDateParts(iso: string): { dateStr: string; timeStr: string; msStr: string } {
+  const d = new Date(iso);
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const ms = `.${String(d.getMilliseconds()).padStart(3, '0')}`;
+  return { dateStr: date, timeStr: time, msStr: ms };
+}
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+function formatNumber(n: number): string {
+  return n.toLocaleString('zh-CN');
+}
+
+// ---------- 图表 ----------
+type TrendPoint = { date: string; http: number; ws: number; sse: number };
+
+function TrendChart({ data }: { data: TrendPoint[] | null }) {
+  if (!data || data.length === 0) {
+    return <div className="px-1 py-8 text-center text-[12px] text-ink-subtle">暂无趋势数据</div>;
+  }
+  const W = 720, H = 180, pad = 24;
+  const max = Math.max(1, ...data.map((d) => d.http + d.ws + d.sse));
+  const xStep = (W - pad * 2) / Math.max(1, data.length - 1);
   const points = (key: 'http' | 'ws' | 'sse') =>
     data
       .map((d, i) => {
@@ -462,11 +742,9 @@ function TrendChart() {
         return `${x},${y}`;
       })
       .join(' ');
-
   return (
     <div className="px-1 pt-2">
       <svg viewBox={`0 0 ${W} ${H + 20}`} className="h-[200px] w-full">
-        {/* Y grid */}
         {[0, 0.25, 0.5, 0.75, 1].map((p, i) => (
           <line
             key={i}
@@ -478,48 +756,28 @@ function TrendChart() {
             strokeWidth="1"
           />
         ))}
-        {/* 渐变 */}
         <defs>
           <linearGradient id="httpGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#09090B" stopOpacity="0.18" />
             <stop offset="100%" stopColor="#09090B" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {/* HTTP 折线 + 填充 */}
-        <polyline
-          points={points('http')}
-          fill="none"
-          stroke="#09090B"
-          strokeWidth="1.5"
-        />
+        <polyline points={points('http')} fill="none" stroke="#09090B" strokeWidth="1.5" />
         <polygon
           points={`${pad},${H - pad} ${points('http')} ${W - pad},${H - pad}`}
           fill="url(#httpGrad)"
         />
-        <polyline
-          points={points('ws')}
-          fill="none"
-          stroke="#22C55E"
-          strokeWidth="1.5"
-        />
-        <polyline
-          points={points('sse')}
-          fill="none"
-          stroke="#F59E0B"
-          strokeWidth="1.5"
-        />
-        {/* 数据点 */}
+        <polyline points={points('ws')} fill="none" stroke="#22C55E" strokeWidth="1.5" />
+        <polyline points={points('sse')} fill="none" stroke="#F59E0B" strokeWidth="1.5" />
         {data.map((d, i) => (
-          <g key={i}>
-            <circle
-              cx={pad + i * xStep}
-              cy={H - pad - (d.http / max) * (H - pad * 2)}
-              r={i === 3 ? 3.5 : 2}
-              fill="#09090B"
-            />
-          </g>
+          <circle
+            key={i}
+            cx={pad + i * xStep}
+            cy={H - pad - (d.http / max) * (H - pad * 2)}
+            r={2}
+            fill="#09090B"
+          />
         ))}
-        {/* X 轴标签 */}
         {data.map((d, i) => (
           <text
             key={i}
@@ -530,32 +788,28 @@ function TrendChart() {
             fontFamily="JetBrains Mono, monospace"
             fill="#A1A1AA"
           >
-            {d.x}
+            {d.date}
           </text>
         ))}
-        {/* 第 4 天的引导虚线 */}
-        <line
-          x1={pad + 3 * xStep}
-          y1={pad}
-          x2={pad + 3 * xStep}
-          y2={H - pad}
-          stroke="#D4D4D8"
-          strokeWidth="1"
-          strokeDasharray="3 3"
-        />
       </svg>
     </div>
   );
 }
 
-function StatusPieChart() {
-  // 89% 2xx / 6% 4xx / 3% 5xx / 2% 3xx
+function StatusPieChart({
+  distribution,
+  total,
+}: {
+  distribution: { '2xx': number; '3xx': number; '4xx': number; '5xx': number; other: number } | null;
+  total: number;
+}) {
   const segs = [
-    { label: '2xx', pct: 89, color: '#22C55E' },
-    { label: '4xx', pct: 6, color: '#F59E0B' },
-    { label: '5xx', pct: 3, color: '#EF4444' },
-    { label: '3xx', pct: 2, color: '#3B82F6' },
+    { label: '2xx', value: distribution?.['2xx'] ?? 0, color: '#22C55E' },
+    { label: '3xx', value: distribution?.['3xx'] ?? 0, color: '#3B82F6' },
+    { label: '4xx', value: distribution?.['4xx'] ?? 0, color: '#F59E0B' },
+    { label: '5xx', value: distribution?.['5xx'] ?? 0, color: '#EF4444' },
   ];
+  const safeTotal = total > 0 ? total : 1;
   const R = 32;
   const C = 2 * Math.PI * R;
   let acc = 0;
@@ -564,7 +818,8 @@ function StatusPieChart() {
       <svg viewBox="0 0 80 80" className="h-20 w-20 flex-shrink-0">
         <g transform="rotate(-90 40 40)">
           {segs.map((s, i) => {
-            const len = (s.pct / 100) * C;
+            const pct = (s.value / safeTotal) * 100;
+            const len = (pct / 100) * C;
             const dashArray = `${len} ${C - len}`;
             const dashOffset = -acc;
             acc += len;
@@ -583,8 +838,8 @@ function StatusPieChart() {
             );
           })}
         </g>
-        <text x="40" y="44" textAnchor="middle" fontSize="14" fontWeight="600" fill="#09090B">
-          2,431
+        <text x="40" y="44" textAnchor="middle" fontSize="13" fontWeight="600" fill="#09090B">
+          {formatNumber(total)}
         </text>
       </svg>
       <ul className="space-y-1.5 text-[12px]">
@@ -592,7 +847,7 @@ function StatusPieChart() {
           <li key={s.label} className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />
             <span className="text-ink">{s.label}</span>
-            <span className="text-ink-tertiary">{s.pct}%</span>
+            <span className="text-ink-tertiary">{formatNumber(s.value)}</span>
           </li>
         ))}
       </ul>
@@ -600,6 +855,59 @@ function StatusPieChart() {
   );
 }
 
-function cn(...args: Array<string | false | null | undefined>) {
-  return args.filter(Boolean).join(' ');
+function Pagination({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (p: number) => void;
+}) {
+  if (totalPages <= 1) return <div className="flex items-center gap-0.5" />;
+  const items: Array<number | 'gap'> = [];
+  const push = (v: number | 'gap') => items.push(v);
+  const addRange = (s: number, e: number) => {
+    for (let i = s; i <= e; i++) push(i);
+  };
+  if (totalPages <= 7) {
+    addRange(1, totalPages);
+  } else {
+    addRange(1, 2);
+    if (page > 4) push('gap');
+    const start = Math.max(3, page - 1);
+    const end = Math.min(totalPages - 2, page + 1);
+    addRange(start, end);
+    if (page < totalPages - 3) push('gap');
+    addRange(totalPages - 1, totalPages);
+  }
+  return (
+    <div className="flex items-center gap-0.5">
+      <button className="page-btn" disabled={page <= 1} onClick={() => onChange(page - 1)}>
+        <ChevronLeft className="h-3 w-3" />
+      </button>
+      {items.map((it, i) =>
+        it === 'gap' ? (
+          <span key={`g-${i}`} className="px-1 text-ink-disabled">
+            …
+          </span>
+        ) : (
+          <button
+            key={it}
+            className={cn('page-btn', it === page && 'active')}
+            onClick={() => onChange(it)}
+          >
+            {it}
+          </button>
+        ),
+      )}
+      <button
+        className="page-btn"
+        disabled={page >= totalPages}
+        onClick={() => onChange(page + 1)}
+      >
+        <ChevronRight className="h-3 w-3" />
+      </button>
+    </div>
+  );
 }
