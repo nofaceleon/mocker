@@ -30,7 +30,7 @@ export function StatCard({
       )}
       <div className="min-w-0 flex-1">
         <div className="text-[11.5px] font-medium text-ink-tertiary">{label}</div>
-        <div className="text-[22px] font-semibold leading-[1.1] tracking-[-0.02em] text-ink">
+        <div className="overflow-hidden text-[22px] font-semibold leading-[1.1] tracking-[-0.02em] text-ink">
           {value}
         </div>
         {(hint || trend) && (
