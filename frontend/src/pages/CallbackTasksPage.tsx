@@ -6,7 +6,7 @@ import {
   Clock,
   Edit2,
   Inbox,
-  RotateCw,
+  RefreshCw,
   Search,
   Send,
   X,
@@ -242,7 +242,7 @@ export function CallbackTasksPage() {
                     <td className="text-[12px] text-ink-secondary">
                       {t.retryCount} / {t.maxRetries}
                     </td>
-                    <td className="text-right">
+                    <td className="text-left">
                       <div className="inline-flex items-center gap-1">
                         <Button
                           variant="ghost"
@@ -267,7 +267,7 @@ export function CallbackTasksPage() {
                             onClick={() => retryMut.mutate(t.id)}
                             disabled={retryMut.isPending}
                           >
-                            <RotateCw className="h-3.5 w-3.5" />
+                            <RefreshCw className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         {t.status === 'pending' && (
