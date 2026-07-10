@@ -33,3 +33,6 @@ logs/
 # 临时
 tmp/
 temp/
+
+# 运行时
+.mocker.pid
