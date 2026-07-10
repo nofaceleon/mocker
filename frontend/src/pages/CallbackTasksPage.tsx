@@ -105,6 +105,7 @@ export function CallbackTasksPage() {
 
       <Card
         title="回调任务"
+        noBody
         extra={
           <div className="flex items-center gap-2">
             {apiId !== undefined && (
@@ -164,124 +165,120 @@ export function CallbackTasksPage() {
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>任务</th>
-                  <th>接口</th>
-                  <th>回调 URL · 方法</th>
-                  <th>状态</th>
-                  <th>计划发送时间</th>
-                  <th>实际响应</th>
-                  <th>重试</th>
-                  <th className="text-right">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((t) => {
-                  const sm = STATUS_MAP[t.status];
-                  return (
-                    <tr key={t.id}>
-                      <td>
-                        <div className="flex items-center gap-1">
-                          <span className="text-[12.5px] font-medium text-ink">#{t.id}</span>
-                          <button
-                            type="button"
-                            onClick={() => setSelected(t.id)}
-                            className="rounded p-1 text-ink-tertiary hover:bg-canvas-subtle hover:text-ink"
-                            title="查看详情"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </button>
+          <table className="params-table">
+            <thead>
+              <tr>
+                <th>任务</th>
+                <th>接口</th>
+                <th>回调 URL · 方法</th>
+                <th>状态</th>
+                <th>计划发送时间</th>
+                <th>实际响应</th>
+                <th>重试</th>
+                <th className="text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((t) => {
+                const sm = STATUS_MAP[t.status];
+                return (
+                  <tr key={t.id}>
+                    <td>
+                      <div className="text-[12.5px] font-medium text-ink">#{t.id}</div>
+                      {t.requestId && (
+                        <div
+                          className="mt-0.5 truncate text-[10.5px] text-ink-subtle"
+                          title={`req: ${t.requestId}`}
+                        >
+                          req: {t.requestId}
                         </div>
-                        {t.requestId && (
-                          <div className="mt-0.5 text-[10.5px] text-ink-subtle">req: {t.requestId}</div>
-                        )}
-                      </td>
-                      <td>
-                        <div className="text-[12.5px]">
-                          <div className="font-medium text-ink">{t.apiName ?? `API #${t.apiId}`}</div>
-                          <div className="mono text-[10.5px] text-ink-tertiary">
-                            {t.apiMethod} {t.apiPath}
-                          </div>
+                      )}
+                    </td>
+                    <td>
+                      <div className="text-[12.5px]">
+                        <div className="font-medium text-ink">{t.apiName ?? `API #${t.apiId}`}</div>
+                        <div className="mono text-[10.5px] text-ink-tertiary">
+                          {t.apiMethod} {t.apiPath}
                         </div>
-                      </td>
-                      <td>
-                        <span className="max-w-[260px] truncate text-[12.5px] text-ink-secondary" title={t.callbackUrl}>
-                          {t.callbackUrl}
+                      </div>
+                    </td>
+                    <td>
+                      <span
+                        className="block max-w-[280px] truncate text-[12.5px] text-ink-secondary"
+                        title={t.callbackUrl}
+                      >
+                        {t.callbackUrl}
+                      </span>
+                      <div className="mt-0.5">
+                        <MethodBadge method={t.callbackMethod as any} />
+                      </div>
+                    </td>
+                    <td>
+                      <StatusBadge status={sm.status}>{sm.label}</StatusBadge>
+                    </td>
+                    <td className="text-[12px] text-ink-secondary">
+                      {formatTime(t.scheduledAt)}
+                    </td>
+                    <td className="text-[12px]">
+                      {t.responseStatus != null ? (
+                        <span
+                          className={
+                            t.responseStatus >= 200 && t.responseStatus < 300
+                              ? 'text-success-text'
+                              : 'text-danger-text'
+                          }
+                        >
+                          {t.responseStatus}
                         </span>
-                        <div className="mt-0.5">
-                          <MethodBadge method={t.callbackMethod as any} />
-                        </div>
-                      </td>
-                      <td>
-                        <StatusBadge status={sm.status}>{sm.label}</StatusBadge>
-                      </td>
-                      <td className="text-[12px] text-ink-secondary">
-                        {formatTime(t.scheduledAt)}
-                      </td>
-                      <td className="text-[12px]">
-                        {t.responseStatus != null ? (
-                          <span
-                            className={
-                              t.responseStatus >= 200 && t.responseStatus < 300
-                                ? 'text-success-text'
-                                : 'text-danger-text'
-                            }
+                      ) : (
+                        <span className="text-ink-subtle">—</span>
+                      )}
+                      {t.sentAt && (
+                        <div className="text-[10.5px] text-ink-subtle">→ {formatTime(t.sentAt)}</div>
+                      )}
+                    </td>
+                    <td className="text-[12px] text-ink-secondary">
+                      {t.retryCount} / {t.maxRetries}
+                    </td>
+                    <td className="text-right">
+                      <div className="inline-flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="查看详情"
+                          onClick={() => setSelected(t.id)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        {t.status === 'failed' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            title="手动重发"
+                            onClick={() => retryMut.mutate(t.id)}
+                            disabled={retryMut.isPending}
                           >
-                            {t.responseStatus}
-                          </span>
-                        ) : (
-                          <span className="text-ink-subtle">—</span>
+                            <RotateCw className="h-3.5 w-3.5" />
+                          </Button>
                         )}
-                        {t.sentAt && (
-                          <div className="text-[10.5px] text-ink-subtle">→ {formatTime(t.sentAt)}</div>
-                        )}
-                      </td>
-                      <td className="text-[12px] text-ink-secondary">
-                        {t.retryCount} / {t.maxRetries}
-                      </td>
-                      <td className="text-right">
-                        <div className="inline-flex items-center gap-1">
+                        {t.status === 'pending' && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            title="查看详情"
-                            onClick={() => setSelected(t.id)}
+                            title="取消任务"
+                            onClick={() => cancelMut.mutate(t.id)}
+                            disabled={cancelMut.isPending}
                           >
-                            <Eye className="h-3.5 w-3.5" />
+                            <X className="h-3.5 w-3.5" />
                           </Button>
-                          {t.status === 'failed' && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              title="手动重发"
-                              onClick={() => retryMut.mutate(t.id)}
-                              disabled={retryMut.isPending}
-                            >
-                              <RotateCw className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          {t.status === 'pending' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              title="取消任务"
-                              onClick={() => cancelMut.mutate(t.id)}
-                              disabled={cancelMut.isPending}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
 
         {total > pageSize && (
