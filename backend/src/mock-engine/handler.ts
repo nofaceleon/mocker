@@ -452,16 +452,16 @@ function extractRequestMeta(req: Request): RequestMeta {
 function writeLogSafely(payload: LogPayload): void {
   try {
     const db = getDb();
-    // drizzle 0.38 的 json mode 字段在 TS 类型上分别推断为 unknown / Record<string,string>
-    // 这里统一以 string 形式写入（drizzle 内部会再次 stringify），用 as never 绕过严格类型
+    // drizzle 0.38 的 json mode 字段会再次 JSON.stringify，所以传入前必须先把"已经是 JSON 字符串"的值还原成对象/数组
+    // truncateForLog 返回的是已 stringify 的字符串，这里用 JSON.parse 反序列化回去再交给 drizzle
     db.insert(requestLogs)
       .values({
         apiId: payload.apiId,
         requestMethod: payload.requestMethod,
         requestPath: payload.requestPath,
-        requestParams: truncateForLog(payload.requestParams, false) as never,
-        requestBody: truncateForLog(payload.requestBody, false) as never,
-        requestHeaders: JSON.stringify(payload.requestHeaders ?? {}) as never,
+        requestParams: parseJsonBack(truncateForLog(payload.requestParams, false)),
+        requestBody: parseJsonBack(truncateForLog(payload.requestBody, false)),
+        requestHeaders: payload.requestHeaders ?? {},
         responseStatus: payload.responseStatus,
         responseBody: truncateForLog(payload.responseBody, true),
         responseTime: payload.responseTime,
@@ -473,6 +473,17 @@ function writeLogSafely(payload: LogPayload): void {
   } catch (err) {
     // 日志失败绝不影响业务
     logger.warn({ err }, 'failed to write request log');
+  }
+}
+
+// 把 truncateForLog 产出的"已经是 JSON 字符串"还原成对象/数组，
+// 让 drizzle 的 mode:'json' 字段在 mapToDriverValue 中再次 stringify 时只产生一层。
+function parseJsonBack(s: string): unknown {
+  if (!s) return null;
+  try {
+    return JSON.parse(s);
+  } catch {
+    return s;
   }
 }
 

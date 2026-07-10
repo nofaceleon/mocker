@@ -12,7 +12,6 @@ import {
   Server,
   TrendingDown,
   Trash2,
-  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -27,6 +26,7 @@ import {
   Tabs,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { HeadersBlock, JsonField } from '@/lib/log-format';
 import {
   buildRequestLogExportUrl,
   useClearRequestLogs,
@@ -376,12 +376,6 @@ export function LogsPage() {
               </tbody>
             </table>
 
-            {selected && detail.data && (
-              <div className="border-t border-line bg-canvas px-5 py-4">
-                <LogDetail log={detail.data} onClose={() => setSelected(null)} />
-              </div>
-            )}
-
             <div className="flex items-center justify-between border-t border-line bg-canvas px-4 py-2.5 text-[12px] text-ink-tertiary">
               <span>
                 显示 {(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)} 条 / 共 {formatNumber(total)} 条
@@ -392,6 +386,36 @@ export function LogsPage() {
           </>
         )}
       </Card>
+
+      {/* 详情弹框 */}
+      <Modal
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        width="xl"
+        title={
+          detail.data ? (
+            <div className="flex items-center gap-2">
+              <MethodBadge method={detail.data.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'} />
+              <span className="font-mono text-ink-secondary">{detail.data.path}</span>
+              {detail.data.format === 'sse' && (
+                <span className="rounded bg-warning-soft px-1.5 py-0.5 font-mono text-[10.5px] font-semibold text-warning">
+                  SSE
+                </span>
+              )}
+            </div>
+          ) : (
+            '调用日志详情'
+          )
+        }
+      >
+        {detail.isLoading ? (
+          <div className="py-10 text-center text-[12px] text-ink-tertiary">加载中…</div>
+        ) : detail.data ? (
+          <LogDetail log={detail.data} />
+        ) : (
+          <div className="py-10 text-center text-[12px] text-ink-tertiary">未找到日志详情</div>
+        )}
+      </Modal>
 
       {/* 二次确认：清除全部 */}
       <Modal
@@ -501,9 +525,18 @@ function LogRowView({
         <span className={cn(responseTimeClass(log.responseTime))}>{log.responseTime} ms</span>
       </td>
       <td onClick={(e) => e.stopPropagation()}>
-        <Button variant="ghost" size="sm">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleExpand();
+          }}
+        >
           {expanded ? '收起' : '查看'}
-          <ChevronRight className="h-3 w-3" />
+          <ChevronRight
+            className={cn('h-3 w-3 transition-transform', expanded && 'rotate-90')}
+          />
         </Button>
       </td>
     </tr>
@@ -511,29 +544,12 @@ function LogRowView({
 }
 
 // ---------- 详情面板 ----------
-function LogDetail({ log, onClose }: { log: RequestLog; onClose: () => void }) {
+function LogDetail({ log }: { log: RequestLog }) {
   const [tab, setTab] = useState<'request' | 'response' | 'headers' | 'server'>('request');
   const timeMs = log.createdAt ? new Date(log.createdAt).getTime() : Date.now();
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-[13px] font-semibold tracking-[-0.005em] text-ink">
-          <MethodBadge method={log.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'} />
-          <span className="font-mono text-ink-secondary">{log.path}</span>
-          {log.format === 'sse' && (
-            <span className="rounded bg-warning-soft px-1.5 py-0.5 font-mono text-[10.5px] font-semibold text-warning">
-              SSE
-            </span>
-          )}
-        </h3>
-        <button
-          onClick={onClose}
-          className="rounded p-1 text-ink-tertiary hover:bg-canvas-subtle hover:text-ink"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </div>
       <Tabs<'request' | 'response' | 'headers' | 'server'>
         value={tab}
         onChange={setTab}
@@ -554,26 +570,33 @@ function LogDetail({ log, onClose }: { log: RequestLog; onClose: () => void }) {
             {tab === 'server' && '服务端处理时间线'}
           </h4>
           {tab === 'request' && (
-            <pre className="code-content !rounded-md !p-3 !text-[12px]">
-              {renderCodeBlock([
-                { label: 'Query', value: log.requestParams },
-                { label: 'Body', value: log.requestBody },
-              ])}
-            </pre>
+            <div className="space-y-3">
+              <JsonField label="Query" value={log.requestParams} />
+              <JsonField label="Body" value={log.requestBody} />
+            </div>
           )}
           {tab === 'response' && (
-            <pre className="code-content !rounded-md !p-3 !text-[12px]">
-              {renderResponseBody(log)}
-            </pre>
+            <JsonField
+              label="响应内容"
+              value={log.responseBody}
+              placeholder="空响应"
+            />
           )}
           {tab === 'headers' && (
-            <pre className="code-content !rounded-md !p-3 !text-[12px]">
-              {log.requestHeaders
-                ? Object.entries(log.requestHeaders)
-                    .map(([k, v]) => `${k}: ${v}`)
-                    .join('\n')
-                : '—'}
-            </pre>
+            <div className="space-y-4">
+              <div>
+                <h5 className="mb-2 text-[10.5px] font-semibold uppercase tracking-wider text-ink-disabled">
+                  请求头
+                </h5>
+                <HeadersBlock headers={log.requestHeaders} />
+              </div>
+              <div>
+                <h5 className="mb-2 text-[10.5px] font-semibold uppercase tracking-wider text-ink-disabled">
+                  响应头
+                </h5>
+                <HeadersBlock headers={null} emptyHint="后端尚未记录响应头" />
+              </div>
+            </div>
           )}
           {tab === 'server' && (
             <pre className="code-content !rounded-md !p-3 !text-[12px]">
@@ -635,37 +658,6 @@ function renderServerTimeline(log: RequestLog, startedAt: number): string {
     lines.push(`[${fmt(log.responseTime)}] [INFO]    SSE 流已结束`);
   }
   return lines.join('\n');
-}
-
-function renderCodeBlock(items: Array<{ label: string; value: unknown }>): string {
-  const out: string[] = [];
-  for (const it of items) {
-    out.push(`${it.label}:`);
-    out.push(safeStringify(it.value));
-    out.push('');
-  }
-  return out.join('\n').trimEnd();
-}
-
-function renderResponseBody(log: RequestLog): string {
-  if (!log.responseBody) return '—';
-  // 后端在 response_body 中：SSE 分支写的是 {eventsSent,format:'sse'}，HTTP 分支写的是模板渲染后的内容
-  // 如果内容是 JSON 字符串，尝试格式化
-  const raw = log.responseBody;
-  try {
-    const obj = JSON.parse(raw);
-    return safeStringify(obj);
-  } catch {
-    return raw;
-  }
-}
-
-function safeStringify(v: unknown): string {
-  try {
-    return JSON.stringify(v, null, 2);
-  } catch {
-    return String(v);
-  }
 }
 
 function statusText(status: number): string {

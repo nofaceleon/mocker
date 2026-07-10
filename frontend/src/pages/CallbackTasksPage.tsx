@@ -30,6 +30,7 @@ import {
   useCancelCallbackTask,
   useRetryCallbackTask,
 } from '@/hooks/queries/use-callback-tasks';
+import { HeadersBlock, JsonField } from '@/lib/log-format';
 import type { CallbackTaskStatus } from '@/types/api';
 
 const STATUS_TABS: { value: CallbackTaskStatus | 'all'; label: string }[] = [
@@ -320,7 +321,7 @@ function TaskDetailDrawer({ taskId, onClose }: { taskId: number | null; onClose:
   const { data: task, isLoading } = useCallbackTask(taskId ?? undefined);
   const open = taskId !== null;
   return (
-    <Drawer open={open} onClose={onClose} title={task ? `任务 #${task.id} 详情` : '任务详情'} width="md">
+    <Drawer open={open} onClose={onClose} title={task ? `任务 #${task.id} 详情` : '任务详情'} width="lg">
       {isLoading || !task ? (
         <div className="py-8 text-center text-[13px] text-ink-tertiary">加载中…</div>
       ) : (
@@ -365,29 +366,17 @@ function TaskDetailDrawer({ taskId, onClose }: { taskId: number | null; onClose:
 
           <div>
             <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">请求头</div>
-            <pre className="mono rounded-md bg-canvas-deep p-3 text-[11.5px] text-ink-secondary">
-              {task.callbackHeaders ? JSON.stringify(task.callbackHeaders, null, 2) : '—'}
-            </pre>
+            <HeadersBlock headers={task.callbackHeaders} emptyHint="未配置请求头" />
           </div>
 
-          <div>
-            <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">请求体</div>
-            <pre className="mono rounded-md bg-canvas-deep p-3 text-[11.5px] text-ink-secondary">
-              {task.callbackBody ?? '—'}
-            </pre>
-          </div>
+          <JsonField label="请求体" value={task.callbackBody} placeholder="空请求体" />
 
-          <div>
-            <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">响应体</div>
-            <pre className="mono rounded-md bg-canvas-deep p-3 text-[11.5px] text-ink-secondary">
-              {task.responseBody ?? '—'}
-            </pre>
-          </div>
+          <JsonField label="响应体" value={task.responseBody} placeholder="暂未收到响应" />
 
           {task.errorMessage && (
             <div>
               <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-danger-text">错误信息</div>
-              <pre className="mono rounded-md border border-danger-border bg-danger-soft p-3 text-[11.5px] text-danger-text">
+              <pre className="mono overflow-auto whitespace-pre-wrap rounded-md border border-danger-border bg-danger-soft p-3 text-[11.5px] text-danger-text">
                 {task.errorMessage}
               </pre>
             </div>
