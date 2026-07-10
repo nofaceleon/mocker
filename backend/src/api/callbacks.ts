@@ -5,6 +5,7 @@ import { getDb } from '../db/index.js';
 import {
   callbackConfigs,
   callbackTasks,
+  featureGroups,
   mockApis,
   type CallbackConfig,
 } from '../db/schema.js';
@@ -163,6 +164,7 @@ router.get(
       .select({
         id: callbackTasks.id,
         apiId: callbackTasks.apiId,
+        projectId: featureGroups.projectId,
         apiName: mockApis.name,
         apiMethod: mockApis.method,
         apiPath: mockApis.path,
@@ -183,6 +185,7 @@ router.get(
       })
       .from(callbackTasks)
       .leftJoin(mockApis, eq(callbackTasks.apiId, mockApis.id))
+      .leftJoin(featureGroups, eq(mockApis.featureGroupId, featureGroups.id))
       .where(where)
       .orderBy(desc(callbackTasks.id))
       .limit(q.pageSize)

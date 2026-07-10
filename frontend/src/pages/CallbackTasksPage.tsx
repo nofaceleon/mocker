@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Activity,
   CheckCircle2,
   Clock,
+  Edit2,
   Inbox,
   RotateCw,
   Search,
@@ -251,6 +252,13 @@ export function CallbackTasksPage() {
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
+                        {t.projectId && (
+                          <Link to={`/projects/${t.projectId}/apis/${t.apiId}`}>
+                            <Button variant="ghost" size="sm" title="编辑接口">
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                        )}
                         {t.status === 'failed' && (
                           <Button
                             variant="secondary"

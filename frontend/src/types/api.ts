@@ -210,6 +210,7 @@ export type CallbackTaskStatus = 'pending' | 'sent' | 'failed';
 export type CallbackTask = {
   id: number;
   apiId: number;
+  projectId: number | null;
   apiName: string | null;
   apiMethod: string | null;
   apiPath: string | null;
