@@ -43,24 +43,24 @@ type SSEConfig = {
 };
 
 type ResponsePanelProps = {
-  draft: MockApiPayload;
+  formData: MockApiPayload;
   onChange: (next: MockApiPayload) => void;
   onSave: (data?: Partial<MockApiPayload>) => void;
   saving?: boolean;
 };
 
-export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanelProps) {
-  const isSSE = draft.protocol === 'SSE';
+export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePanelProps) {
+  const isSSE = formData.protocol === 'SSE';
 
-  const [bodyText, setBodyText] = useState(() => safeStringify(draft.responseBody ?? {}));
+  const [bodyText, setBodyText] = useState(() => safeStringify(formData.responseBody ?? {}));
   const [bodyErr, setBodyErr] = useState<string | null>(null);
-  const [headersText, setHeadersText] = useState(() => safeStringify(draft.responseHeaders ?? {}));
+  const [headersText, setHeadersText] = useState(() => safeStringify(formData.responseHeaders ?? {}));
   const [headersErr, setHeadersErr] = useState<string | null>(null);
 
   // SSE配置状态
   const [sseConfig, setSSEConfig] = useState<SSEConfig>(() => {
     if (!isSSE) return { events: [], interval: 500, loop: false };
-    const body = draft.responseBody as Record<string, unknown> | null;
+    const body = formData.responseBody as Record<string, unknown> | null;
     if (body && Array.isArray(body.events)) {
       return {
         events: body.events as SSEEvent[],
@@ -73,11 +73,11 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
   });
 
   useEffect(() => {
-    setBodyText(safeStringify(draft.responseBody ?? {}));
-  }, [draft.responseBody]);
+    setBodyText(safeStringify(formData.responseBody ?? {}));
+  }, [formData.responseBody]);
   useEffect(() => {
-    setHeadersText(safeStringify(draft.responseHeaders ?? {}));
-  }, [draft.responseHeaders]);
+    setHeadersText(safeStringify(formData.responseHeaders ?? {}));
+  }, [formData.responseHeaders]);
 
   const handleSave = () => {
     if (isSSE) {
@@ -90,7 +90,7 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
           responseHeaders: headers,
           responseContentType: 'text/event-stream',
         };
-        onChange({ ...draft, ...sseData });
+        onChange({ ...formData, ...sseData });
         onSave(sseData);
       } catch (e) {
         setHeadersErr(e instanceof Error ? e.message : 'JSON 格式错误');
@@ -107,7 +107,7 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
             responseBody: body,
             responseHeaders: headers,
           };
-          onChange({ ...draft, ...httpData });
+          onChange({ ...formData, ...httpData });
           onSave(httpData);
         } catch (e) {
           setHeadersErr(e instanceof Error ? e.message : 'JSON 格式错误');
@@ -160,8 +160,8 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
           {!isSSE && (
             <FormField label="状态码">
               <Select
-                value={draft.responseStatus ?? 200}
-                onChange={(e) => onChange({ ...draft, responseStatus: Number(e.target.value) })}
+                value={formData.responseStatus ?? 200}
+                onChange={(e) => onChange({ ...formData, responseStatus: Number(e.target.value) })}
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s.value} value={s.value}>
@@ -176,8 +176,8 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
               type="number"
               min={0}
               max={60000}
-              value={draft.responseDelay ?? 0}
-              onChange={(e) => onChange({ ...draft, responseDelay: Number(e.target.value) || 0 })}
+              value={formData.responseDelay ?? 0}
+              onChange={(e) => onChange({ ...formData, responseDelay: Number(e.target.value) || 0 })}
             />
           </FormField>
           {isSSE && (
@@ -196,9 +196,9 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
               type="number"
               min={0}
               max={60000}
-              value={draft.responseDelayMax ?? 0}
+              value={formData.responseDelayMax ?? 0}
               placeholder="0"
-              onChange={(e) => onChange({ ...draft, responseDelayMax: Number(e.target.value) || 0 })}
+              onChange={(e) => onChange({ ...formData, responseDelayMax: Number(e.target.value) || 0 })}
             />
           </FormField>
         </div>
@@ -230,8 +230,8 @@ export function ResponsePanel({ draft, onChange, onSave, saving }: ResponsePanel
           {!isSSE && (
             <FormField label="Content-Type">
               <Select
-                value={draft.responseContentType ?? 'application/json'}
-                onChange={(e) => onChange({ ...draft, responseContentType: e.target.value })}
+                value={formData.responseContentType ?? 'application/json'}
+                onChange={(e) => onChange({ ...formData, responseContentType: e.target.value })}
               >
                 {CONTENT_TYPES.map((c) => (
                   <option key={c} value={c}>

@@ -6,7 +6,7 @@ import { PanelHeader } from '../PanelHeader';
 import { PanelActions } from '../PanelActions';
 
 type ScriptPanelProps = {
-  draft: MockApiPayload;
+  formData: MockApiPayload;
   onChange: (next: MockApiPayload) => void;
   onSave: (data?: Partial<MockApiPayload>) => void;
   saving?: boolean;
@@ -29,26 +29,26 @@ async function handle(req) {
   };
 }`;
 
-export function ScriptPanel({ draft, onChange, onSave, saving }: ScriptPanelProps) {
-  const enabled = !!draft.script;
-  const [script, setScript] = useState(draft.script ?? STARTER);
+export function ScriptPanel({ formData, onChange, onSave, saving }: ScriptPanelProps) {
+  const enabled = !!formData.script;
+  const [script, setScript] = useState(formData.script ?? STARTER);
 
   useEffect(() => {
-    setScript(draft.script ?? STARTER);
-  }, [draft.script]);
+    setScript(formData.script ?? STARTER);
+  }, [formData.script]);
 
   const handleToggle = (v: boolean) => {
     if (v) {
-      onChange({ ...draft, script: script || STARTER });
+      onChange({ ...formData, script: script || STARTER });
     } else {
-      onChange({ ...draft, script: null });
+      onChange({ ...formData, script: null });
     }
   };
 
   const handleScriptChange = (value: string) => {
     setScript(value);
     if (enabled) {
-      onChange({ ...draft, script: value });
+      onChange({ ...formData, script: value });
     }
   };
 

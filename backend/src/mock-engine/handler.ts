@@ -87,7 +87,9 @@ async function executeMatched(
 
   // 2. 校验
   const rules = parseValidationRules(api.validationRules);
-  const valid = validate(rules, reqCtx as unknown as Record<string, unknown>);
+  const valid = rules.isEnabled === false
+    ? { ok: true as const }
+    : validate(rules, reqCtx as unknown as Record<string, unknown>);
   if (!valid.ok) {
     const fail = buildFailResponse(rules, valid.errors);
     res.status(fail.status).json(fail.body);

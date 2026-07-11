@@ -65,18 +65,18 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
     return DEFAULT_CONFIG;
   }, [serverCfg]);
 
-  const [draft, setDraft] = useState<CallbackConfig>(initial);
+  const [formData, setFormData] = useState<CallbackConfig>(initial);
   const [dirty, setDirty] = useState(false);
   const lastSavedRef = useRef<string>(JSON.stringify(initial));
 
   useEffect(() => {
-    setDraft(initial);
+    setFormData(initial);
     setDirty(false);
     lastSavedRef.current = JSON.stringify(initial);
   }, [initial]);
 
   const update = (patch: Partial<CallbackConfig>) => {
-    setDraft((d) => {
+    setFormData((d) => {
       const next = { ...d, ...patch };
       setDirty(JSON.stringify(next) !== lastSavedRef.current);
       return next;
@@ -84,8 +84,8 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
   };
 
   const handleSave = async () => {
-    await saveMut.mutateAsync(draft);
-    lastSavedRef.current = JSON.stringify(draft);
+    await saveMut.mutateAsync(formData);
+    lastSavedRef.current = JSON.stringify(formData);
     setDirty(false);
     onSave?.();
   };
@@ -94,7 +94,7 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
     if (!serverCfg) return;
     if (!confirm('确认删除该接口的回调配置？所有关联的待发送任务会被取消。')) return;
     await deleteMut.mutateAsync();
-    setDraft(DEFAULT_CONFIG);
+    setFormData(DEFAULT_CONFIG);
     lastSavedRef.current = JSON.stringify(DEFAULT_CONFIG);
     setDirty(false);
   };
@@ -134,8 +134,8 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
               <ExternalLink className="h-3.5 w-3.5" />
               查看任务
             </Link>
-            <span className="text-[11.5px] text-ink-tertiary">{draft.isEnabled ? '已启用' : '未启用'}</span>
-            <Switch checked={draft.isEnabled} onChange={(v) => update({ isEnabled: v })} />
+            <span className="text-[11.5px] text-ink-tertiary">{formData.isEnabled ? '已启用' : '未启用'}</span>
+            <Switch checked={formData.isEnabled} onChange={(v) => update({ isEnabled: v })} />
           </div>
         }
         description="启用后，接口响应后会自动按设定延迟向回调 URL 发送请求。常用于模拟支付、识别等异步通知。"
@@ -154,10 +154,10 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
           <FormField label="回调 URL" required className="col-span-2">
             <Input
               className="mono"
-              value={draft.callbackUrl}
+              value={formData.callbackUrl}
               onChange={(e) => update({ callbackUrl: e.target.value })}
               placeholder="https://example.com/callback 或 {{req.body.callbackUrl}}"
-              disabled={!draft.isEnabled}
+              disabled={!formData.isEnabled}
             />
             <div className="form-helper">
               支持变量替换，例 <code>{'{{req.body.callbackUrl}}'}</code> 或固定 URL
@@ -165,9 +165,9 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
           </FormField>
           <FormField label="回调方法">
             <Select
-              value={draft.callbackMethod}
+              value={formData.callbackMethod}
               onChange={(e) => update({ callbackMethod: e.target.value as CallbackConfig['callbackMethod'] })}
-              disabled={!draft.isEnabled}
+              disabled={!formData.isEnabled}
             >
               <option value="POST">POST</option>
               <option value="GET">GET</option>
@@ -180,20 +180,20 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
         <div className="form-row three-col">
           <FormField label="延迟类型">
             <Select
-              value={draft.delayType}
+              value={formData.delayType}
               onChange={(e) => update({ delayType: e.target.value as CallbackConfig['delayType'] })}
-              disabled={!draft.isEnabled}
+              disabled={!formData.isEnabled}
             >
               <option value="fixed">固定</option>
               <option value="random">随机范围</option>
             </Select>
           </FormField>
-          <FormField label="延迟时间" hint={draft.delayType === 'random' ? '范围：最小-最大（毫秒）' : '毫秒'}>
+          <FormField label="延迟时间" hint={formData.delayType === 'random' ? '范围：最小-最大（毫秒）' : '毫秒'}>
             <Input
-              value={draft.delayValue}
+              value={formData.delayValue}
               onChange={(e) => update({ delayValue: e.target.value })}
-              placeholder={draft.delayType === 'random' ? '3000-8000' : '5000'}
-              disabled={!draft.isEnabled}
+              placeholder={formData.delayType === 'random' ? '3000-8000' : '5000'}
+              disabled={!formData.isEnabled}
             />
           </FormField>
         </div>
@@ -201,9 +201,9 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
           <textarea
             className="form-textarea mono mono-dark !text-[12.5px]"
             rows={3}
-            value={serialiseHeaders(draft.callbackHeaders)}
+            value={serialiseHeaders(formData.callbackHeaders)}
             onChange={(e) => update({ callbackHeaders: parseHeaders(e.target.value) })}
-            disabled={!draft.isEnabled}
+            disabled={!formData.isEnabled}
             placeholder='{"Content-Type": "application/json"}'
           />
         </FormField>
@@ -214,9 +214,9 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
           <textarea
             className="form-textarea mono mono-dark !text-[12.5px]"
             rows={6}
-            value={draft.callbackBody}
+            value={formData.callbackBody}
             onChange={(e) => update({ callbackBody: e.target.value })}
-            disabled={!draft.isEnabled}
+            disabled={!formData.isEnabled}
             placeholder='{"faceId": "{{req.body.faceId}}", "result": "{{response.data}}"}'
           />
         </FormField>
@@ -226,9 +226,9 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
         <div className="form-row">
           <FormField label="启用自动重试" className="col-span-2">
             <Switch
-              checked={draft.retryEnabled}
+              checked={formData.retryEnabled}
               onChange={(v) => update({ retryEnabled: v })}
-              disabled={!draft.isEnabled}
+              disabled={!formData.isEnabled}
             />
           </FormField>
         </div>
@@ -238,25 +238,25 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
               type="number"
               min={0}
               max={10}
-              value={draft.maxRetries}
+              value={formData.maxRetries}
               onChange={(e) => update({ maxRetries: Math.max(0, Number(e.target.value) || 0) })}
-              disabled={!draft.isEnabled || !draft.retryEnabled}
+              disabled={!formData.isEnabled || !formData.retryEnabled}
             />
           </FormField>
           <FormField label="重试间隔" hint="毫秒">
             <Input
               type="number"
               min={100}
-              value={draft.retryInterval}
+              value={formData.retryInterval}
               onChange={(e) => update({ retryInterval: Math.max(100, Number(e.target.value) || 100) })}
-              disabled={!draft.isEnabled || !draft.retryEnabled}
+              disabled={!formData.isEnabled || !formData.retryEnabled}
             />
           </FormField>
           <FormField label="间隔策略">
             <Select
-              value={draft.retryStrategy}
+              value={formData.retryStrategy}
               onChange={(e) => update({ retryStrategy: e.target.value as CallbackConfig['retryStrategy'] })}
-              disabled={!draft.isEnabled || !draft.retryEnabled}
+              disabled={!formData.isEnabled || !formData.retryEnabled}
             >
               <option value="fixed">固定间隔</option>
               <option value="exponential">指数退避</option>
@@ -270,11 +270,11 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
             className="col-span-2"
           >
             <Select
-              value={draft.retryCondition}
+              value={formData.retryCondition}
               onChange={(e) =>
                 update({ retryCondition: e.target.value as CallbackConfig['retryCondition'] })
               }
-              disabled={!draft.isEnabled || !draft.retryEnabled}
+              disabled={!formData.isEnabled || !formData.retryEnabled}
             >
               {RETRY_CONDITION_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -284,7 +284,7 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
             </Select>
           </FormField>
         </div>
-        {draft.retryCondition === 'custom' && (
+        {formData.retryCondition === 'custom' && (
           <div className="form-row">
             <FormField
               label="自定义表达式"
@@ -293,9 +293,9 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
             >
               <Input
                 className="mono"
-                value={draft.retryConditionExpr ?? ''}
+                value={formData.retryConditionExpr ?? ''}
                 onChange={(e) => update({ retryConditionExpr: e.target.value })}
-                disabled={!draft.isEnabled || !draft.retryEnabled}
+                disabled={!formData.isEnabled || !formData.retryEnabled}
                 placeholder="statusCode != 200"
               />
             </FormField>

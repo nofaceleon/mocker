@@ -3,7 +3,6 @@ import {
   Settings,
   FileText,
   Check,
-  Shield,
   Send,
   Link2,
   Code2,
@@ -19,7 +18,6 @@ export type ConfigTab =
   | 'basic'
   | 'params'
   | 'response'
-  | 'validate'
   | 'callback'
   | 'datalink'
   | 'script'
@@ -36,7 +34,6 @@ export const TABS: ReadonlyArray<TabDef> = [
   { value: 'basic', label: '基本配置', icon: Settings },
   { value: 'params', label: '请求参数', icon: FileText },
   { value: 'response', label: '响应配置', icon: Check },
-  { value: 'validate', label: '参数校验', icon: Shield },
   { value: 'callback', label: '延迟回调', icon: Send, badge: 'ON' },
   { value: 'datalink', label: '数据联动', icon: Link2, badge: 'ON' },
   { value: 'script', label: '自定义脚本', icon: Code2, badge: 'ON' },
@@ -77,9 +74,9 @@ export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogCl
   }, [featureState]);
 
   const sections: Array<{ title: string; tabs: TabDef[] }> = [
-    { title: '基础配置', tabs: dynamicTabs.slice(0, 4) },
-    { title: '高级特性', tabs: dynamicTabs.slice(4, 7) },
-    { title: '调试', tabs: dynamicTabs.slice(7) },
+    { title: '基础配置', tabs: dynamicTabs.slice(0, 3) },
+    { title: '高级特性', tabs: dynamicTabs.slice(3, 6) },
+    { title: '调试', tabs: dynamicTabs.slice(6) },
   ];
 
   return (

@@ -32,7 +32,7 @@ type Extra = {
 };
 
 type BasicPanelProps = {
-  draft: MockApiPayload;
+  formData: MockApiPayload;
   onChange: (next: MockApiPayload) => void;
   groupName?: string;
   onSave: (data?: Partial<MockApiPayload>) => void;
@@ -44,7 +44,7 @@ type BasicPanelProps = {
 export type BasicExtra = Extra;
 
 export function BasicPanel({
-  draft,
+  formData,
   onChange,
   groupName,
   onSave,
@@ -54,16 +54,16 @@ export function BasicPanel({
 }: BasicPanelProps) {
   const protocol = extra?.protocol ?? 'HTTP';
   const priority = extra?.priority ?? 'high';
-  const contentType = extra?.contentType ?? draft.responseContentType ?? 'application/json';
+  const contentType = extra?.contentType ?? formData.responseContentType ?? 'application/json';
   const isSSE = protocol === 'SSE';
 
   const handleProtocolChange = (newProtocol: Protocol) => {
     onExtraChange?.({ ...(extra ?? {}), protocol: newProtocol });
     // SSE协议强制使用GET方法
     if (newProtocol === 'SSE') {
-      onChange({ ...draft, protocol: newProtocol, method: 'GET', responseContentType: 'text/event-stream' });
+      onChange({ ...formData, protocol: newProtocol, method: 'GET', responseContentType: 'text/event-stream' });
     } else {
-      onChange({ ...draft, protocol: newProtocol });
+      onChange({ ...formData, protocol: newProtocol });
     }
   };
 
@@ -79,8 +79,8 @@ export function BasicPanel({
         <div className="form-row">
           <FormField label="接口名称" required>
             <Input
-              value={draft.name}
-              onChange={(e) => onChange({ ...draft, name: e.target.value })}
+              value={formData.name}
+              onChange={(e) => onChange({ ...formData, name: e.target.value })}
               placeholder="例如：人脸注册"
               maxLength={100}
             />
@@ -105,8 +105,8 @@ export function BasicPanel({
           </FormField>
           <FormField label="HTTP 方法" required>
             <Select
-              value={draft.method}
-              onChange={(e) => onChange({ ...draft, method: e.target.value as HttpMethod })}
+              value={formData.method}
+              onChange={(e) => onChange({ ...formData, method: e.target.value as HttpMethod })}
             >
               {HTTP_METHODS.map((m) => (
                 <option key={m} value={m}>
@@ -131,11 +131,11 @@ export function BasicPanel({
 
         <FormField label="路由路径" required>
           <div className="input-group">
-            <span className="input-group-text">{isSSE ? 'GET' : draft.method}</span>
+            <span className="input-group-text">{isSSE ? 'GET' : formData.method}</span>
             <Input
               className="mono"
-              value={draft.path}
-              onChange={(e) => onChange({ ...draft, path: e.target.value })}
+              value={formData.path}
+              onChange={(e) => onChange({ ...formData, path: e.target.value })}
               placeholder="/api/events"
             />
           </div>
@@ -148,8 +148,8 @@ export function BasicPanel({
 
         <FormField label="接口描述">
           <textarea
-            value={draft.description ?? ''}
-            onChange={(e) => onChange({ ...draft, description: e.target.value || null })}
+            value={formData.description ?? ''}
+            onChange={(e) => onChange({ ...formData, description: e.target.value || null })}
             rows={2}
             placeholder="一段简短描述"
             className="form-textarea"
@@ -164,7 +164,7 @@ export function BasicPanel({
                 value={contentType}
                 onChange={(e) => {
                   const v = e.target.value;
-                  onChange({ ...draft, responseContentType: v });
+                  onChange({ ...formData, responseContentType: v });
                   onExtraChange?.({ ...(extra ?? {}), contentType: v });
                 }}
               >
@@ -184,8 +184,8 @@ export function BasicPanel({
           <FormField label="启用接口">
             <div className="flex items-center gap-2 pt-1.5">
               <Switch
-                checked={draft.isEnabled ?? true}
-                onChange={(v) => onChange({ ...draft, isEnabled: v })}
+                checked={formData.isEnabled ?? true}
+                onChange={(v) => onChange({ ...formData, isEnabled: v })}
               />
               <span className="text-[12.5px] text-ink-secondary">启用后接收外部调用</span>
             </div>

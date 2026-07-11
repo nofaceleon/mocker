@@ -14,14 +14,14 @@ const DATA_OPS: ReadonlyArray<{ value: DataOp; label: string; hint: string }> = 
 ];
 
 type DataLinkPanelProps = {
-  draft: MockApiPayload;
+  formData: MockApiPayload;
   onChange: (next: MockApiPayload) => void;
   onSave: (data?: Partial<MockApiPayload>) => void;
   saving?: boolean;
 };
 
-export function DataLinkPanel({ draft, onChange, onSave, saving }: DataLinkPanelProps) {
-  const op = (draft.dataOp ?? 'none') as DataOp;
+export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPanelProps) {
+  const op = (formData.dataOp ?? 'none') as DataOp;
   const enabled = op !== 'none';
 
   const hint = DATA_OPS.find((o) => o.value === op)?.hint ?? '';
@@ -36,7 +36,7 @@ export function DataLinkPanel({ draft, onChange, onSave, saving }: DataLinkPanel
             <span className="text-[11.5px] text-ink-tertiary">{enabled ? '已启用' : '未启用'}</span>
             <Switch
               checked={enabled}
-              onChange={(v) => onChange({ ...draft, dataOp: v ? 'select' : 'none' })}
+              onChange={(v) => onChange({ ...formData, dataOp: v ? 'select' : 'none' })}
             />
           </div>
         }
@@ -48,7 +48,7 @@ export function DataLinkPanel({ draft, onChange, onSave, saving }: DataLinkPanel
           <FormField label="操作类型" hint={hint}>
             <Select
               value={op}
-              onChange={(e) => onChange({ ...draft, dataOp: e.target.value as DataOp })}
+              onChange={(e) => onChange({ ...formData, dataOp: e.target.value as DataOp })}
             >
               {DATA_OPS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -60,8 +60,8 @@ export function DataLinkPanel({ draft, onChange, onSave, saving }: DataLinkPanel
           <FormField label="业务表名" hint="字母/数字/下划线，开头不能为数字">
             <Input
               className="mono"
-              value={draft.dataTable ?? ''}
-              onChange={(e) => onChange({ ...draft, dataTable: e.target.value || null })}
+              value={formData.dataTable ?? ''}
+              onChange={(e) => onChange({ ...formData, dataTable: e.target.value || null })}
               placeholder="例如 face_data"
               disabled={!enabled}
             />
@@ -70,11 +70,11 @@ export function DataLinkPanel({ draft, onChange, onSave, saving }: DataLinkPanel
 
         <FormField label="where 条件" hint="JSON 格式；path 参数自动注入">
           <textarea
-            value={JSON.stringify(draft.dataWhere ?? {}, null, 2)}
+            value={JSON.stringify(formData.dataWhere ?? {}, null, 2)}
             onChange={(e) => {
               try {
                 const v = e.target.value.trim() ? JSON.parse(e.target.value) : {};
-                onChange({ ...draft, dataWhere: v as Record<string, unknown> });
+                onChange({ ...formData, dataWhere: v as Record<string, unknown> });
               } catch {
                 /* 暂时吞掉，等待失焦时做格式校验 */
               }

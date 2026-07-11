@@ -23,7 +23,7 @@ export function PanelActions({
   return (
     <div className="mt-6 flex items-center justify-between border-t border-line pt-[18px]">
       <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-subtle before:block before:h-1 before:w-1 before:rounded-full before:bg-success before:content-['']">
-        {hint ?? '所有修改自动保存到草稿'}
+        {hint ?? '修改内容将在点击保存后提交'}
       </span>
       <div className="flex items-center gap-2">
         {right ?? (

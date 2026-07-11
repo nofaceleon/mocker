@@ -44,6 +44,7 @@ export type ValidationParamRule = {
 };
 
 export type ValidationRules = {
+  isEnabled?: boolean;
   query?: ValidationParamRule[];
   body?: ValidationParamRule[];
   path?: ValidationParamRule[];

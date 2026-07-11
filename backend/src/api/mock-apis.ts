@@ -45,6 +45,7 @@ const validationParamSchema = z
 
 const validationRulesSchema = z
   .object({
+    isEnabled: z.boolean().optional(),
     query: z.array(validationParamSchema).optional(),
     body: z.array(validationParamSchema).optional(),
     path: z.array(validationParamSchema).optional(),
@@ -149,9 +150,38 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = idParamSchema.parse(req.params);
     const db = getDb();
-    const row = db.select().from(mockApis).where(eq(mockApis.id, id)).get();
+    const rows = db
+      .select({
+        id: mockApis.id,
+        featureGroupId: mockApis.featureGroupId,
+        name: mockApis.name,
+        description: mockApis.description,
+        protocol: mockApis.protocol,
+        method: mockApis.method,
+        path: mockApis.path,
+        isEnabled: mockApis.isEnabled,
+        sortOrder: mockApis.sortOrder,
+        responseStatus: mockApis.responseStatus,
+        responseDelay: mockApis.responseDelay,
+        responseDelayMax: mockApis.responseDelayMax,
+        responseContentType: mockApis.responseContentType,
+        responseHeaders: mockApis.responseHeaders,
+        responseBody: mockApis.responseBody,
+        validationRules: mockApis.validationRules,
+        dataOp: mockApis.dataOp,
+        dataTable: mockApis.dataTable,
+        dataWhere: mockApis.dataWhere,
+        script: mockApis.script,
+        createdAt: mockApis.createdAt,
+        updatedAt: mockApis.updatedAt,
+        hasCallback: sql<number>`(SELECT COUNT(*) FROM callback_configs WHERE callback_configs.api_id = ${mockApis.id} AND callback_configs.is_enabled = 1)`,
+      })
+      .from(mockApis)
+      .where(eq(mockApis.id, id))
+      .all();
+    const row = rows[0];
     if (!row) throw new ApiError('NOT_FOUND', `接口 ${id} 不存在`, 404);
-    res.success(row);
+    res.success({ ...row, hasCallback: Number(row.hasCallback ?? 0) > 0 });
   }),
 );
 

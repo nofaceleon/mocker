@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ApiError } from '@/lib/api';
@@ -18,7 +18,6 @@ import { ConfigNav, type ConfigTab } from './ConfigNav';
 import { BasicPanel, type BasicExtra } from './panels/BasicPanel';
 import { ParamsPanel } from './panels/ParamsPanel';
 import { ResponsePanel } from './panels/ResponsePanel';
-import { ValidatePanel } from './panels/ValidatePanel';
 import { CallbackPanel } from './panels/CallbackPanel';
 import { DataLinkPanel } from './panels/DataLinkPanel';
 import { ScriptPanel } from './panels/ScriptPanel';
@@ -40,7 +39,7 @@ export function ApiEditPage() {
   const createMut = useCreateMockApi();
   const testMut = useTestMockApi();
 
-  const [draft, setDraft] = useState<MockApiPayload>(() => newDraft());
+  const [formData, setFormData] = useState<MockApiPayload>(() => newFormData());
   const [extra, setExtra] = useState<BasicExtra>({
     protocol: 'HTTP',
     priority: 'high',
@@ -51,9 +50,14 @@ export function ApiEditPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | undefined>(undefined);
 
+  const prevApiIdRef = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (api && !isNew) {
-      setDraft(apiToDraft(api));
+      // 仅在 api id 变化时（初次加载 / 切换接口）重置 formData，避免 refetch 时覆盖未保存的修改
+      if (prevApiIdRef.current === undefined || prevApiIdRef.current !== api.id) {
+        setFormData(apiToFormData(api));
+        prevApiIdRef.current = api.id;
+      }
       setExtra((prev) => ({
         ...prev,
         protocol: api.protocol ?? 'HTTP',
@@ -65,7 +69,7 @@ export function ApiEditPage() {
 
   useEffect(() => {
     if (isNew) {
-      setDraft(newDraft());
+      setFormData(newFormData());
       setLastSavedAt(undefined);
     }
   }, [isNew]);
@@ -80,29 +84,29 @@ export function ApiEditPage() {
       api ?? {
         id: 0,
         featureGroupId: gid,
-        name: draft.name || '新建接口',
-        description: draft.description ?? null,
-        protocol: draft.protocol ?? 'HTTP',
-        method: draft.method,
-        path: draft.path,
-        isEnabled: draft.isEnabled ?? true,
+        name: formData.name || '新建接口',
+        description: formData.description ?? null,
+        protocol: formData.protocol ?? 'HTTP',
+        method: formData.method,
+        path: formData.path,
+        isEnabled: formData.isEnabled ?? true,
         sortOrder: 0,
-        responseStatus: draft.responseStatus ?? 200,
-        responseDelay: draft.responseDelay ?? 0,
-        responseDelayMax: draft.responseDelayMax ?? 0,
-        responseContentType: draft.responseContentType ?? 'application/json',
-        responseHeaders: draft.responseHeaders ?? null,
-        responseBody: draft.responseBody ?? null,
-        validationRules: draft.validationRules ?? null,
-        dataOp: draft.dataOp ?? 'none',
-        dataTable: draft.dataTable ?? null,
-        dataWhere: draft.dataWhere ?? null,
-        script: draft.script ?? null,
+        responseStatus: formData.responseStatus ?? 200,
+        responseDelay: formData.responseDelay ?? 0,
+        responseDelayMax: formData.responseDelayMax ?? 0,
+        responseContentType: formData.responseContentType ?? 'application/json',
+        responseHeaders: formData.responseHeaders ?? null,
+        responseBody: formData.responseBody ?? null,
+        validationRules: formData.validationRules ?? null,
+        dataOp: formData.dataOp ?? 'none',
+        dataTable: formData.dataTable ?? null,
+        dataWhere: formData.dataWhere ?? null,
+        script: formData.script ?? null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         mockDataCount: 0,
       },
-    [api, draft, gid],
+    [api, formData, gid],
   );
 
   const saving = updateMut.isPending || createMut.isPending;
@@ -133,8 +137,8 @@ export function ApiEditPage() {
 
   const handleSave = async (data?: Partial<MockApiPayload>) => {
     try {
-      // 合并data到draft
-      const saveData = data ? { ...draft, ...data } : draft;
+      // 合并data到formData
+      const saveData = data ? { ...formData, ...data } : formData;
 
       if (isNew) {
         if (!gid) {
@@ -148,7 +152,7 @@ export function ApiEditPage() {
       } else if (api) {
         const updated = await updateMut.mutateAsync({ id: api.id, data: saveData });
         toast.success('已保存');
-        setDraft(apiToDraft(updated));
+        setFormData(apiToFormData(updated));
         setLastSavedAt(updated.updatedAt);
       }
     } catch (err) {
@@ -194,8 +198,8 @@ export function ApiEditPage() {
         <div className="overflow-y-auto bg-canvas">
           {tab === 'basic' && (
             <BasicPanel
-              draft={draft}
-              onChange={setDraft}
+              formData={formData}
+              onChange={setFormData}
               groupName={activeGroup?.name}
               onSave={handleSave}
               saving={saving}
@@ -203,14 +207,13 @@ export function ApiEditPage() {
               onExtraChange={setExtra}
             />
           )}
-          {tab === 'params' && <ParamsPanel draft={draft} onChange={setDraft} onSave={handleSave} saving={saving} />}
-          {tab === 'response' && <ResponsePanel draft={draft} onChange={setDraft} onSave={handleSave} saving={saving} />}
-          {tab === 'validate' && <ValidatePanel draft={draft} onChange={setDraft} onSave={handleSave} saving={saving} />}
+          {tab === 'params' && <ParamsPanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
+          {tab === 'response' && <ResponsePanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
           {tab === 'callback' && api && (
             <CallbackPanel apiId={api.id} onSave={handleSave} saving={saving} />
           )}
-          {tab === 'datalink' && <DataLinkPanel draft={draft} onChange={setDraft} onSave={handleSave} saving={saving} />}
-          {tab === 'script' && <ScriptPanel draft={draft} onChange={setDraft} onSave={handleSave} saving={saving} />}
+          {tab === 'datalink' && <DataLinkPanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
+          {tab === 'script' && <ScriptPanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
           {tab === 'test' && (
             <TestPanel api={summary} onRun={async (input) => testMut.mutateAsync({ id: summary.id, input })} />
           )}
@@ -241,7 +244,7 @@ export function ApiEditPage() {
   );
 }
 
-function newDraft(): MockApiPayload {
+function newFormData(): MockApiPayload {
   return {
     name: '',
     description: null,
@@ -263,7 +266,7 @@ function newDraft(): MockApiPayload {
   };
 }
 
-function apiToDraft(api: MockApi): MockApiPayload {
+function apiToFormData(api: MockApi): MockApiPayload {
   return {
     name: api.name,
     description: api.description,

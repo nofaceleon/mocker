@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FileText } from 'lucide-react';
-import { Card } from '@/components/ui';
+import { Card, Switch } from '@/components/ui';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
 import type { ValidationParamRule } from '@/types/api';
 import type { ParamType, ParamLocation } from '@/types/api';
@@ -19,8 +19,8 @@ const LOCATIONS: ParamLocation[] = ['body', 'query', 'path', 'header'];
 const TYPES: ParamType[] = ['string', 'number', 'boolean', 'array', 'object'];
 
 type ParamsPanelProps = {
-  draft: MockApiPayload;
-  onChange: (next: MockApiPayload) => void;
+  formData: MockApiPayload;
+  onChange: (next: MockApiPayload | ((prev: MockApiPayload) => MockApiPayload)) => void;
   onSave: (data?: Partial<MockApiPayload>) => void;
   saving?: boolean;
 };
@@ -75,24 +75,34 @@ function parseDefault(raw: string, type: ParamType): unknown {
   return raw;
 }
 
-export function ParamsPanel({ draft, onChange, onSave, saving }: ParamsPanelProps) {
-  const rules = draft.validationRules ?? {};
+export function ParamsPanel({ formData, onChange, onSave, saving }: ParamsPanelProps) {
+  const rules = formData.validationRules ?? {};
   const bodyRules = rules.body ?? [];
   const [rows, setRows] = useState<ParamRow[]>(() => rowsFromRules(bodyRules));
+  const isInternalUpdate = useRef(false);
 
   useEffect(() => {
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
     setRows(rowsFromRules(bodyRules));
   }, [JSON.stringify(bodyRules)]);
 
-  const applyToDraft = (next: ParamRow[]) => {
+  const applyToFormData = (next: ParamRow[]) => {
     setRows(next);
-    onChange({
-      ...draft,
+    onChange((prev) => ({
+      ...prev,
       validationRules: {
-        ...(rules ?? {}),
+        ...(prev.validationRules ?? {}),
         body: rulesFromRows(next),
       },
-    });
+    }));
+  };
+
+  const updateRow = (updater: (rs: ParamRow[]) => ParamRow[]) => {
+    isInternalUpdate.current = true;
+    applyToFormData(updater(rows));
   };
 
   const summary = useMemo(() => {
@@ -101,12 +111,30 @@ export function ParamsPanel({ draft, onChange, onSave, saving }: ParamsPanelProp
     return total === 0 ? '' : `共 ${total} 个参数 · 必填 ${required}`;
   }, [rows]);
 
+  const validationEnabled = rules.isEnabled !== false;
+
   return (
     <div className="mx-auto max-w-[880px] px-8 pb-12 pt-7">
       <PanelHeader
         icon={FileText}
         title="请求参数"
         description="定义接口期望接收的请求字段。每行代表一个参数，自动落入后端参数校验的 body 规则集。"
+        action={
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-[11.5px] text-ink-tertiary">
+              参数校验 {validationEnabled ? '已启用' : '已禁用'}
+            </span>
+            <Switch
+              checked={validationEnabled}
+              onChange={(v) =>
+                onChange((prev) => ({
+                  ...prev,
+                  validationRules: { ...(prev.validationRules ?? {}), isEnabled: v },
+                }))
+              }
+            />
+          </div>
+        }
       />
 
       <Card
@@ -120,7 +148,7 @@ export function ParamsPanel({ draft, onChange, onSave, saving }: ParamsPanelProp
       >
         <ParamTable
           rows={rows}
-          onChange={applyToDraft}
+          onChange={applyToFormData}
           newRow={newParamRow}
           importJson
           emptyText="尚未定义参数，点击「添加」开始"
@@ -131,7 +159,7 @@ export function ParamsPanel({ draft, onChange, onSave, saving }: ParamsPanelProp
               render: (r, idx) => (
                 <TextCell
                   value={r.name}
-                  onChange={(v) => setRows((rs) => rs.map((x, i) => (i === idx ? { ...x, name: v } : x)))}
+                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, name: v } : x)))}
                   placeholder="name"
                   mono
                 />
@@ -145,7 +173,7 @@ export function ParamsPanel({ draft, onChange, onSave, saving }: ParamsPanelProp
                 <SelectCell
                   value={r.type}
                   options={TYPES}
-                  onChange={(v) => setRows((rs) => rs.map((x, i) => (i === idx ? { ...x, type: v } : x)))}
+                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, type: v } : x)))}
                 />
               ),
             },
@@ -157,7 +185,7 @@ export function ParamsPanel({ draft, onChange, onSave, saving }: ParamsPanelProp
                 <SelectCell
                   value={r.location}
                   options={LOCATIONS}
-                  onChange={(v) => setRows((rs) => rs.map((x, i) => (i === idx ? { ...x, location: v } : x)))}
+                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, location: v } : x)))}
                 />
               ),
             },
@@ -168,7 +196,7 @@ export function ParamsPanel({ draft, onChange, onSave, saving }: ParamsPanelProp
               render: (r, idx) => (
                 <CheckCell
                   checked={r.required}
-                  onChange={(v) => setRows((rs) => rs.map((x, i) => (i === idx ? { ...x, required: v } : x)))}
+                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, required: v } : x)))}
                 />
               ),
             },
@@ -179,7 +207,7 @@ export function ParamsPanel({ draft, onChange, onSave, saving }: ParamsPanelProp
               render: (r, idx) => (
                 <TextCell
                   value={r.defaultValue}
-                  onChange={(v) => setRows((rs) => rs.map((x, i) => (i === idx ? { ...x, defaultValue: v } : x)))}
+                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, defaultValue: v } : x)))}
                   placeholder="—"
                   mono={r.type === 'object' || r.type === 'array'}
                 />
@@ -191,7 +219,7 @@ export function ParamsPanel({ draft, onChange, onSave, saving }: ParamsPanelProp
               render: (r, idx) => (
                 <TextCell
                   value={r.desc}
-                  onChange={(v) => setRows((rs) => rs.map((x, i) => (i === idx ? { ...x, desc: v } : x)))}
+                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, desc: v } : x)))}
                   placeholder="备注"
                 />
               ),
@@ -200,7 +228,7 @@ export function ParamsPanel({ draft, onChange, onSave, saving }: ParamsPanelProp
         />
       </Card>
 
-      <PanelActions hint="修改将实时写入 draft" onSave={onSave} saving={saving} />
+      <PanelActions hint="修改内容将在点击保存后提交" onSave={onSave} saving={saving} />
     </div>
   );
 }

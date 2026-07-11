@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Shield } from 'lucide-react';
 import { Card, FormField, Input, Select, Switch, Button } from '@/components/ui';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
@@ -113,25 +113,30 @@ const STATUS_FAIL = [
 ];
 
 type ValidatePanelProps = {
-  draft: MockApiPayload;
+  formData: MockApiPayload;
   onChange: (next: MockApiPayload) => void;
   onSave: (data?: Partial<MockApiPayload>) => void;
   saving?: boolean;
 };
 
-export function ValidatePanel({ draft, onChange, onSave, saving }: ValidatePanelProps) {
-  const rules = draft.validationRules ?? {};
+export function ValidatePanel({ formData, onChange, onSave, saving }: ValidatePanelProps) {
+  const rules = formData.validationRules ?? {};
   const bodyRules = rules.body ?? [];
   const [rows, setRows] = useState<ValidateRow[]>(() => rulesToRows(bodyRules));
+  const isInternalUpdate = useRef(false);
 
   useEffect(() => {
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
     setRows(rulesToRows(bodyRules));
   }, [JSON.stringify(bodyRules)]);
 
-  const apply = (next: ValidateRow[]) => {
+  const applyToFormData = (next: ValidateRow[]) => {
     setRows(next);
     onChange({
-      ...draft,
+      ...formData,
       validationRules: {
         ...rules,
         body: rowsToRules(next),
@@ -139,12 +144,17 @@ export function ValidatePanel({ draft, onChange, onSave, saving }: ValidatePanel
     });
   };
 
+  const updateRow = (updater: (rs: ValidateRow[]) => ValidateRow[]) => {
+    isInternalUpdate.current = true;
+    applyToFormData(updater(rows));
+  };
+
   const failStatus = rules.failStatus ?? 400;
   const failMessage = rules.failMessage ?? '参数校验失败';
 
   const setFail = (patch: Partial<{ failStatus: number; failMessage: string }>) => {
     onChange({
-      ...draft,
+      ...formData,
       validationRules: {
         ...rules,
         ...(patch.failStatus !== undefined ? { failStatus: patch.failStatus } : {}),
@@ -153,8 +163,13 @@ export function ValidatePanel({ draft, onChange, onSave, saving }: ValidatePanel
     });
   };
 
-  const enabled = rows.length > 0;
-  const summary = enabled ? `${rows.length} 条规则 · 失败返 ${failStatus}` : '暂未启用';
+  const enabled = rules.isEnabled !== false;
+  const hasRules = rows.length > 0;
+  const summary = !enabled
+    ? `已禁用 · ${rows.length} 条规则`
+    : hasRules
+      ? `${rows.length} 条规则 · 失败返 ${failStatus}`
+      : '暂未配置规则';
 
   const ruleOptions = RULE_OPTIONS.map((o) => o.value);
 
@@ -169,7 +184,12 @@ export function ValidatePanel({ draft, onChange, onSave, saving }: ValidatePanel
             <span className="text-[11.5px] text-ink-tertiary">{summary}</span>
             <Switch
               checked={enabled}
-              onChange={(v) => (v ? apply(rows.length === 0 ? [newValidateRow()] : rows) : apply([]))}
+              onChange={(v) =>
+                onChange({
+                  ...formData,
+                  validationRules: { ...rules, isEnabled: v },
+                })
+              }
             />
           </div>
         }
@@ -186,7 +206,7 @@ export function ValidatePanel({ draft, onChange, onSave, saving }: ValidatePanel
       >
         <ParamTable<ValidateRow>
           rows={rows}
-          onChange={apply}
+          onChange={applyToFormData}
           newRow={newValidateRow}
           emptyText="尚未配置校验规则，点击「添加」开始"
           columns={[
@@ -197,7 +217,7 @@ export function ValidatePanel({ draft, onChange, onSave, saving }: ValidatePanel
               render: (r, idx) => (
                 <TextCell
                   value={r.name}
-                  onChange={(v) => setRows((rs) => rs.map((x, i) => (i === idx ? { ...x, name: v } : x)))}
+                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, name: v } : x)))}
                   placeholder="name"
                   mono
                 />
@@ -211,7 +231,7 @@ export function ValidatePanel({ draft, onChange, onSave, saving }: ValidatePanel
                 <SelectCell
                   value={r.rule}
                   options={ruleOptions}
-                  onChange={(v) => setRows((rs) => rs.map((x, i) => (i === idx ? { ...x, rule: v as RuleKind } : x)))}
+                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, rule: v as RuleKind } : x)))}
                 />
               ),
             },
@@ -234,7 +254,7 @@ export function ValidatePanel({ draft, onChange, onSave, saving }: ValidatePanel
                 return (
                   <TextCell
                     value={r.ruleValue}
-                    onChange={(v) => setRows((rs) => rs.map((x, i) => (i === idx ? { ...x, ruleValue: v } : x)))}
+                    onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, ruleValue: v } : x)))}
                     placeholder={placeholder}
                     mono
                   />
@@ -248,7 +268,7 @@ export function ValidatePanel({ draft, onChange, onSave, saving }: ValidatePanel
               render: (r, idx) => (
                 <TextCell
                   value={r.errCode}
-                  onChange={(v) => setRows((rs) => rs.map((x, i) => (i === idx ? { ...x, errCode: v } : x)))}
+                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, errCode: v } : x)))}
                   mono
                 />
               ),
@@ -259,7 +279,7 @@ export function ValidatePanel({ draft, onChange, onSave, saving }: ValidatePanel
               render: (r, idx) => (
                 <TextCell
                   value={r.errMessage}
-                  onChange={(v) => setRows((rs) => rs.map((x, i) => (i === idx ? { ...x, errMessage: v } : x)))}
+                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, errMessage: v } : x)))}
                   placeholder="参数 name 校验失败"
                 />
               ),

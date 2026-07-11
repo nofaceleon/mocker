@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Check, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { JsonImportModal } from './JsonImportModal';
 
 export type ParamLocation = 'query' | 'body' | 'path' | 'header';
 export type ParamType = 'string' | 'number' | 'boolean' | 'array' | 'object';
@@ -75,14 +76,13 @@ export function ParamTable<R extends { id: string }>({
   onImportJson,
   newRow,
 }: ParamTableProps<R>) {
+  const [importOpen, setImportOpen] = useState(false);
   const remove = (idx: number) => onChange(rows.filter((_, i) => i !== idx));
   const add = () => {
     const next = (newRow ?? (newParamRow as unknown as () => R))();
     onChange([...rows, next]);
   };
-  const importRows = () => {
-    const raw = window.prompt('粘贴 JSON 数组，自动展开为行：');
-    if (!raw) return;
+  const handleImport = (raw: string) => {
     try {
       const appended = onImportJson ? onImportJson(raw) : (defaultParamImport(raw) as unknown as R[]);
       onChange([...rows, ...appended]);
@@ -97,7 +97,7 @@ export function ParamTable<R extends { id: string }>({
         {emptyText}
         <div className="mt-3 flex items-center justify-center gap-2">
           {importJson && (
-            <Button variant="ghost" size="sm" onClick={importRows}>
+            <Button variant="ghost" size="sm" onClick={() => setImportOpen(true)}>
               <Plus className="h-3 w-3" />
               导入 JSON
             </Button>
@@ -107,6 +107,7 @@ export function ParamTable<R extends { id: string }>({
             添加
           </Button>
         </div>
+        <JsonImportModal open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
       </div>
     );
   }
@@ -152,7 +153,7 @@ export function ParamTable<R extends { id: string }>({
         <span className="text-[11.5px] text-ink-tertiary">共 {rows.length} 行</span>
         <div className="flex items-center gap-2">
           {importJson && (
-            <Button variant="ghost" size="sm" onClick={importRows}>
+            <Button variant="ghost" size="sm" onClick={() => setImportOpen(true)}>
               <Plus className="h-3 w-3" />
               导入 JSON
             </Button>
@@ -163,6 +164,7 @@ export function ParamTable<R extends { id: string }>({
           </Button>
         </div>
       </div>
+      <JsonImportModal open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
     </>
   );
 }

@@ -258,6 +258,7 @@ export type NewCallbackTask = typeof callbackTasks.$inferInsert;
 
 // ---------------- 参数校验规则 TS 类型 ----------------
 export type ValidationRules = {
+  isEnabled?: boolean;
   query?: ParamRule[];
   body?: ParamRule[];
   path?: ParamRule[];
