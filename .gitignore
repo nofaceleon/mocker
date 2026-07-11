@@ -36,3 +36,6 @@ temp/
 
 # 运行时
 .mocker.pid
+
+# mimocode
+.mimocode/
