@@ -104,6 +104,23 @@ export function LogsPage() {
 
   const stats = useRequestLogStats(range);
   const logs = useRequestLogs(listQuery);
+  const [progress, setProgress] = useState(0);
+
+  // 进度条驱动的定时刷新
+  useEffect(() => {
+    setProgress(0);
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          logs.refetch();
+          stats.refetch();
+          return 0;
+        }
+        return prev + 2; // 50ms × 50步 = 2.5s，+2 → 100步 = 5s
+      });
+    }, 50);
+    return () => clearInterval(interval);
+  }, [range, projectFilter, apiFilter, methodFilter, statusFilter, search]);
   const detail = useRequestLog(selected ?? undefined);
   const clearMut = useClearRequestLogs();
 
@@ -348,9 +365,18 @@ export function LogsPage() {
               />
             </div>
           )}
-          <div className="ml-auto inline-flex items-center gap-1.5 text-[12px] text-ink-tertiary">
+          <div className="ml-auto flex items-center gap-2">
             <LiveDot />
-            实时刷新中
+            <span className="text-[12px] text-ink-tertiary">实时刷新</span>
+            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-line">
+              <div
+                className="h-full rounded-full bg-ink transition-[width] duration-100 ease-linear"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="w-8 text-right font-mono text-[11px] text-ink-tertiary">
+              {Math.ceil((100 - progress) * 50 / 1000)}s
+            </span>
           </div>
         </div>
       </div>

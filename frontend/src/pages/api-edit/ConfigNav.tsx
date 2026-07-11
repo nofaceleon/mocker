@@ -108,13 +108,13 @@ export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogCl
         {/* 元信息行 */}
         <div className="flex items-center gap-2 text-[11px]">
           {summary?.isEnabled ? (
-            <span className="inline-flex items-center gap-1 rounded bg-success-soft px-1.5 py-0.5 font-medium text-success-text">
-              <span className="live-dot !h-[5px] !w-[5px] !shadow-none" />
+            <span className="inline-flex items-center gap-1.5 font-medium text-ink-secondary">
+              <span className="live-dot !h-[6px] !w-[6px]" />
               运行中
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded bg-danger-soft px-1.5 py-0.5 font-medium text-danger-text">
-              <span className="live-dot-danger !h-[5px] !w-[5px] !shadow-none" />
+            <span className="inline-flex items-center gap-1.5 font-medium text-ink-secondary">
+              <span className="live-dot-danger !h-[6px] !w-[6px]" />
               未启用
             </span>
           )}

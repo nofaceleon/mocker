@@ -67,7 +67,7 @@ export function useRequestLogs(query: RequestLogQuery = {}) {
           params: buildQuery(query),
         }),
       ),
-    refetchInterval: 5_000,
+    refetchInterval: false,
   });
 }
 
@@ -84,7 +84,7 @@ export function useRequestLogStats(range: RequestLogRange = '24h') {
     queryKey: KEYS.stats(range),
     queryFn: async () =>
       unwrap(await api.get<RequestLogStats>('/request-logs/stats', { params: { range } })),
-    refetchInterval: 5_000,
+    refetchInterval: false,
   });
 }
 
