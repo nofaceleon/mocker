@@ -25,11 +25,12 @@ export function Topbar({ brand, nav, right }: TopbarProps) {
 
 type BreadcrumbProps = {
   items: Array<{ label: ReactNode; to?: string; onClick?: () => void; current?: boolean }>;
+  className?: string;
 };
 
-export function Breadcrumb({ items }: BreadcrumbProps) {
+export function Breadcrumb({ items, className }: BreadcrumbProps) {
   return (
-    <nav className="breadcrumb">
+    <nav className={cn('breadcrumb', className)}>
       {items.map((it, i) => {
         const isLast = i === items.length - 1;
         return (

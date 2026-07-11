@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Activity,
   Calendar,
@@ -46,10 +47,14 @@ const STATUS_OPTIONS: Array<RequestLogStatusClass | 'all'> = ['all', '2xx', '4xx
 const PAGE_SIZE = 20;
 
 export function LogsPage() {
+  const [searchParams] = useSearchParams();
+  const initialProject = searchParams.get('projectId') ?? 'all';
+  const initialApi = searchParams.get('apiId') ?? 'all';
+
   const [range, setRange] = useState<RequestLogRange>('24h');
   const [search, setSearch] = useState('');
-  const [projectFilter, setProjectFilter] = useState<string>('all');
-  const [apiFilter, setApiFilter] = useState<string>('all');
+  const [projectFilter, setProjectFilter] = useState<string>(initialProject);
+  const [apiFilter, setApiFilter] = useState<string>(initialApi);
   const [methodFilter, setMethodFilter] = useState<RequestLogHttpMethod | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<RequestLogStatusClass | 'all'>('all');
   const [page, setPage] = useState(1);

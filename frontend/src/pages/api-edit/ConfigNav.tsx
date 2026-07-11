@@ -1,6 +1,17 @@
-import { Settings, FileText, Check, Shield, Send, Link2, Code2, TestTube, BookOpen, ChevronLeft } from 'lucide-react';
-import { MethodBadge, Button, Breadcrumb } from '@/components/ui';
+import {
+  Settings,
+  FileText,
+  Check,
+  Shield,
+  Send,
+  Link2,
+  Code2,
+  TestTube,
+  BookOpen,
+} from 'lucide-react';
+import { MethodBadge, Breadcrumb, CopyButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { config as runtimeConfig } from '@/lib/runtime-config';
 import type { HttpMethod } from '@/types/api';
 
 export type ConfigTab =
@@ -56,35 +67,48 @@ export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogCl
 
   return (
     <aside className="flex flex-col overflow-y-auto border-r border-line bg-white scrollbar-thin">
-      <div className="border-b border-line-subtle px-4 py-3">
+      <div className="border-b border-line-subtle px-4 py-3.5">
         {breadcrumb && breadcrumb.length > 0 && (
-          <div className="mb-2 flex items-center gap-1 text-[11px]">
-            <ChevronLeft className="h-3 w-3 text-ink-tertiary" />
-            <Breadcrumb items={breadcrumb} />
+          <div className="mb-3 text-[12px]">
+            <Breadcrumb items={breadcrumb} className="!ml-0" />
           </div>
         )}
-        <div className="mb-1 flex items-center gap-2">
-          <MethodBadge method={method} className="!text-[10px] !py-[2px] !px-[6px]" />
-          <span className="flex-1 truncate text-[13px] font-medium text-ink">
-            {summary?.name || '新建接口'}
+
+        {/* 接口名称 */}
+        <div className="mb-2.5 truncate text-[15px] font-semibold leading-snug text-ink">
+          {summary?.name || '新建接口'}
+        </div>
+
+        {/* 端点展示条 */}
+        <div className="mb-3 flex items-center gap-2 rounded-lg bg-[#F8F8FA] px-3 py-2">
+          <MethodBadge method={method} className="!text-[11px] !py-[1px] !px-[6px]" />
+          <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-ink-secondary">
+            {path || '/'}
           </span>
-          {summary?.isEnabled && (
-            <span className="inline-flex items-center gap-0.5 rounded-full border border-success-border bg-success-soft px-1.5 py-px text-[9px] font-medium text-success-text">
-              <span className="live-dot" />
+          <CopyButton text={`${runtimeConfig.apiBase}${path}`} />
+        </div>
+
+        {/* 元信息行 */}
+        <div className="flex items-center gap-2 text-[11px]">
+          {summary?.isEnabled ? (
+            <span className="inline-flex items-center gap-1 rounded bg-success-soft px-1.5 py-0.5 font-medium text-success-text">
+              <span className="live-dot !h-[5px] !w-[5px] !shadow-none" />
               运行中
             </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded bg-danger-soft px-1.5 py-0.5 font-medium text-danger-text">
+              <span className="live-dot-danger !h-[5px] !w-[5px] !shadow-none" />
+              未启用
+            </span>
           )}
-        </div>
-        <div className="mb-1 param-code truncate !text-[11px]">{path || '/'}</div>
-        <div className="flex items-center justify-between">
-          <div className="text-[11px] text-ink-tertiary">
-            {summary?.groupName ?? '新建接口'}
-            {summary?.calledCount !== undefined && <> · 已调用 {summary.calledCount} 次</>}
-          </div>
-          <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px]" onClick={onLogClick}>
+          <button
+            type="button"
+            onClick={onLogClick}
+            className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-ink-tertiary transition-colors hover:bg-canvas-subtle hover:text-ink-secondary"
+          >
             <BookOpen className="h-3 w-3" />
             日志
-          </Button>
+          </button>
         </div>
       </div>
 

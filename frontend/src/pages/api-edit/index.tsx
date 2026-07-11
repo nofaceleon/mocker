@@ -70,7 +70,10 @@ export function ApiEditPage() {
     }
   }, [isNew]);
 
-  const activeGroup = useMemo(() => groups?.find((g) => g.id === gid) ?? null, [groups, gid]);
+  const activeGroup = useMemo(() => {
+    const resolvedGid = gid || api?.featureGroupId;
+    return groups?.find((g) => g.id === resolvedGid) ?? null;
+  }, [groups, gid, api?.featureGroupId]);
 
   const summary: MockApi = useMemo(
     () =>
@@ -175,7 +178,7 @@ export function ApiEditPage() {
             { label: project?.name ?? '...', to: `/projects/${projectId}` },
             ...(activeGroup ? [{ label: activeGroup.name, to: `/projects/${projectId}` }] : []),
           ]}
-          onLogClick={() => toast.info('调用日志将在 P1 上线')}
+          onLogClick={() => navigate(`/logs?projectId=${projectId}${apiId ? `&apiId=${apiId}` : ''}`)}
           summary={configSummary}
         />
 

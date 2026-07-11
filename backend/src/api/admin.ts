@@ -73,6 +73,7 @@ router.get(
     res.success({
       dbPath: config.db.path,
       backupDir: config.db.backupDir,
+      port: config.port,
       status: 'ok',
     });
   }),

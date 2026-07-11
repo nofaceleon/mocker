@@ -1,13 +1,55 @@
 /**
- * 运行时配置（来自 .env 或后端 /admin/health/db）
- * P0 阶段：硬编码默认值 + 显示给用户
+ * 运行时配置 — 从后端 /api/admin/health/db 动态获取
  */
 
-export const config = {
-  dbPath: '/Users/songjiansheng/Desktop/mocker/data/mock.db',
-  backupDir: '/Users/songjiansheng/Desktop/mocker/data/backups',
-  apiBase: 'http://localhost:3001',
-  frontendPort: 5173,
-  backendPort: 3001,
-  apiBaseUrl: '/api',
+interface RuntimeConfig {
+  dbPath: string;
+  backupDir: string;
+  backendPort: number;
+  status: string;
+}
+
+const defaults: RuntimeConfig = {
+  dbPath: '',
+  backupDir: '',
+  backendPort: 3000,
+  status: 'ok',
 };
+
+let resolved: RuntimeConfig = { ...defaults };
+
+export const config = {
+  get apiBase() {
+    return `http://${window.location.hostname}:${resolved.backendPort}`;
+  },
+  get backendPort() {
+    return resolved.backendPort;
+  },
+  get frontendPort() {
+    return Number(window.location.port) || 5173;
+  },
+  get apiBaseUrl() {
+    return '/api';
+  },
+  get dbPath() {
+    return resolved.dbPath;
+  },
+  get backupDir() {
+    return resolved.backupDir;
+  },
+};
+
+export async function loadRuntimeConfig(): Promise<void> {
+  try {
+    const res = await fetch('/api/admin/health/db');
+    if (res.ok) {
+      const data = await res.json();
+      const payload = data?.data ?? data;
+      if (payload) {
+        resolved = { ...defaults, ...payload };
+      }
+    }
+  } catch {
+    // 使用默认值
+  }
+}
