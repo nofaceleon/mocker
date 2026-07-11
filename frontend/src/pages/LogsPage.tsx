@@ -116,7 +116,7 @@ export function LogsPage() {
           stats.refetch();
           return 0;
         }
-        return prev + 2; // 50ms × 50步 = 2.5s，+2 → 100步 = 5s
+        return prev + 1; // 50ms × 100步 = 5s
       });
     }, 50);
     return () => clearInterval(interval);
