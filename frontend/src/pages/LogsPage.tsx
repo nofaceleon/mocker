@@ -247,7 +247,7 @@ export function LogsPage() {
           <select
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
-            className="form-select h-8 w-auto min-w-[120px] text-[12px]"
+            className="form-select w-auto min-w-[120px] text-[12px]"
           >
             <option value="all">全部项目</option>
             {projectOptions.map((p) => (
@@ -259,7 +259,7 @@ export function LogsPage() {
           <select
             value={apiFilter}
             onChange={(e) => setApiFilter(e.target.value)}
-            className="form-select h-8 w-auto min-w-[140px] text-[12px]"
+            className="form-select w-auto min-w-[140px] text-[12px]"
           >
             <option value="all">全部接口</option>
             {apiOptions.map((a) => (
@@ -271,7 +271,7 @@ export function LogsPage() {
           <select
             value={methodFilter}
             onChange={(e) => setMethodFilter(e.target.value as RequestLogHttpMethod | 'all')}
-            className="form-select h-8 w-auto min-w-[110px] text-[12px]"
+            className="form-select w-auto min-w-[110px] text-[12px]"
           >
             {METHOD_OPTIONS.map((m) => (
               <option key={m} value={m}>
@@ -282,7 +282,7 @@ export function LogsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as RequestLogStatusClass | 'all')}
-            className="form-select h-8 w-auto min-w-[110px] text-[12px]"
+            className="form-select w-auto min-w-[110px] text-[12px]"
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>

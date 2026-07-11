@@ -13,7 +13,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       <select
         ref={ref}
         className={cn(
-          'form-select h-8',
+          'form-select',
           invalid && 'border-danger',
           className,
         )}

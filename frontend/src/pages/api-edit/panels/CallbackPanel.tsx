@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Send, AlertCircle, ExternalLink, Trash2 } from 'lucide-react';
+import { Send, AlertCircle, ExternalLink, Save, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Card, FormField, Input, Select, Switch } from '@/components/ui';
+import { Button, Card, FormField, Input, Select, Switch } from '@/components/ui';
 import type { CallbackConfig, CallbackConditionPreset } from '@/types/api';
 import {
   useCallbackConfig,
@@ -9,7 +9,6 @@ import {
   useSaveCallbackConfig,
 } from '@/hooks/queries/use-callback-config';
 import { PanelHeader } from '../PanelHeader';
-import { PanelActions } from '../PanelActions';
 
 type CallbackPanelProps = {
   apiId: number | undefined;
@@ -304,7 +303,7 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
         )}
       </Card>
 
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
         <button
           type="button"
           onClick={handleDelete}
@@ -314,11 +313,19 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
           <Trash2 className="h-3.5 w-3.5" />
           删除回调配置
         </button>
-        <PanelActions
-          hint={dirty ? '有未保存的修改' : isLoading ? '加载中…' : '已保存'}
-          onSave={handleSave}
-          saving={saving || saveMut.isPending}
-        />
+        <div className="flex items-center gap-3">
+          <span className="text-[12px] text-ink-subtle">
+            {dirty ? '有未保存的修改' : isLoading ? '加载中…' : '已保存'}
+          </span>
+          <Button
+            variant="primary"
+            onClick={handleSave}
+            loading={saving || saveMut.isPending}
+          >
+            <Save className="h-3.5 w-3.5" />
+            保存
+          </Button>
+        </div>
       </div>
     </div>
   );
