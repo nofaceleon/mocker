@@ -1,10 +1,11 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { eq, and, asc, sql } from 'drizzle-orm';
+import { eq, and, asc, sql, inArray } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import {
   featureGroups,
   mockApis,
+  callbackConfigs,
   type MockApi,
   type ValidationRules,
   type HttpMethod,
@@ -122,12 +123,22 @@ router.get(
         createdAt: mockApis.createdAt,
         updatedAt: mockApis.updatedAt,
         mockDataCount: sql<number>`(SELECT COUNT(*) FROM mock_data WHERE mock_data.api_id = ${mockApis.id})`,
-        hasCallback: sql<number>`(SELECT COUNT(*) FROM callback_configs WHERE callback_configs.api_id = ${mockApis.id} AND callback_configs.is_enabled = 1)`,
       })
       .from(mockApis)
       .where(eq(mockApis.featureGroupId, featureGroupId))
       .orderBy(asc(mockApis.sortOrder), asc(mockApis.id))
       .all();
+
+    // 批量查询哪些 API 有启用的回调配置
+    const apiIds = rows.map((r) => r.id);
+    const enabledCallbacks = apiIds.length > 0
+      ? db
+          .select({ apiId: callbackConfigs.apiId })
+          .from(callbackConfigs)
+          .where(and(inArray(callbackConfigs.apiId, apiIds), eq(callbackConfigs.isEnabled, true)))
+          .all()
+      : [];
+    const callbackSet = new Set(enabledCallbacks.map((c) => c.apiId));
 
     // 添加完整的 mock 路由地址
     const host = req.get('host') || `localhost:${config.port}`;
@@ -137,7 +148,7 @@ router.get(
       ...row,
       fullPath: row.path,
       fullUrl: `${baseUrl}${row.path}`,
-      hasCallback: Number(row.hasCallback ?? 0) > 0,
+      hasCallback: callbackSet.has(row.id),
     }));
 
     res.success(result);
@@ -174,14 +185,20 @@ router.get(
         script: mockApis.script,
         createdAt: mockApis.createdAt,
         updatedAt: mockApis.updatedAt,
-        hasCallback: sql<number>`(SELECT COUNT(*) FROM callback_configs WHERE callback_configs.api_id = ${mockApis.id} AND callback_configs.is_enabled = 1)`,
       })
       .from(mockApis)
       .where(eq(mockApis.id, id))
       .all();
     const row = rows[0];
     if (!row) throw new ApiError('NOT_FOUND', `接口 ${id} 不存在`, 404);
-    res.success({ ...row, hasCallback: Number(row.hasCallback ?? 0) > 0 });
+
+    const cbConfig = db
+      .select({ apiId: callbackConfigs.apiId })
+      .from(callbackConfigs)
+      .where(and(eq(callbackConfigs.apiId, id), eq(callbackConfigs.isEnabled, true)))
+      .get();
+
+    res.success({ ...row, hasCallback: cbConfig !== undefined });
   }),
 );
 
@@ -277,7 +294,14 @@ router.put(
 
     const updated = db.select().from(mockApis).where(eq(mockApis.id, id)).get()!;
     registry.upsert(updated);
-    res.success(updated);
+
+    const cbConfig = db
+      .select({ apiId: callbackConfigs.apiId })
+      .from(callbackConfigs)
+      .where(and(eq(callbackConfigs.apiId, id), eq(callbackConfigs.isEnabled, true)))
+      .get();
+
+    res.success({ ...updated, hasCallback: cbConfig !== undefined });
   }),
 );
 

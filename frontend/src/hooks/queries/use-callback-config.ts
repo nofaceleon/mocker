@@ -28,6 +28,7 @@ export function useSaveCallbackConfig(apiId: ID) {
       qc.setQueryData(KEYS.byApi(apiId), data);
       qc.invalidateQueries({ queryKey: KEYS.root });
       qc.invalidateQueries({ queryKey: ['mock-apis'] });
+      qc.invalidateQueries({ queryKey: ['mock-apis', 'detail', apiId] });
     },
   });
 }
@@ -41,6 +42,7 @@ export function useDeleteCallbackConfig(apiId: ID) {
       qc.setQueryData(KEYS.byApi(apiId), null);
       qc.invalidateQueries({ queryKey: KEYS.root });
       qc.invalidateQueries({ queryKey: ['mock-apis'] });
+      qc.invalidateQueries({ queryKey: ['mock-apis', 'detail', apiId] });
     },
   });
 }

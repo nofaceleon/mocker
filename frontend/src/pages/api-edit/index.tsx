@@ -210,7 +210,7 @@ export function ApiEditPage() {
           {tab === 'params' && <ParamsPanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
           {tab === 'response' && <ResponsePanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
           {tab === 'callback' && api && (
-            <CallbackPanel apiId={api.id} onSave={handleSave} saving={saving} />
+            <CallbackPanel apiId={api.id} onSave={() => setLastSavedAt(new Date().toISOString())} saving={saving} />
           )}
           {tab === 'datalink' && <DataLinkPanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
           {tab === 'script' && <ScriptPanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
