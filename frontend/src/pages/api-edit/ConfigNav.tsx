@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   Settings,
   FileText,
@@ -48,6 +49,12 @@ type BreadcrumbItem = {
   current?: boolean;
 };
 
+type FeatureState = {
+  hasCallback?: boolean;
+  hasDataLink?: boolean;
+  hasScript?: boolean;
+};
+
 type ConfigNavProps = {
   current: ConfigTab;
   onChange: (v: ConfigTab) => void;
@@ -56,13 +63,23 @@ type ConfigNavProps = {
   breadcrumb?: BreadcrumbItem[];
   onLogClick?: () => void;
   summary?: { name?: string; isEnabled?: boolean; groupName?: string; calledCount?: number; lastSavedAt?: string; lastCalledAt?: string };
+  featureState?: FeatureState;
 };
 
-export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogClick, summary }: ConfigNavProps) {
+export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogClick, summary, featureState }: ConfigNavProps) {
+  const dynamicTabs = useMemo(() => {
+    return TABS.map((tab) => {
+      if (tab.value === 'callback') return { ...tab, badge: featureState?.hasCallback ? 'ON' : 'OFF' };
+      if (tab.value === 'datalink') return { ...tab, badge: featureState?.hasDataLink ? 'ON' : 'OFF' };
+      if (tab.value === 'script') return { ...tab, badge: featureState?.hasScript ? 'ON' : 'OFF' };
+      return tab;
+    });
+  }, [featureState]);
+
   const sections: Array<{ title: string; tabs: TabDef[] }> = [
-    { title: '基础配置', tabs: TABS.slice(0, 4) },
-    { title: '高级特性', tabs: TABS.slice(4, 7) },
-    { title: '调试', tabs: TABS.slice(7) },
+    { title: '基础配置', tabs: dynamicTabs.slice(0, 4) },
+    { title: '高级特性', tabs: dynamicTabs.slice(4, 7) },
+    { title: '调试', tabs: dynamicTabs.slice(7) },
   ];
 
   return (

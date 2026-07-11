@@ -106,6 +106,14 @@ export function ApiEditPage() {
   );
 
   const saving = updateMut.isPending || createMut.isPending;
+  const featureState = useMemo(
+    () => ({
+      hasCallback: summary.hasCallback,
+      hasDataLink: summary.dataOp !== 'none',
+      hasScript: !!(summary.script && summary.script.trim()),
+    }),
+    [summary.hasCallback, summary.dataOp, summary.script],
+  );
   const configSummary = {
     name: summary.name,
     isEnabled: summary.isEnabled,
@@ -180,6 +188,7 @@ export function ApiEditPage() {
           ]}
           onLogClick={() => navigate(`/logs?projectId=${projectId}${apiId ? `&apiId=${apiId}` : ''}`)}
           summary={configSummary}
+          featureState={featureState}
         />
 
         <div className="overflow-y-auto bg-canvas">

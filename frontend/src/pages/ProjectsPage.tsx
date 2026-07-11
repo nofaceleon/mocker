@@ -77,7 +77,7 @@ export function ProjectsPage() {
     return {
       projects: projects.length,
       apis: projects.reduce((sum, p) => sum + (p.apiCount ?? 0), 0),
-      calls: projects.reduce((sum, p) => sum + (p.apiCount ?? 0) * 8, 0), // 占位估算
+      calls: projects.reduce((sum, p) => sum + (p.callCount ?? 0), 0),
       pending: callbackStats?.pending ?? 0,
     };
   }, [projects, callbackStats]);
@@ -138,9 +138,8 @@ export function ProjectsPage() {
         />
         <StatCard
           label="今日调用"
-          value="2,431"
-          hint="+8.3%"
-          trend="up"
+          value={stats.calls}
+          hint=""
           icon={<Activity />}
         />
         <StatCard
@@ -257,7 +256,7 @@ function ProjectCard({
         </span>
         <span className="inline-flex items-center gap-1 rounded-full border border-line bg-canvas-subtle px-2 py-0.5 text-[11px] font-medium text-ink-secondary">
           <TrendingUp className="h-2.5 w-2.5" />
-          {(project.apiCount ?? 0) * 8} 次
+          {(project.callCount ?? 0)} 次
         </span>
       </div>
 

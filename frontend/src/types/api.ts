@@ -11,6 +11,7 @@ export type Project = {
   updatedAt: string;
   featureGroupCount?: number;
   apiCount?: number;
+  callCount?: number;
 };
 
 export type FeatureGroup = {

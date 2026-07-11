@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { eq, desc, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { projects, featureGroups, mockApis, mockData } from '../db/schema.js';
+import { projects, featureGroups, mockApis, mockData, requestLogs } from '../db/schema.js';
 import { ApiError, asyncHandler } from '../middleware/error-handler.js';
 
 const router = Router();
@@ -32,6 +32,7 @@ router.get(
   '/',
   asyncHandler(async (_req: Request, res: Response) => {
     const db = getDb();
+    // 使用 sql.raw 引用外部表列名，避免 Drizzle 模板在关联子查询中丢失表限定符
     const rows = db
       .select({
         id: projects.id,
@@ -39,8 +40,9 @@ router.get(
         description: projects.description,
         createdAt: projects.createdAt,
         updatedAt: projects.updatedAt,
-        featureGroupCount: sql<number>`(SELECT COUNT(*) FROM ${featureGroups} WHERE ${featureGroups.projectId} = ${projects.id})`,
-        apiCount: sql<number>`(SELECT COUNT(*) FROM ${mockApis} WHERE ${mockApis.featureGroupId} IN (SELECT id FROM ${featureGroups} WHERE ${featureGroups.projectId} = ${projects.id}))`,
+        featureGroupCount: sql<number>`(SELECT COUNT(*) FROM ${featureGroups} WHERE ${featureGroups.projectId} = ${sql.raw('projects.id')})`,
+        apiCount: sql<number>`(SELECT COUNT(*) FROM ${mockApis} WHERE ${mockApis.featureGroupId} IN (SELECT id FROM ${featureGroups} WHERE ${featureGroups.projectId} = ${sql.raw('projects.id')}))`,
+        callCount: sql<number>`(SELECT COUNT(*) FROM ${requestLogs} WHERE ${requestLogs.apiId} IN (SELECT id FROM ${mockApis} WHERE ${mockApis.featureGroupId} IN (SELECT id FROM ${featureGroups} WHERE ${featureGroups.projectId} = ${sql.raw('projects.id')})))`,
       })
       .from(projects)
       .orderBy(desc(projects.updatedAt))
