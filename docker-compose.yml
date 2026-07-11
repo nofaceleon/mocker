@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - NODE_OPTIONS=--max-old-space-size=512
     container_name: mockhub
     ports:
       - "3000:3000"
@@ -15,6 +17,8 @@ services:
     volumes:
       - mockhub-data:/app/data
     restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1.0
 
 volumes:
   mockhub-data:
