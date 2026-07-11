@@ -14,6 +14,7 @@ import { ApiError, asyncHandler } from '../middleware/error-handler.js';
 const router = Router();
 
 const RANGE_MS: Record<string, number | null> = {
+  all: null,
   '1h': 60 * 60 * 1000,
   '24h': 24 * 60 * 60 * 1000,
   '7d': 7 * 24 * 60 * 60 * 1000,
@@ -26,7 +27,7 @@ const listQuerySchema = z.object({
   method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).optional(),
   statusClass: z.enum(['2xx', '3xx', '4xx', '5xx']).optional(),
   keyword: z.string().trim().min(1).max(200).optional(),
-  range: z.enum(['1h', '24h', '7d', 'custom']).optional().default('24h'),
+  range: z.enum(['all', '1h', '24h', '7d', 'custom']).optional().default('24h'),
   start: z.coerce.number().int().positive().optional(),
   end: z.coerce.number().int().positive().optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
@@ -42,7 +43,7 @@ const filtersSchema = z.object({
 });
 
 const statsSchema = z.object({
-  range: z.enum(['1h', '24h', '7d', 'custom']).optional().default('24h'),
+  range: z.enum(['all', '1h', '24h', '7d', 'custom']).optional().default('24h'),
   start: z.coerce.number().int().positive().optional(),
   end: z.coerce.number().int().positive().optional(),
 });
@@ -64,7 +65,7 @@ const exportSchema = z.object({
   method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).optional(),
   statusClass: z.enum(['2xx', '3xx', '4xx', '5xx']).optional(),
   keyword: z.string().trim().min(1).max(200).optional(),
-  range: z.enum(['1h', '24h', '7d', 'custom']).optional().default('24h'),
+  range: z.enum(['all', '1h', '24h', '7d', 'custom']).optional().default('24h'),
   start: z.coerce.number().int().positive().optional(),
   end: z.coerce.number().int().positive().optional(),
 });
@@ -86,7 +87,9 @@ function buildRangeCondition(q: { range?: string; start?: number; end?: number }
     if (q.end) return lte(requestLogs.createdAt, new Date(q.end));
     return undefined;
   }
-  const span = RANGE_MS[q.range ?? '24h'] ?? RANGE_MS['24h'];
+  // 显式检查 range 是否在 RANGE_MS 中，避免 null 被 ?? 误判为 falsy
+  const rangeKey = q.range && q.range in RANGE_MS ? q.range : '24h';
+  const span = RANGE_MS[rangeKey];
   if (span === null) return undefined;
   return gte(requestLogs.createdAt, new Date(now - span));
 }

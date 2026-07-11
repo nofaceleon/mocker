@@ -8,7 +8,7 @@ import type {
   RequestLogStats,
 } from '@/types/api';
 
-export type RequestLogRange = '1h' | '24h' | '7d' | 'custom';
+export type RequestLogRange = 'all' | '1h' | '24h' | '7d' | 'custom';
 export type RequestLogStatusClass = '2xx' | '3xx' | '4xx' | '5xx';
 export type RequestLogHttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 

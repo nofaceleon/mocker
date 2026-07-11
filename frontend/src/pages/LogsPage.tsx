@@ -51,7 +51,9 @@ export function LogsPage() {
   const initialProject = searchParams.get('projectId') ?? 'all';
   const initialApi = searchParams.get('apiId') ?? 'all';
 
-  const [range, setRange] = useState<RequestLogRange>('24h');
+  const [range, setRange] = useState<RequestLogRange>('all');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
   const [search, setSearch] = useState('');
   const [projectFilter, setProjectFilter] = useState<string>(initialProject);
   const [apiFilter, setApiFilter] = useState<string>(initialApi);
@@ -62,6 +64,7 @@ export function LogsPage() {
   const [checkedIds, setCheckedIds] = useState<number[]>([]);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [confirmClearSelected, setConfirmClearSelected] = useState(false);
+  const todayStr = new Date().toISOString().split('T')[0];
 
   // 项目切换时清空接口筛选
   useEffect(() => {
@@ -72,7 +75,7 @@ export function LogsPage() {
   // 搜索词变化时重置页码
   useEffect(() => {
     setPage(1);
-  }, [search, methodFilter, statusFilter, range]);
+  }, [search, methodFilter, statusFilter, range, customStart, customEnd]);
 
   const filtersQuery = useMemo(() => ({ projectId: projectFilter === 'all' ? undefined : Number(projectFilter) }), [projectFilter]);
   const filters = useRequestLogFilters(filtersQuery);
@@ -91,10 +94,12 @@ export function LogsPage() {
       statusClass: statusFilter === 'all' ? undefined : statusFilter,
       keyword: search.trim() || undefined,
       range,
+      start: range === 'custom' && customStart ? new Date(customStart).getTime() : undefined,
+      end: range === 'custom' && customEnd ? new Date(customEnd + 'T23:59:59').getTime() : undefined,
       page,
       pageSize: PAGE_SIZE,
     }),
-    [projectFilter, apiFilter, methodFilter, statusFilter, search, range, page],
+    [projectFilter, apiFilter, methodFilter, statusFilter, search, range, customStart, customEnd, page],
   );
 
   const stats = useRequestLogStats(range);
@@ -127,7 +132,9 @@ export function LogsPage() {
     setApiFilter('all');
     setMethodFilter('all');
     setStatusFilter('all');
-    setRange('24h');
+    setRange('all');
+    setCustomStart('');
+    setCustomEnd('');
     setPage(1);
     setCheckedIds([]);
   }
@@ -308,11 +315,39 @@ export function LogsPage() {
             value={range}
             onChange={(v) => setRange(v)}
             items={[
+              { value: 'all', label: '全部' },
               { value: '1h', label: '最近 1 小时' },
               { value: '24h', label: '最近 24 小时' },
               { value: '7d', label: '最近 7 天' },
+              { value: 'custom', label: '自定义' },
             ]}
           />
+          {range === 'custom' && (
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                value={customStart}
+                max={customEnd || todayStr}
+                onChange={(e) => {
+                  setCustomStart(e.target.value);
+                  if (customEnd && e.target.value > customEnd) setCustomEnd(e.target.value);
+                }}
+                className="form-input h-7 w-auto min-w-[130px] text-[12px]"
+              />
+              <span className="text-[12px] text-ink-tertiary">至</span>
+              <input
+                type="date"
+                value={customEnd}
+                min={customStart || undefined}
+                max={todayStr}
+                onChange={(e) => {
+                  setCustomEnd(e.target.value);
+                  if (customStart && e.target.value < customStart) setCustomStart(e.target.value);
+                }}
+                className="form-input h-7 w-auto min-w-[130px] text-[12px]"
+              />
+            </div>
+          )}
           <div className="ml-auto inline-flex items-center gap-1.5 text-[12px] text-ink-tertiary">
             <LiveDot />
             实时刷新中
@@ -361,6 +396,7 @@ export function LogsPage() {
                   <th>方法</th>
                   <th>路径</th>
                   <th>所属接口</th>
+                  <th>Request ID</th>
                   <th>客户端</th>
                   <th>状态</th>
                   <th>响应时间</th>
@@ -519,6 +555,14 @@ function LogRowView({
             <span className="text-[11px] text-ink-subtle">（{log.projectName}）</span>
           )}
         </div>
+      </td>
+      <td>
+        <span
+          className="max-w-[160px] truncate font-mono text-[11.5px] text-ink-tertiary"
+          title={log.requestId ?? ''}
+        >
+          {log.requestId ? log.requestId.slice(0, 8) + '…' : '—'}
+        </span>
       </td>
       <td>
         <span className="font-mono text-[11.5px] text-ink-tertiary">{log.clientIp ?? '—'}</span>
