@@ -329,6 +329,28 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
     setRunning(false);
   };
 
+  const parsedHeaders = useMemo(() => {
+    if (headersText.trim()) {
+      try {
+        return JSON.parse(headersText) as Record<string, string>;
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
+  }, [headersText]);
+
+  const parsedBody = useMemo(() => {
+    if (api.method !== 'GET' && bodyText.trim()) {
+      try {
+        return JSON.parse(bodyText);
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
+  }, [bodyText, api.method]);
+
   const curl = isSSE
     ? buildCurl({
         method: api.method,
@@ -342,8 +364,8 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
           method: api.method,
           baseUrl: runtimeConfig.apiBase,
           path: result.path,
-          headers: result.responseHeaders,
-          body: null,
+          headers: parsedHeaders,
+          body: parsedBody,
         })
       : '';
 
