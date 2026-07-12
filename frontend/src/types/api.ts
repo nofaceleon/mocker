@@ -31,6 +31,40 @@ export type DataOp = 'none' | 'insert' | 'select' | 'update' | 'delete';
 export type ParamType = 'string' | 'number' | 'boolean' | 'array' | 'object';
 export type ParamLocation = 'query' | 'body' | 'path' | 'header';
 
+// ---------- 多响应配置 ----------
+
+export type ResponseConditionSource = 'query' | 'body' | 'header' | 'path';
+
+export type ResponseOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'contains'
+  | 'gt'
+  | 'lt'
+  | 'gte'
+  | 'lte'
+  | 'regex';
+
+export type ResponseCondition = {
+  source: ResponseConditionSource;
+  field: string;
+  operator: ResponseOperator;
+  value: string;
+};
+
+export type MockApiResponse = {
+  id: string;
+  name: string;
+  conditions: ResponseCondition[];
+  isDefault: boolean;
+  responseStatus?: number;
+  responseDelay?: number;
+  responseDelayMax?: number;
+  responseContentType?: string;
+  responseHeaders?: Record<string, string> | null;
+  responseBody?: unknown;
+};
+
 export type ValidationParamRule = {
   name: string;
   type: ParamType;
@@ -76,6 +110,7 @@ export type MockApi = {
   /** insert/update 写入模板，支持 {{req.body.x}}；null 则用整包 body */
   dataPayload: Record<string, unknown> | null;
   script: string | null;
+  responses: MockApiResponse[] | null;
   createdAt: string;
   updatedAt: string;
   mockDataCount?: number;

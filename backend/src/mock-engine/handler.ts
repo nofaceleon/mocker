@@ -21,6 +21,7 @@ import { ensureBusinessTable } from './schema-manager.js';
 import { runScript, ScriptError } from './script-runtime.js';
 import { callbackScheduler } from './callback/callback-scheduler.js';
 import { enqueueCallbackTask, renderCallbackEnqueueInput } from './callback/callback-engine.js';
+import { resolveResponse } from './resolver.js';
 
 const MAX_LOG_BODY_SIZE = 32 * 1024;
 
@@ -114,7 +115,8 @@ async function executeMatched(
   // 3. 执行数据联动（如果有）
   let dbResult: unknown;
   if (api.dataOp !== 'none' && api.dataTable) {
-    const where = buildRuntimeWhere(api, reqCtx);
+    const whereRenderCtx: ResponseContext = { req: reqCtx };
+    const where = buildRuntimeWhere(api, reqCtx, whereRenderCtx);
 
     if (api.dataOp === 'insert') {
       const row = resolveDataPayload(api, reqCtx, 'insert');
@@ -170,21 +172,36 @@ async function executeMatched(
     }
   }
 
-  // 5. 构建渲染上下文
+  // 5. 多响应解析（SSE/WebSocket 不需要）
+  let resolvedApi: MockApi = api;
+  if (api.protocol !== 'SSE' && api.protocol !== 'WebSocket') {
+    const { fields: resolvedFields } = resolveResponse(api, reqCtx);
+    resolvedApi = {
+      ...api,
+      responseStatus: resolvedFields.responseStatus,
+      responseDelay: resolvedFields.responseDelay,
+      responseDelayMax: resolvedFields.responseDelayMax,
+      responseContentType: resolvedFields.responseContentType,
+      responseHeaders: resolvedFields.responseHeaders,
+      responseBody: resolvedFields.responseBody,
+    };
+  }
+
+  // 6. 构建渲染上下文
   const renderCtx: ResponseContext = {
     req: reqCtx,
     dbResult,
     response: scriptOverride ? scriptResult : undefined,
   };
 
-  // 6. 判断是否为SSE请求（根据protocol字段）
+  // 7. 判断是否为SSE请求（根据protocol字段）
   if (api.protocol === 'SSE') {
-    await handleSSERequest(req, res, api, renderCtx, start, meta, scriptOverride ? scriptResult : undefined);
+    await handleSSERequest(req, res, resolvedApi, renderCtx, start, meta, scriptOverride ? scriptResult : undefined);
     return;
   }
 
-  // 7. 普通HTTP响应
-  await handleHTTPResponse(req, res, api, renderCtx, start, meta, scriptOverride ? scriptResult : undefined);
+  // 8. 普通HTTP响应
+  await handleHTTPResponse(req, res, resolvedApi, renderCtx, start, meta, scriptOverride ? scriptResult : undefined);
 }
 
 /**
@@ -445,11 +462,17 @@ function unwrapResult(r: ReturnType<typeof execute>): unknown {
   return { affected: r.affected };
 }
 
-/** 把 path 参数和 query 参数填进 dataWhere，构造运行时 where */
-function buildRuntimeWhere(api: MockApi, ctx: ReturnType<typeof extractContext>): Record<string, unknown> {
+/** 把 path 参数和 dataWhere 模板填进 where，构造运行时 where */
+function buildRuntimeWhere(
+  api: MockApi,
+  ctx: ReturnType<typeof extractContext>,
+  renderCtx: ResponseContext,
+): Record<string, unknown> {
   const base = (parseObjectField(api.dataWhere) as Record<string, unknown> | null) ?? {};
-  // 优先级：用户配置的 dataWhere > query 参数 > 路径参数
-  const merged: Record<string, unknown> = { ...ctx.path, ...ctx.query, ...base };
+  // 渲染 dataWhere 中的模板变量（如 {{req.body.id}}、{{req.query.is_fail}}）
+  const rendered = renderTemplate(base, renderCtx) as Record<string, unknown>;
+  // 合并路径参数（路径参数优先级低于 dataWhere 配置）
+  const merged: Record<string, unknown> = { ...ctx.path, ...rendered };
   return merged;
 }
 

@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { AlertCircle, Clipboard, Play, Square, TestTube, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, Button, FormField, Input, Textarea, CopyButton } from '@/components/ui';
-import type { MockApi } from '@/types/api';
+import { Card, Button, FormField, Input, Select, Textarea, CopyButton } from '@/components/ui';
+import type { MockApi, MockApiResponse } from '@/types/api';
 import type { TestApiInput, TestApiOutput } from '@/hooks/queries/use-mock-apis';
 import { config as runtimeConfig } from '@/lib/runtime-config';
 import {
@@ -45,6 +45,10 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
   const [result, setResult] = useState<TestApiOutput | null>(null);
   const [elapsed, setElapsed] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  // 多响应手动选择
+  const responses = (api.responses as MockApiResponse[] | null) ?? null;
+  const [selectedResponseId, setSelectedResponseId] = useState<string>('');
 
   // 当 api 变化（如切换接口或保存后）时同步刷新默认示例
   useEffect(() => {
@@ -110,11 +114,17 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
       }
     }
 
+    // 注入多响应选择头
+    const extraHeaders: Record<string, string> = {};
+    if (selectedResponseId && responses) {
+      extraHeaders['X-Mock-Response-Id'] = selectedResponseId;
+    }
+
     if (isSSE) {
       // SSE测试：先获取配置信息，然后连接
       try {
         setRunning(true);
-        const headers = headersText.trim() ? JSON.parse(headersText) : undefined;
+        const headers = { ...extraHeaders, ...(headersText.trim() ? JSON.parse(headersText) : {}) };
         const body = api.method !== 'GET' && bodyText.trim() ? JSON.parse(bodyText) : undefined;
         const r = await onRun({ path: path, query: parsedQuery, body, headers });
         setResult(r as unknown as TestApiOutput);
@@ -135,7 +145,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
     } else {
       // 普通HTTP测试
       try {
-        const headers = headersText.trim() ? JSON.parse(headersText) : undefined;
+        const headers = { ...extraHeaders, ...(headersText.trim() ? JSON.parse(headersText) : {}) };
         const body = api.method !== 'GET' && bodyText.trim() ? JSON.parse(bodyText) : undefined;
         setRunning(true);
         const t0 = performance.now();
@@ -464,6 +474,26 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
                 : `SSE 使用 ${api.method} 方法，通过 fetch API 建立连接，支持发送请求体。`}
             </div>
           </div>
+        )}
+
+        {/* 多响应手动选择 */}
+        {responses && responses.length > 0 && (
+          <FormField
+            label="指定响应"
+            hint="选择特定响应进行测试，不选则按条件自动匹配"
+          >
+            <Select
+              value={selectedResponseId}
+              onChange={(e) => setSelectedResponseId(e.target.value)}
+            >
+              <option value="">自动匹配</option>
+              {responses.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name} ({r.responseStatus}){r.isDefault ? ' [默认]' : ''}
+                </option>
+              ))}
+            </Select>
+          </FormField>
         )}
       </Card>
 

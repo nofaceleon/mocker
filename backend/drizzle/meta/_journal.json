@@ -43,6 +43,13 @@
       "when": 1783811000000,
       "tag": "0005_data_payload",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1783846957042,
+      "tag": "0006_new_kat_farrell",
+      "breakpoints": true
     }
   ]
 }

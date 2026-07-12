@@ -12,6 +12,8 @@ import {
   HTTP_METHODS,
   PROTOCOLS,
   DATA_OPS,
+  RESPONSE_CONDITION_SOURCES,
+  RESPONSE_OPERATORS,
 } from '../db/schema.js';
 import { ApiError, asyncHandler } from '../middleware/error-handler.js';
 import { handleMockRequest } from '../mock-engine/handler.js';
@@ -56,6 +58,26 @@ const validationRulesSchema = z
   })
   .partial();
 
+const responseConditionSchema = z.object({
+  source: z.enum(RESPONSE_CONDITION_SOURCES),
+  field: z.string().min(1).max(200),
+  operator: z.enum(RESPONSE_OPERATORS),
+  value: z.string(),
+});
+
+const responseItemSchema = z.object({
+  id: z.string().min(1).max(50),
+  name: z.string().min(1).max(100),
+  conditions: z.array(responseConditionSchema).default([]),
+  isDefault: z.boolean().default(false),
+  responseStatus: z.number().int().min(100).max(599).default(200),
+  responseDelay: z.number().int().min(0).max(60_000).default(0),
+  responseDelayMax: z.number().int().min(0).max(60_000).default(0),
+  responseContentType: z.string().max(200).default('application/json'),
+  responseHeaders: z.record(z.string(), z.string()).nullable().default(null),
+  responseBody: z.unknown().default(null),
+});
+
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(2000).optional().nullable(),
@@ -76,6 +98,7 @@ const createSchema = z.object({
   dataWhere: z.record(z.string(), z.unknown()).optional().nullable(),
   dataPayload: z.record(z.string(), z.unknown()).optional().nullable(),
   script: z.string().optional().nullable(),
+  responses: z.array(responseItemSchema).optional().nullable(),
 });
 
 const updateSchema = createSchema.partial();
@@ -122,6 +145,7 @@ router.get(
         dataWhere: mockApis.dataWhere,
         dataPayload: mockApis.dataPayload,
         script: mockApis.script,
+        responses: mockApis.responses,
         createdAt: mockApis.createdAt,
         updatedAt: mockApis.updatedAt,
         mockDataCount: sql<number>`(SELECT COUNT(*) FROM mock_data WHERE mock_data.api_id = ${mockApis.id})`,
@@ -186,6 +210,7 @@ router.get(
         dataWhere: mockApis.dataWhere,
         dataPayload: mockApis.dataPayload,
         script: mockApis.script,
+        responses: mockApis.responses,
         createdAt: mockApis.createdAt,
         updatedAt: mockApis.updatedAt,
       })
@@ -245,6 +270,7 @@ router.post(
         dataWhere: body.dataWhere ?? null,
         dataPayload: body.dataPayload ?? null,
         script: body.script ?? null,
+        responses: body.responses ?? null,
       })
       .returning()
       .all();
@@ -294,6 +320,7 @@ router.put(
       ...(body.dataWhere !== undefined ? { dataWhere: body.dataWhere } : {}),
       ...(body.dataPayload !== undefined ? { dataPayload: body.dataPayload } : {}),
       ...(body.script !== undefined ? { script: body.script } : {}),
+      ...(body.responses !== undefined ? { responses: body.responses } : {}),
     };
     db.update(mockApis).set(patch).where(eq(mockApis.id, id)).run();
 

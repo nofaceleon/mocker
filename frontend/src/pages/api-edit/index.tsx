@@ -105,6 +105,7 @@ export function ApiEditPage() {
         dataWhere: formData.dataWhere ?? null,
         dataPayload: formData.dataPayload ?? null,
         script: formData.script ?? null,
+        responses: formData.responses ?? null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         mockDataCount: 0,
@@ -260,6 +261,18 @@ export function ApiEditPage() {
 }
 
 function newFormData(): MockApiPayload {
+  const defaultResponse: import('@/types/api').MockApiResponse = {
+    id: crypto.randomUUID(),
+    name: '默认响应',
+    conditions: [],
+    isDefault: true,
+    responseStatus: 200,
+    responseDelay: 0,
+    responseDelayMax: 0,
+    responseContentType: 'application/json',
+    responseHeaders: { 'Content-Type': 'application/json' },
+    responseBody: { code: 0, message: 'success', data: {} },
+  };
   return {
     name: '',
     description: null,
@@ -279,10 +292,28 @@ function newFormData(): MockApiPayload {
     dataWhere: {},
     dataPayload: null,
     script: null,
+    responses: [defaultResponse],
   };
 }
 
 function apiToFormData(api: MockApi): MockApiPayload {
+  // 旧接口没有 responses 数据时，从扁平字段生成默认响应
+  let responses = api.responses;
+  if (!responses || responses.length === 0) {
+    responses = [{
+      id: crypto.randomUUID(),
+      name: '默认响应',
+      conditions: [],
+      isDefault: true,
+      responseStatus: api.responseStatus ?? 200,
+      responseDelay: api.responseDelay ?? 0,
+      responseDelayMax: api.responseDelayMax ?? 0,
+      responseContentType: api.responseContentType ?? 'application/json',
+      responseHeaders: api.responseHeaders ?? null,
+      responseBody: api.responseBody ?? null,
+    }];
+  }
+
   return {
     name: api.name,
     description: api.description,
@@ -303,6 +334,7 @@ function apiToFormData(api: MockApi): MockApiPayload {
     dataWhere: api.dataWhere,
     dataPayload: api.dataPayload ?? null,
     script: api.script,
+    responses,
   };
 }
 

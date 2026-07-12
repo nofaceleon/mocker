@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
-import type { HttpMethod, Protocol, ID, MockApi, ValidationRules } from '@/types/api';
+import type { HttpMethod, Protocol, ID, MockApi, MockApiResponse, ValidationRules } from '@/types/api';
 
 const KEYS = {
   byGroup: (gid: ID) => ['mock-apis', 'group', gid] as const,
@@ -27,6 +27,7 @@ export type MockApiPayload = {
   dataWhere?: Record<string, unknown> | null;
   dataPayload?: Record<string, unknown> | null;
   script?: string | null;
+  responses?: MockApiResponse[] | null;
 };
 
 export function useMockApis(featureGroupId: ID | undefined) {

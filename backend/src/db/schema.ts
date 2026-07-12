@@ -106,6 +106,9 @@ export const mockApis = sqliteTable(
     // 自定义脚本
     script: text('script'),
 
+    // 多响应配置
+    responses: text('responses', { mode: 'json' }).$type<MockApiResponse[]>(),
+
     ...timestamps,
   },
   (t) => [
@@ -297,6 +300,42 @@ export type ParamRule = {
   pattern?: string; // 正则
   enum?: unknown[]; // 枚举
   refine?: string; // 自定义校验函数（字符串表达式，P0 暂不解析）
+};
+
+// ---------------- 多响应配置 TS 类型 ----------------
+export const RESPONSE_CONDITION_SOURCES = ['query', 'body', 'header', 'path'] as const;
+export type ResponseConditionSource = (typeof RESPONSE_CONDITION_SOURCES)[number];
+
+export const RESPONSE_OPERATORS = [
+  'equals',
+  'not_equals',
+  'contains',
+  'gt',
+  'lt',
+  'gte',
+  'lte',
+  'regex',
+] as const;
+export type ResponseOperator = (typeof RESPONSE_OPERATORS)[number];
+
+export type ResponseCondition = {
+  source: ResponseConditionSource;
+  field: string;
+  operator: ResponseOperator;
+  value: string;
+};
+
+export type MockApiResponse = {
+  id: string;
+  name: string;
+  conditions: ResponseCondition[];
+  isDefault: boolean;
+  responseStatus?: number;
+  responseDelay?: number;
+  responseDelayMax?: number;
+  responseContentType?: string;
+  responseHeaders?: Record<string, string> | null;
+  responseBody?: unknown;
 };
 
 export const SCHEMA_VERSION = 1;

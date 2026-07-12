@@ -189,6 +189,7 @@ async function onMessage(
   const reqCtx: RequestContext = {
     path: pathParams,
     query: Object.fromEntries(url.searchParams.entries()),
+    originalQuery: Object.fromEntries(url.searchParams.entries()),
     body: (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
       ? parsed
       : { message: parsed }) as Record<string, unknown>,
