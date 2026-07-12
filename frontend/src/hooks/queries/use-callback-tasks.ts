@@ -2,10 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 import type { CallbackStats, CallbackTask, CallbackTaskPage, CallbackTaskStatus, ID } from '@/types/api';
 
+export type CallbackTaskTimeRange = 'all' | '1h' | '24h' | '7d' | 'custom';
+
 type QueryParams = {
   apiId?: ID;
   status?: CallbackTaskStatus | 'all';
   keyword?: string;
+  range?: CallbackTaskTimeRange;
+  start?: number;
+  end?: number;
   page?: number;
   pageSize?: number;
 };
@@ -21,6 +26,9 @@ function buildQuery(q: QueryParams): Record<string, string | number> {
   if (q.apiId) out.apiId = q.apiId;
   if (q.status && q.status !== 'all') out.status = q.status;
   if (q.keyword) out.keyword = q.keyword;
+  if (q.range && q.range !== 'all') out.range = q.range;
+  if (q.start != null) out.start = q.start;
+  if (q.end != null) out.end = q.end;
   if (q.page) out.page = q.page;
   if (q.pageSize) out.pageSize = q.pageSize;
   return out;

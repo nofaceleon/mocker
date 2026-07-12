@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { and, desc, eq, like, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, like, lte, or, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import {
   callbackConfigs,
@@ -128,11 +128,42 @@ const taskQuerySchema = z.object({
   apiId: z.coerce.number().int().positive().optional(),
   status: z.enum(['pending', 'sent', 'failed']).optional(),
   keyword: z.string().trim().min(1).max(200).optional(),
+  /** 相对时间范围：1h | 24h | 7d | all（默认 all） */
+  range: z.enum(['all', '1h', '24h', '7d', 'custom']).optional().default('all'),
+  /** 自定义起始时间（ISO 或 epoch ms） */
+  start: z.string().optional(),
+  /** 自定义结束时间（ISO 或 epoch ms） */
+  end: z.string().optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
 });
 
 const taskIdSchema = z.object({ taskId: z.coerce.number().int().positive() });
+
+function parseTimeBound(v: string | undefined): Date | null {
+  if (!v) return null;
+  const n = Number(v);
+  if (Number.isFinite(n) && n > 0) return new Date(n);
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function buildTimeRangeFilter(q: z.infer<typeof taskQuerySchema>) {
+  if (q.range === 'custom') {
+    const start = parseTimeBound(q.start);
+    const end = parseTimeBound(q.end);
+    if (start && end) return and(gte(callbackTasks.createdAt, start), lte(callbackTasks.createdAt, end));
+    if (start) return gte(callbackTasks.createdAt, start);
+    if (end) return lte(callbackTasks.createdAt, end);
+    return undefined;
+  }
+  if (q.range === 'all' || !q.range) return undefined;
+  const now = Date.now();
+  const span =
+    q.range === '1h' ? 3_600_000 : q.range === '24h' ? 86_400_000 : q.range === '7d' ? 7 * 86_400_000 : 0;
+  if (!span) return undefined;
+  return gte(callbackTasks.createdAt, new Date(now - span));
+}
 
 router.get(
   '/callback-tasks',
@@ -150,6 +181,7 @@ router.get(
             like(mockApis.path, `%${q.keyword}%`),
           )
         : undefined,
+      buildTimeRangeFilter(q),
     );
 
     const totalRow = db
@@ -178,6 +210,7 @@ router.get(
         responseStatus: callbackTasks.responseStatus,
         responseBody: callbackTasks.responseBody,
         errorMessage: callbackTasks.errorMessage,
+        attemptLogs: callbackTasks.attemptLogs,
         scheduledAt: callbackTasks.scheduledAt,
         sentAt: callbackTasks.sentAt,
         createdAt: callbackTasks.createdAt,
@@ -241,6 +274,7 @@ router.get(
         responseStatus: callbackTasks.responseStatus,
         responseBody: callbackTasks.responseBody,
         errorMessage: callbackTasks.errorMessage,
+        attemptLogs: callbackTasks.attemptLogs,
         scheduledAt: callbackTasks.scheduledAt,
         sentAt: callbackTasks.sentAt,
         createdAt: callbackTasks.createdAt,

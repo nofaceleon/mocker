@@ -5,6 +5,7 @@ import { getDb } from '../../db/index.js';
 import {
   callbackConfigs,
   callbackTasks,
+  type CallbackAttemptLog,
   type CallbackConfig,
   type CallbackTask,
 } from '../../db/schema.js';
@@ -73,6 +74,7 @@ export function enqueueCallbackTask(input: EnqueueTaskInput): CallbackTask | nul
         responseStatus: null,
         responseBody: null,
         errorMessage: null,
+        attemptLogs: [],
         sentAt: null,
         nextRetryAt: null,
       })
@@ -216,11 +218,30 @@ export async function executeTask(task: CallbackTask, cfg: CallbackConfig | null
     cfg?.retryEnabled && task.retryCount < task.maxRetries && shouldRetry(retryCfg, status, networkError !== null);
 
   const now = new Date();
+  const prevLogs = parseAttemptLogs(task.attemptLogs);
+  const attemptNo = prevLogs.length + 1;
+  const success = status !== null && status >= 200 && status < 300 && !networkError;
+  const attempt: CallbackAttemptLog = {
+    attempt: attemptNo,
+    at: now.toISOString(),
+    request: {
+      url: task.callbackUrl,
+      method: task.callbackMethod,
+      headers: task.callbackHeaders ?? null,
+      body: task.callbackBody ?? null,
+    },
+    responseStatus: status,
+    responseBody,
+    errorMessage: networkError,
+    outcome: willRetry ? 'will_retry' : success ? 'success' : 'failed',
+  };
+  const attemptLogs = [...prevLogs, attempt];
+
   if (willRetry) {
     const nextInterval =
-      cfg.retryStrategy === 'exponential'
-        ? cfg.retryInterval * Math.pow(2, task.retryCount)
-        : cfg.retryInterval;
+      cfg!.retryStrategy === 'exponential'
+        ? cfg!.retryInterval * Math.pow(2, task.retryCount)
+        : cfg!.retryInterval;
     const nextAt = new Date(now.getTime() + Math.max(0, nextInterval));
     db.update(callbackTasks)
       .set({
@@ -228,6 +249,7 @@ export async function executeTask(task: CallbackTask, cfg: CallbackConfig | null
         responseStatus: status,
         responseBody: responseBody,
         errorMessage: networkError,
+        attemptLogs,
         nextRetryAt: nextAt,
         scheduledAt: nextAt,
         status: 'pending',
@@ -239,12 +261,13 @@ export async function executeTask(task: CallbackTask, cfg: CallbackConfig | null
     return;
   }
 
-  const finalStatus: 'sent' | 'failed' = status !== null && status >= 200 && status < 300 && !networkError ? 'sent' : 'failed';
+  const finalStatus: 'sent' | 'failed' = success ? 'sent' : 'failed';
   db.update(callbackTasks)
     .set({
       responseStatus: status,
       responseBody: responseBody,
       errorMessage: networkError,
+      attemptLogs,
       status: finalStatus,
       sentAt: now,
       nextRetryAt: null,
@@ -253,9 +276,23 @@ export async function executeTask(task: CallbackTask, cfg: CallbackConfig | null
     .run();
 
   logger.info(
-    { taskId: task.id, status: finalStatus, responseStatus: status },
+    { taskId: task.id, status: finalStatus, responseStatus: status, attempts: attemptLogs.length },
     'callback task finished',
   );
+}
+
+function parseAttemptLogs(raw: unknown): CallbackAttemptLog[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw as CallbackAttemptLog[];
+  if (typeof raw === 'string') {
+    try {
+      const v = JSON.parse(raw);
+      return Array.isArray(v) ? (v as CallbackAttemptLog[]) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 async function sendCallback(task: CallbackTask): Promise<AxiosResponse> {
@@ -304,6 +341,7 @@ export async function reExecute(taskId: number): Promise<void> {
   const db = getDb();
   const task = db.select().from(callbackTasks).where(eq(callbackTasks.id, taskId)).get();
   if (!task) throw new Error(`callback task ${taskId} not found`);
+  // 手动重发：保留历史 attemptLogs，从新一轮尝试继续追加
   db.update(callbackTasks)
     .set({
       status: 'pending',
@@ -312,6 +350,7 @@ export async function reExecute(taskId: number): Promise<void> {
       responseStatus: null,
       responseBody: null,
       errorMessage: null,
+      nextRetryAt: null,
     })
     .where(eq(callbackTasks.id, taskId))
     .run();
