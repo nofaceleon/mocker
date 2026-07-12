@@ -55,6 +55,7 @@ import { cn } from '@/lib/cn';
 import type { FeatureGroup, MockApi } from '@/types/api';
 import { SwaggerImportModal } from '@/components/SwaggerImportModal';
 import { buildMockRequestSample } from '@/lib/mock-request-sample';
+import { copyToClipboard } from '@/lib/clipboard';
 
 export function ProjectDetailPage() {
   const { projectId } = useParams();
@@ -409,18 +410,8 @@ function ApiListPanel({
   const handleCopy = useCallback(
     async (api: MockApi) => {
       const curl = buildCurlCommand(api);
-      try {
-        await navigator.clipboard.writeText(curl);
-        toast.success('已复制 curl 命令到剪贴板');
-      } catch {
-        const textarea = document.createElement('textarea');
-        textarea.value = curl;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        toast.success('已复制 curl 命令到剪贴板');
-      }
+      await copyToClipboard(curl);
+      toast.success('已复制 curl 命令到剪贴板');
     },
     [buildCurlCommand],
   );

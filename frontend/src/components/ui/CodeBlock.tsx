@@ -3,6 +3,7 @@ import { Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
 import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/clipboard';
 
 export function CodeBlock({
   language,
@@ -38,7 +39,7 @@ export function CopyButton({ text, label = '已复制' }: { text: string; label?
       className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded text-ink-subtle transition-colors hover:text-ink"
       title="复制"
       onClick={() => {
-        navigator.clipboard.writeText(text).then(() => {
+        copyToClipboard(text).then(() => {
           setCopied(true);
           toast.success(label);
           setTimeout(() => setCopied(false), 1200);

@@ -10,6 +10,7 @@ import {
   type MockRequestSample,
 } from '@/lib/mock-request-sample';
 import { PanelHeader } from '../PanelHeader';
+import { copyToClipboard } from '@/lib/clipboard';
 
 type SSEEvent = {
   id?: string;
@@ -505,8 +506,9 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
                     parts.push(`data: ${e.data}`);
                     return parts.join('\n') + '\n';
                   }).join('\n');
-                  navigator.clipboard.writeText(text);
-                  toast.success('事件已复制');
+                  copyToClipboard(text).then(() => {
+                    toast.success('事件已复制');
+                  });
                 }}
               >
                 <Clipboard className="h-3 w-3" />
@@ -572,8 +574,9 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
                   type="button"
                   className="tool-link inline-flex items-center gap-1"
                   onClick={() => {
-                    navigator.clipboard.writeText(JSON.stringify(result.responseBody, null, 2));
-                    toast.success('响应已复制');
+                    copyToClipboard(JSON.stringify(result.responseBody, null, 2)).then(() => {
+                      toast.success('响应已复制');
+                    });
                   }}
                 >
                   <Clipboard className="h-3 w-3" />

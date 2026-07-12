@@ -8,6 +8,7 @@ import type { DataOp } from '@/types/api';
 import { reportFieldError } from '@/lib/form-validation';
 import { PanelHeader } from '../PanelHeader';
 import { PanelActions } from '../PanelActions';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const DATA_OPS: ReadonlyArray<{ value: DataOp; label: string; hint: string }> = [
   { value: 'none', label: '不操作', hint: '暂不联动数据' },
@@ -420,7 +421,7 @@ function TablePreview({ tableName }: { tableName: string }) {
   );
 
   const handleCopyFieldName = (name: string) => {
-    navigator.clipboard.writeText(name).then(() => {
+    copyToClipboard(name).then(() => {
       toast.success(`已复制字段名: ${name}`);
     });
   };
@@ -437,7 +438,7 @@ function TablePreview({ tableName }: { tableName: string }) {
     );
     const template = JSON.stringify(templateObj, null, 2);
 
-    navigator.clipboard.writeText(template).then(() => {
+    copyToClipboard(template).then(() => {
       toast.success('已复制写入模板');
     });
   };
