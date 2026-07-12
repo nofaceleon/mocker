@@ -14,6 +14,7 @@ import {
 import { useProject } from '@/hooks/queries/use-projects';
 import { useFeatureGroups } from '@/hooks/queries/use-feature-groups';
 import type { MockApi } from '@/types/api';
+import { genId } from '@/lib/id';
 import { ConfigNav, type ConfigTab } from './ConfigNav';
 import { ApiSwitcherPanel } from './ApiSwitcherPanel';
 import { BasicPanel, type BasicExtra } from './panels/BasicPanel';
@@ -262,7 +263,7 @@ export function ApiEditPage() {
 
 function newFormData(): MockApiPayload {
   const defaultResponse: import('@/types/api').MockApiResponse = {
-    id: crypto.randomUUID(),
+    id: genId(),
     name: '默认响应',
     conditions: [],
     isDefault: true,
@@ -301,7 +302,7 @@ function apiToFormData(api: MockApi): MockApiPayload {
   let responses = api.responses;
   if (!responses || responses.length === 0) {
     responses = [{
-      id: crypto.randomUUID(),
+      id: genId(),
       name: '默认响应',
       conditions: [],
       isDefault: true,

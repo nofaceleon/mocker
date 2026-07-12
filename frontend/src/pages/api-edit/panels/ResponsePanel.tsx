@@ -3,6 +3,7 @@ import { Check, AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { Card, FormField, Input, Button } from '@/components/ui';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
 import type { MockApiResponse } from '@/types/api';
+import { genId } from '@/lib/id';
 import { PanelHeader } from '../PanelHeader';
 import { PanelActions } from '../PanelActions';
 import { ResponseItemCard } from './ResponseItemCard';
@@ -63,7 +64,7 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
 
   const addResponse = () => {
     const newResponse: MockApiResponse = {
-      id: crypto.randomUUID(),
+      id: genId(),
       name: `响应 ${(formData.responses?.length ?? 0) + 1}`,
       conditions: [],
       isDefault: false,
