@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Send, AlertCircle, ExternalLink, Save, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button, Card, FormField, Input, Select, Switch } from '@/components/ui';
 import type { CallbackConfig, CallbackConditionPreset } from '@/types/api';
 import {
@@ -8,6 +9,8 @@ import {
   useDeleteCallbackConfig,
   useSaveCallbackConfig,
 } from '@/hooks/queries/use-callback-config';
+import { ApiError } from '@/lib/api';
+import { reportFieldError } from '@/lib/form-validation';
 import { PanelHeader } from '../PanelHeader';
 
 type CallbackPanelProps = {
@@ -39,6 +42,11 @@ const RETRY_CONDITION_OPTIONS: { value: CallbackConditionPreset; label: string; 
   { value: 'custom', label: '自定义表达式' },
 ];
 
+type FieldErrors = {
+  callbackUrl?: string;
+  retryConditionExpr?: string;
+};
+
 export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
   if (apiId === undefined) {
     return (
@@ -56,9 +64,21 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
     );
   }
 
-  const { data: serverCfg, isLoading } = useCallbackConfig(apiId ?? undefined);
-  const saveMut = useSaveCallbackConfig(apiId!);
-  const deleteMut = useDeleteCallbackConfig(apiId!);
+  return <CallbackPanelForm apiId={apiId} onSave={onSave} saving={saving} />;
+}
+
+function CallbackPanelForm({
+  apiId,
+  onSave,
+  saving,
+}: {
+  apiId: number;
+  onSave?: () => void;
+  saving?: boolean;
+}) {
+  const { data: serverCfg, isLoading } = useCallbackConfig(apiId);
+  const saveMut = useSaveCallbackConfig(apiId);
+  const deleteMut = useDeleteCallbackConfig(apiId);
 
   const initial = useMemo<CallbackConfig>(() => {
     if (serverCfg) return { ...DEFAULT_CONFIG, ...serverCfg };
@@ -67,11 +87,15 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
 
   const [formData, setFormData] = useState<CallbackConfig>(initial);
   const [dirty, setDirty] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const lastSavedRef = useRef<string>(JSON.stringify(initial));
+  const urlRef = useRef<HTMLInputElement>(null);
+  const exprRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setFormData(initial);
     setDirty(false);
+    setErrors({});
     lastSavedRef.current = JSON.stringify(initial);
   }, [initial]);
 
@@ -81,22 +105,80 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
       setDirty(JSON.stringify(next) !== lastSavedRef.current);
       return next;
     });
+    setErrors((prev) => {
+      const next = { ...prev };
+      if ('callbackUrl' in patch) delete next.callbackUrl;
+      if ('retryConditionExpr' in patch || 'retryCondition' in patch || 'retryEnabled' in patch) {
+        delete next.retryConditionExpr;
+      }
+      return next;
+    });
+  };
+
+  const validate = (): FieldErrors => {
+    const next: FieldErrors = {};
+    if (!formData.callbackUrl.trim()) {
+      next.callbackUrl = '请填写回调 URL';
+    }
+    if (
+      formData.retryEnabled &&
+      formData.retryCondition === 'custom' &&
+      !(formData.retryConditionExpr ?? '').trim()
+    ) {
+      next.retryConditionExpr = '请填写自定义表达式';
+    }
+    return next;
   };
 
   const handleSave = async () => {
-    await saveMut.mutateAsync(formData);
-    lastSavedRef.current = JSON.stringify(formData);
-    setDirty(false);
-    onSave?.();
+    const nextErrors = validate();
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      if (nextErrors.callbackUrl) {
+        reportFieldError(nextErrors.callbackUrl, urlRef.current);
+      } else if (nextErrors.retryConditionExpr) {
+        reportFieldError(nextErrors.retryConditionExpr, exprRef.current);
+      }
+      return;
+    }
+
+    try {
+      await saveMut.mutateAsync(formData);
+      lastSavedRef.current = JSON.stringify(formData);
+      setDirty(false);
+      setErrors({});
+      toast.success('回调配置已保存');
+      onSave?.();
+    } catch (err) {
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : '保存失败';
+      toast.error(msg);
+    }
   };
 
   const handleDelete = async () => {
     if (!serverCfg) return;
     if (!confirm('确认删除该接口的回调配置？所有关联的待发送任务会被取消。')) return;
-    await deleteMut.mutateAsync();
-    setFormData(DEFAULT_CONFIG);
-    lastSavedRef.current = JSON.stringify(DEFAULT_CONFIG);
-    setDirty(false);
+    try {
+      await deleteMut.mutateAsync();
+      setFormData(DEFAULT_CONFIG);
+      lastSavedRef.current = JSON.stringify(DEFAULT_CONFIG);
+      setDirty(false);
+      setErrors({});
+      toast.success('回调配置已删除');
+    } catch (err) {
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : '删除失败';
+      toast.error(msg);
+    }
   };
 
   const serialiseHeaders = (h: Record<string, string>): string =>
@@ -151,17 +233,26 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
 
       <Card className="mt-3" title="回调请求">
         <div className="form-row">
-          <FormField label="回调 URL" required className="col-span-2">
+          <FormField
+            label="回调 URL"
+            required
+            className="col-span-2"
+            error={errors.callbackUrl}
+          >
             <Input
+              ref={urlRef}
               className="mono"
               value={formData.callbackUrl}
               onChange={(e) => update({ callbackUrl: e.target.value })}
               placeholder="https://example.com/callback 或 {{req.body.callbackUrl}}"
               disabled={!formData.isEnabled}
+              invalid={!!errors.callbackUrl}
             />
-            <div className="form-helper">
-              支持变量替换，例 <code>{'{{req.body.callbackUrl}}'}</code> 或固定 URL
-            </div>
+            {!errors.callbackUrl && (
+              <div className="form-helper">
+                支持变量替换，例 <code>{'{{req.body.callbackUrl}}'}</code> 或固定 URL
+              </div>
+            )}
           </FormField>
           <FormField label="回调方法">
             <Select
@@ -288,15 +379,19 @@ export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
           <div className="form-row">
             <FormField
               label="自定义表达式"
-              hint="可用变量：statusCode（HTTP 状态码）"
+              required
+              hint={errors.retryConditionExpr ? undefined : '可用变量：statusCode（HTTP 状态码）'}
+              error={errors.retryConditionExpr}
               className="col-span-2"
             >
               <Input
+                ref={exprRef}
                 className="mono"
                 value={formData.retryConditionExpr ?? ''}
                 onChange={(e) => update({ retryConditionExpr: e.target.value })}
                 disabled={!formData.isEnabled || !formData.retryEnabled}
                 placeholder="statusCode != 200"
+                invalid={!!errors.retryConditionExpr}
               />
             </FormField>
           </div>

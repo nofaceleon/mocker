@@ -1,7 +1,9 @@
+import { useRef, useState } from 'react';
 import { Settings } from 'lucide-react';
 import { Card, FormField, Input, Select, Switch } from '@/components/ui';
 import type { HttpMethod, Protocol } from '@/types/api';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
+import { reportFieldError } from '@/lib/form-validation';
 import { PanelHeader } from '../PanelHeader';
 import { PanelActions } from '../PanelActions';
 
@@ -43,6 +45,11 @@ type BasicPanelProps = {
 
 export type BasicExtra = Extra;
 
+type FieldErrors = {
+  name?: string;
+  path?: string;
+};
+
 export function BasicPanel({
   formData,
   onChange,
@@ -57,18 +64,32 @@ export function BasicPanel({
   const contentType = extra?.contentType ?? formData.responseContentType ?? 'application/json';
   const isSSE = protocol === 'SSE';
 
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const nameRef = useRef<HTMLInputElement>(null);
+  const pathRef = useRef<HTMLInputElement>(null);
+
+  const handleChange = (next: MockApiPayload) => {
+    onChange(next);
+    setErrors((prev) => {
+      const cleared = { ...prev };
+      if (next.name !== formData.name) delete cleared.name;
+      if (next.path !== formData.path) delete cleared.path;
+      return cleared;
+    });
+  };
+
   const handleProtocolChange = (newProtocol: Protocol) => {
     onExtraChange?.({ ...(extra ?? {}), protocol: newProtocol });
     // SSE / WebSocket 使用 GET 作为路由方法占位
     if (newProtocol === 'SSE') {
-      onChange({
+      handleChange({
         ...formData,
         protocol: newProtocol,
         method: 'GET',
         responseContentType: 'text/event-stream',
       });
     } else if (newProtocol === 'WebSocket') {
-      onChange({
+      handleChange({
         ...formData,
         protocol: newProtocol,
         method: 'GET',
@@ -87,8 +108,34 @@ export function BasicPanel({
               },
       });
     } else {
-      onChange({ ...formData, protocol: newProtocol });
+      handleChange({ ...formData, protocol: newProtocol });
     }
+  };
+
+  const handleSave = () => {
+    const next: FieldErrors = {};
+    if (!formData.name.trim()) {
+      next.name = '请填写接口名称';
+    }
+    const path = formData.path.trim();
+    if (!path) {
+      next.path = '请填写路由路径';
+    } else if (!path.startsWith('/')) {
+      next.path = '路由路径必须以 / 开头';
+    }
+
+    if (Object.keys(next).length > 0) {
+      setErrors(next);
+      if (next.name) {
+        reportFieldError(next.name, nameRef.current);
+      } else if (next.path) {
+        reportFieldError(next.path, pathRef.current);
+      }
+      return;
+    }
+
+    setErrors({});
+    onSave();
   };
 
   return (
@@ -101,12 +148,14 @@ export function BasicPanel({
 
       <Card title="接口信息">
         <div className="form-row">
-          <FormField label="接口名称" required>
+          <FormField label="接口名称" required error={errors.name}>
             <Input
+              ref={nameRef}
               value={formData.name}
-              onChange={(e) => onChange({ ...formData, name: e.target.value })}
+              onChange={(e) => handleChange({ ...formData, name: e.target.value })}
               placeholder="例如：人脸注册"
               maxLength={100}
+              invalid={!!errors.name}
             />
           </FormField>
           <FormField label="所属功能组" hint="项目 / 模块">
@@ -130,7 +179,7 @@ export function BasicPanel({
           <FormField label="HTTP 方法" required>
             <Select
               value={formData.method}
-              onChange={(e) => onChange({ ...formData, method: e.target.value as HttpMethod })}
+              onChange={(e) => handleChange({ ...formData, method: e.target.value as HttpMethod })}
             >
               {HTTP_METHODS.map((m) => (
                 <option key={m} value={m}>
@@ -153,27 +202,40 @@ export function BasicPanel({
           </FormField>
         </div>
 
-        <FormField label="路由路径" required>
+        <FormField
+          label="路由路径"
+          required
+          error={errors.path}
+          hint={
+            errors.path
+              ? undefined
+              : isSSE
+                ? 'SSE 基于 HTTP GET，客户端通过 EventSource API 建立连接'
+                : undefined
+          }
+        >
           <div className="input-group">
             <span className="input-group-text">{isSSE ? 'GET' : formData.method}</span>
             <Input
+              ref={pathRef}
               className="mono"
               value={formData.path}
-              onChange={(e) => onChange({ ...formData, path: e.target.value })}
+              onChange={(e) => handleChange({ ...formData, path: e.target.value })}
               placeholder="/api/events"
+              invalid={!!errors.path}
             />
           </div>
-          <div className="form-helper">
-            {isSSE
-              ? 'SSE 基于 HTTP GET，客户端通过 EventSource API 建立连接'
-              : '支持 <code>:id</code> 占位符、<code>*</code> 通配符；匹配优先级：精确 &gt; 参数 &gt; 通配符'}
-          </div>
+          {!errors.path && !isSSE && (
+            <div className="form-helper">
+              支持 <code>:id</code> 占位符、<code>*</code> 通配符；匹配优先级：精确 &gt; 参数 &gt; 通配符
+            </div>
+          )}
         </FormField>
 
         <FormField label="接口描述">
           <textarea
             value={formData.description ?? ''}
-            onChange={(e) => onChange({ ...formData, description: e.target.value || null })}
+            onChange={(e) => handleChange({ ...formData, description: e.target.value || null })}
             rows={2}
             placeholder="一段简短描述"
             className="form-textarea"
@@ -188,7 +250,7 @@ export function BasicPanel({
                 value={contentType}
                 onChange={(e) => {
                   const v = e.target.value;
-                  onChange({ ...formData, responseContentType: v });
+                  handleChange({ ...formData, responseContentType: v });
                   onExtraChange?.({ ...(extra ?? {}), contentType: v });
                 }}
               >
@@ -209,7 +271,7 @@ export function BasicPanel({
             <div className="flex items-center gap-2 pt-1.5">
               <Switch
                 checked={formData.isEnabled ?? true}
-                onChange={(v) => onChange({ ...formData, isEnabled: v })}
+                onChange={(v) => handleChange({ ...formData, isEnabled: v })}
               />
               <span className="text-[12.5px] text-ink-secondary">启用后接收外部调用</span>
             </div>
@@ -217,7 +279,7 @@ export function BasicPanel({
         </div>
       </Card>
 
-      <PanelActions onSave={onSave} saving={saving} />
+      <PanelActions onSave={handleSave} saving={saving} />
     </div>
   );
 }

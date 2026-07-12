@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link2 } from 'lucide-react';
 import { Card, FormField, Input, Select, Switch } from '@/components/ui';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
 import { useBusinessTables } from '@/hooks/queries/use-data-browser';
 import type { DataOp } from '@/types/api';
+import { reportFieldError } from '@/lib/form-validation';
 import { PanelHeader } from '../PanelHeader';
 import { PanelActions } from '../PanelActions';
 
@@ -55,6 +56,9 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
       : '',
   );
   const [payloadErr, setPayloadErr] = useState<string | null>(null);
+  const tableRef = useRef<HTMLInputElement>(null);
+  const payloadRef = useRef<HTMLTextAreaElement>(null);
+  const whereRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setWhereText(safeStringify(formData.dataWhere ?? {}));
@@ -140,6 +144,11 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
       return;
     }
 
+    if (tableErr) {
+      reportFieldError(tableErr, tableRef.current);
+      return;
+    }
+
     const whereResult = needsWhere
       ? tryParseObject(whereText, true)
       : { value: {} as Record<string, unknown>, error: null as string | null };
@@ -147,15 +156,16 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
       ? tryParseObject(payloadText, true)
       : { value: null as Record<string, unknown> | null, error: null as string | null };
 
-    if (whereResult.error) {
-      setWhereErr(whereResult.error);
-      return;
-    }
     if (payloadResult.error) {
       setPayloadErr(payloadResult.error);
+      reportFieldError(payloadResult.error, payloadRef.current);
       return;
     }
-    if (tableErr) return;
+    if (whereResult.error) {
+      setWhereErr(whereResult.error);
+      reportFieldError(whereResult.error, whereRef.current);
+      return;
+    }
 
     // 空模板 → null（运行时回退整包 body）
     const dataPayload =
@@ -176,7 +186,6 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
   const jsonBlocked =
     (needsWhere && (!!whereErr || !!parsedWhere.error)) ||
     (needsPayload && (!!payloadErr || !!parsedPayload.error));
-  const saveBlocked = enabled && (!!tableErr || jsonBlocked);
   const saveHint = tableErr
     ? tableErr
     : jsonBlocked
@@ -233,6 +242,7 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
             error={tableErr ?? undefined}
           >
             <Input
+              ref={tableRef}
               className="mono"
               list="datalink-table-suggestions"
               value={tableName}
@@ -257,6 +267,7 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
           >
             <div className="space-y-1.5">
               <textarea
+                ref={payloadRef}
                 value={payloadText}
                 onChange={(e) => handlePayloadChange(e.target.value)}
                 rows={7}
@@ -311,6 +322,7 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
           >
             <div className="space-y-1.5">
               <textarea
+                ref={whereRef}
                 value={whereText}
                 onChange={(e) => handleWhereChange(e.target.value)}
                 rows={4}
@@ -355,7 +367,7 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
         </ul>
       </div>
 
-      <PanelActions hint={saveHint} onSave={handleSave} saving={saving} disabled={saveBlocked} />
+      <PanelActions hint={saveHint} onSave={handleSave} saving={saving} />
     </div>
   );
 }
