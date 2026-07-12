@@ -3,6 +3,7 @@ import { config } from './config/index.js';
 import { getDb } from './db/index.js';
 import { logger } from './utils/logger.js';
 import { callbackScheduler } from './mock-engine/callback/callback-scheduler.js';
+import { attachWebSocketServer } from './mock-engine/websocket.js';
 
 // 预热数据库：建库 + 应用迁移，失败则快速退出
 getDb();
@@ -19,6 +20,9 @@ const server = app.listen(config.port, () => {
     'MockHub backend started',
   );
 });
+
+// WebSocket Mock（与 HTTP 同端口 upgrade）
+attachWebSocketServer(server);
 
 // 启动回调调度器（持久化扫描 + 兜底重排）
 callbackScheduler.start();

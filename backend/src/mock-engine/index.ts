@@ -5,4 +5,23 @@ export { matchBest, matchSingle } from './matcher.js';
 export { validate, buildFailResponse } from './validator.js';
 export { renderTemplate, applyDelay } from './response.js';
 export { execute, validateIdentifier } from './db-ops.js';
-export { ensureBusinessTable, listBusinessTables, listColumns, tableExists } from './schema-manager.js';
+export {
+  ensureBusinessTable,
+  listBusinessTables,
+  listColumns,
+  tableExists,
+  addBusinessColumn,
+  renameBusinessColumn,
+  dropBusinessColumn,
+  dropBusinessTable,
+  isReservedColumn,
+  normalizeColumnType,
+} from './schema-manager.js';
+export {
+  runScript,
+  createScriptDbApi,
+  ScriptError,
+  type ScriptRunInput,
+  type ScriptRunResult,
+} from './script-runtime.js';
+export { attachWebSocketServer } from './websocket.js';

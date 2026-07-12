@@ -73,6 +73,8 @@ export type MockApi = {
   dataOp: DataOp;
   dataTable: string | null;
   dataWhere: Record<string, unknown> | null;
+  /** insert/update 写入模板，支持 {{req.body.x}}；null 则用整包 body */
+  dataPayload: Record<string, unknown> | null;
   script: string | null;
   createdAt: string;
   updatedAt: string;
@@ -209,6 +211,21 @@ export type CallbackConfig = {
 
 export type CallbackTaskStatus = 'pending' | 'sent' | 'failed';
 
+export type CallbackAttemptLog = {
+  attempt: number;
+  at: string;
+  request: {
+    url: string;
+    method: string;
+    headers: Record<string, string> | null;
+    body: string | null;
+  };
+  responseStatus: number | null;
+  responseBody: string | null;
+  errorMessage: string | null;
+  outcome: 'success' | 'failed' | 'will_retry';
+};
+
 export type CallbackTask = {
   id: number;
   apiId: number;
@@ -226,6 +243,7 @@ export type CallbackTask = {
   responseStatus: number | null;
   responseBody: string | null;
   errorMessage: string | null;
+  attemptLogs?: CallbackAttemptLog[] | null;
   scheduledAt: string;
   sentAt: string | null;
   createdAt: string;

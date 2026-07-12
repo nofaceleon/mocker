@@ -18,6 +18,7 @@ import {
 } from './response.js';
 import { execute } from './db-ops.js';
 import { ensureBusinessTable } from './schema-manager.js';
+import { runScript, ScriptError } from './script-runtime.js';
 import { callbackScheduler } from './callback/callback-scheduler.js';
 import { enqueueCallbackTask, renderCallbackEnqueueInput } from './callback/callback-engine.js';
 
@@ -116,14 +117,14 @@ async function executeMatched(
     const where = buildRuntimeWhere(api, reqCtx);
 
     if (api.dataOp === 'insert') {
-      const body = (reqCtx.body ?? {}) as Record<string, unknown>;
-      if (Object.keys(body).length === 0) {
-        throw new Error('insert requires non-empty body');
+      const row = resolveDataPayload(api, reqCtx, 'insert');
+      if (Object.keys(row).length === 0) {
+        throw new Error('insert 需要非空写入数据：配置 dataPayload 模板，或在请求 body 中传字段');
       }
-      ensureBusinessTable(api.dataTable, body);
-      dbResult = unwrapResult(execute('insert', api.dataTable, body, {}));
+      ensureBusinessTable(api.dataTable, row);
+      dbResult = unwrapResult(execute('insert', api.dataTable, row, {}));
     } else if (api.dataOp === 'update') {
-      const patch = (reqCtx.body ?? {}) as Record<string, unknown>;
+      const patch = resolveDataPayload(api, reqCtx, 'update');
       dbResult = unwrapResult(execute('update', api.dataTable, patch, where));
     } else if (api.dataOp === 'select') {
       dbResult = unwrapResult(execute('select', api.dataTable, undefined, where));
@@ -132,17 +133,58 @@ async function executeMatched(
     }
   }
 
-  // 4. 构建渲染上下文
-  const renderCtx: ResponseContext = { req: reqCtx, dbResult };
+  // 4. 自定义脚本（可选）：返回值覆盖响应体；undefined 则继续走 responseBody 模板
+  let scriptResult: unknown = undefined;
+  let scriptOverride = false;
+  if (api.script && api.script.trim()) {
+    try {
+      const run = await runScript({ code: api.script, req: reqCtx, dbResult });
+      if (run.value !== undefined) {
+        scriptResult = run.value;
+        scriptOverride = true;
+      }
+    } catch (err) {
+      const message =
+        err instanceof ScriptError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : '脚本执行失败';
+      const body = { code: 'SCRIPT_ERROR', message };
+      res.status(500).json(body);
+      writeLogSafely({
+        apiId: api.id,
+        requestMethod: req.method,
+        requestPath: stripMockPrefix(req.path),
+        requestParams: reqCtx.query,
+        requestBody: reqCtx.body,
+        requestHeaders: reqCtx.headers,
+        responseStatus: 500,
+        responseBody: body,
+        responseTime: Date.now() - start,
+        clientIp: meta.clientIp,
+        requestId: meta.requestId,
+        format: 'http',
+      });
+      return;
+    }
+  }
 
-  // 5. 判断是否为SSE请求（根据protocol字段）
+  // 5. 构建渲染上下文
+  const renderCtx: ResponseContext = {
+    req: reqCtx,
+    dbResult,
+    response: scriptOverride ? scriptResult : undefined,
+  };
+
+  // 6. 判断是否为SSE请求（根据protocol字段）
   if (api.protocol === 'SSE') {
-    await handleSSERequest(req, res, api, renderCtx, start, meta);
+    await handleSSERequest(req, res, api, renderCtx, start, meta, scriptOverride ? scriptResult : undefined);
     return;
   }
 
-  // 6. 普通HTTP响应
-  await handleHTTPResponse(req, res, api, renderCtx, start, meta);
+  // 7. 普通HTTP响应
+  await handleHTTPResponse(req, res, api, renderCtx, start, meta, scriptOverride ? scriptResult : undefined);
 }
 
 /**
@@ -155,8 +197,10 @@ async function handleSSERequest(
   renderCtx: ResponseContext,
   start: number,
   meta: RequestMeta,
+  scriptBody?: unknown,
 ): Promise<void> {
-  const responseBody = parseResponseBody(api.responseBody);
+  const responseBody =
+    scriptBody !== undefined ? scriptBody : parseResponseBody(api.responseBody);
   const sseConfig = parseSSEConfig(responseBody, renderCtx);
 
   if (!sseConfig || sseConfig.events.length === 0) {
@@ -317,9 +361,13 @@ async function handleHTTPResponse(
   renderCtx: ResponseContext,
   start: number,
   meta: RequestMeta,
+  scriptBody?: unknown,
 ): Promise<void> {
-  const responseBody = parseResponseBody(api.responseBody);
-  const rendered = renderTemplate(responseBody, renderCtx);
+  // 脚本有返回值时直接作为响应体；否则渲染 responseBody 模板
+  const rendered =
+    scriptBody !== undefined
+      ? scriptBody
+      : renderTemplate(parseResponseBody(api.responseBody), renderCtx);
 
   // 设置 headers
   const headers = parseObjectField(api.responseHeaders) as Record<string, string> | null;
@@ -403,6 +451,33 @@ function buildRuntimeWhere(api: MockApi, ctx: ReturnType<typeof extractContext>)
   // path 参数优先级最高（用于 /face/:id 这种按 id 查询）
   const merged: Record<string, unknown> = { ...ctx.path, ...base };
   return merged;
+}
+
+/**
+ * insert/update 写入数据：
+ * - 若配置了 dataPayload 模板（非空对象），用 {{req.body.x}} 等渲染后作为写入行
+ * - 否则回退为整包请求 body
+ */
+function resolveDataPayload(
+  api: MockApi,
+  ctx: ReturnType<typeof extractContext>,
+  _mode: 'insert' | 'update',
+): Record<string, unknown> {
+  const template = parseObjectField(
+    (api as MockApi & { dataPayload?: unknown }).dataPayload,
+  ) as Record<string, unknown> | null;
+  if (template && typeof template === 'object' && !Array.isArray(template) && Object.keys(template).length > 0) {
+    const rendered = renderTemplate(template, { req: ctx });
+    if (rendered && typeof rendered === 'object' && !Array.isArray(rendered)) {
+      // 去掉模板未解析到的 undefined 字段
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(rendered as Record<string, unknown>)) {
+        if (v !== undefined) out[k] = v;
+      }
+      return out;
+    }
+  }
+  return (ctx.body ?? {}) as Record<string, unknown>;
 }
 
 function parseObjectField(raw: unknown): unknown {
