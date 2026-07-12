@@ -84,7 +84,7 @@ export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogCl
   ];
 
   return (
-    <aside className="flex flex-col overflow-y-auto border-r border-line bg-white scrollbar-thin">
+    <aside className="flex flex-col overflow-y-auto border-r border-line bg-white scrollbar-modern">
       <div className="border-b border-line-subtle px-4 py-3.5">
         {breadcrumb && breadcrumb.length > 0 && (
           <div className="mb-3 text-[12px]">

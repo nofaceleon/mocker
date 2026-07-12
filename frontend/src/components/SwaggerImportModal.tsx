@@ -532,7 +532,7 @@ function PreviewPhase({
       </div>
 
       <div className="overflow-hidden rounded-md border border-line">
-        <div className="max-h-[420px] overflow-y-auto scrollbar-thin">
+        <div className="max-h-[420px] overflow-y-auto scrollbar-modern">
           <table className="params-table w-full">
             <thead className="sticky top-0 bg-canvas-subtle">
               <tr>

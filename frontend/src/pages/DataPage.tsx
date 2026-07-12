@@ -159,7 +159,7 @@ export function DataPage() {
                 />
               </div>
             </div>
-            <ul className="max-h-[480px] overflow-y-auto p-1.5 scrollbar-thin">
+            <ul className="max-h-[480px] overflow-y-auto p-1.5 scrollbar-modern">
               {isLoading ? (
                 <li className="px-3 py-6 text-center text-[12px] text-ink-subtle">加载中…</li>
               ) : filteredTables.length === 0 ? (
@@ -469,7 +469,7 @@ function TableDetail({
           }
         />
       ) : (
-        <div className="overflow-x-auto scrollbar-thin">
+        <div className="overflow-x-auto scrollbar-modern">
           <table className="params-table">
             <thead>
               <tr>

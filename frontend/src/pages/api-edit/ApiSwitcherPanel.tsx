@@ -61,7 +61,7 @@ export function ApiSwitcherPanel({
         />
       </div>
 
-      <div className="scrollbar-thin flex-1 overflow-y-auto">
+      <div className="scrollbar-modern flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="px-3 py-4 text-center text-[12px] text-ink-tertiary">加载中...</div>
         ) : filtered.length === 0 ? (

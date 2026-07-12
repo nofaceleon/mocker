@@ -218,7 +218,7 @@ function Sidebar({
         />
       </div>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-2">
+      <nav className="scrollbar-modern flex-1 overflow-y-auto px-2 py-2">
         <div
           className="mb-1 flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium text-ink hover:bg-canvas-subtle"
           onClick={() => setExpanded({ [project.id]: !expanded[project.id] })}

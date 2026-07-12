@@ -521,7 +521,7 @@ function TablePreview({ tableName }: { tableName: string }) {
           <div className="mb-2 text-[11px] text-ink-tertiary">
             样本数据 (前 {rows.length} 行)
           </div>
-          <div className="overflow-x-auto rounded border border-line bg-white scrollbar-thin">
+          <div className="overflow-x-auto rounded border border-line bg-white scrollbar-modern">
             <table className="params-table !text-[11px]">
               <thead>
                 <tr>

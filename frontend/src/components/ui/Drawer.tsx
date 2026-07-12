@@ -42,7 +42,7 @@ export function Drawer({ open, onClose, title, width = 'md', children, footer }:
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex-1 overflow-auto px-5 py-4 scrollbar-thin">{children}</div>
+        <div className="flex-1 overflow-auto px-5 py-4 scrollbar-modern">{children}</div>
         {footer && (
           <div className="shrink-0 border-t border-line bg-canvas-subtle/50 px-5 py-3">
             {footer}
