@@ -1,85 +1,140 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  Columns3,
   Database as DatabaseIcon,
-  Download,
-  MoreHorizontal,
+  Link2,
   Pencil,
-  Plus,
   Search,
   Table as TableIcon,
   Trash2,
-  Upload,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Button,
   Card,
-  CodeBlock,
   Empty,
-  IconBtn,
+  FormField,
+  Input,
+  Modal,
   PageHeader,
+  Select,
   StatCard,
+  confirm,
 } from '@/components/ui';
-import { useBusinessTables, useDataBrowser } from '@/hooks/queries/use-data-browser';
-import type { DataBrowserTable } from '@/types/api';
+import {
+  useAddBusinessColumn,
+  useBusinessTableRows,
+  useBusinessTables,
+  useClearBusinessTable,
+  useDataBrowser,
+  useDeleteBusinessRow,
+  useDropBusinessColumn,
+  useDropBusinessTable,
+  useRenameBusinessColumn,
+  type BusinessTableMeta,
+  type ColumnType,
+} from '@/hooks/queries/use-data-browser';
+import { useProjects } from '@/hooks/queries/use-projects';
+import type { DataBrowserColumn, ID } from '@/types/api';
+
+const RESERVED_COLS = new Set(['id', 'created_at', 'updated_at']);
+
+const PAGE_SIZE = 50;
 
 export function DataPage() {
-  const { data } = useDataBrowser(1);
-  const { data: tables } = useBusinessTables();
+  const { data: projects } = useProjects();
+  const [projectId, setProjectId] = useState<ID | 'all'>('all');
   const [search, setSearch] = useState('');
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
 
-  const businessTables = data?.businessTables ?? [];
+  // 默认选中第一个项目（若有）
+  useEffect(() => {
+    if (projectId === 'all' && projects && projects.length === 1) {
+      setProjectId(projects[0].id);
+    }
+  }, [projects, projectId]);
+
+  const { data: allTables, isLoading: loadingAll } = useBusinessTables();
+  const numericProjectId = projectId === 'all' ? undefined : projectId;
+  const { data: projectData, isLoading: loadingProject } = useDataBrowser(numericProjectId);
+
+  const tableList: BusinessTableMeta[] = useMemo(() => {
+    if (projectId === 'all') {
+      return (allTables ?? []).map((t) => ({
+        name: t.name,
+        columns: t.columns,
+        rowCount: t.rowCount ?? 0,
+      }));
+    }
+    return (projectData?.businessTables ?? []).map((t) => ({
+      name: t.name,
+      columns: t.columns,
+      rowCount: t.rowCount ?? 0,
+    }));
+  }, [projectId, allTables, projectData]);
 
   const filteredTables = useMemo(() => {
-    if (!search) return businessTables;
+    if (!search) return tableList;
     const q = search.toLowerCase();
-    return businessTables.filter((t) => t.name.toLowerCase().includes(q));
-  }, [businessTables, search]);
+    return tableList.filter((t) => t.name.toLowerCase().includes(q));
+  }, [tableList, search]);
 
-  const activeTable: DataBrowserTable | null = useMemo(() => {
-    if (!selectedTable) return filteredTables[0] ?? null;
-    return filteredTables.find((t) => t.name === selectedTable) ?? null;
-  }, [selectedTable, filteredTables]);
+  // 切换项目/列表变化时校正选中表
+  useEffect(() => {
+    if (filteredTables.length === 0) {
+      setSelectedTable(null);
+      return;
+    }
+    if (!selectedTable || !filteredTables.some((t) => t.name === selectedTable)) {
+      setSelectedTable(filteredTables[0].name);
+    }
+  }, [filteredTables, selectedTable]);
 
-  const totalRows = businessTables.reduce((sum, t) => sum + (t.rowCount ?? 0), 0);
-  const allTables = useMemo(() => {
-    const set = new Set<string>();
-    businessTables.forEach((t) => set.add(t.name));
-    (tables ?? []).forEach((t) => set.add(t.name));
-    return Array.from(set);
-  }, [businessTables, tables]);
+  const activeMeta = filteredTables.find((t) => t.name === selectedTable) ?? null;
+  const totalRows = tableList.reduce((sum, t) => sum + (t.rowCount ?? 0), 0);
+  const linkedApis = useMemo(() => {
+    if (!selectedTable || !projectData?.apis) return [];
+    return projectData.apis.filter((a) => a.dataTable === selectedTable);
+  }, [selectedTable, projectData?.apis]);
+
+  const isLoading = projectId === 'all' ? loadingAll : loadingProject;
 
   return (
     <div className="page-container">
       <PageHeader
         title="数据管理"
-        description="查看和管理所有数据联动产生的 Mock 数据"
+        description="查看与清理数据联动产生的业务表数据"
         actions={
-          <>
-            <Button variant="secondary">
-              <Download className="h-3.5 w-3.5" />
-              导出全部
-            </Button>
-            <Button variant="secondary">
-              <Upload className="h-3.5 w-3.5" />
-              导入
-            </Button>
-            <Button variant="primary">
-              <Plus className="h-3.5 w-3.5" />
-              新建表
-            </Button>
-          </>
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-ink-tertiary">项目</span>
+            <Select
+              className="min-w-[180px]"
+              value={projectId === 'all' ? 'all' : String(projectId)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setProjectId(v === 'all' ? 'all' : Number(v));
+                setSelectedTable(null);
+              }}
+            >
+              <option value="all">全部业务表</option>
+              {(projects ?? []).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          </div>
         }
       />
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard label="业务表" value={allTables.length} icon={<TableIcon />} />
-        <StatCard label="总行数" value={totalRows} hint="所有业务表累计" icon={<DatabaseIcon />} />
+        <StatCard label="业务表" value={tableList.length} icon={<TableIcon />} />
+        <StatCard label="总行数" value={totalRows} hint="当前范围内累计" icon={<DatabaseIcon />} />
         <StatCard
-          label="占用空间"
-          value={`${(totalRows * 0.3).toFixed(1)} KB`}
-          hint="SQLite 估算"
-          icon={<DatabaseIcon />}
+          label="关联接口"
+          value={projectId === 'all' ? '—' : (projectData?.apis.filter((a) => a.dataTable).length ?? 0)}
+          hint={projectId === 'all' ? '选择项目后显示' : '配置了 dataTable 的接口'}
+          icon={<Link2 />}
         />
       </div>
 
@@ -90,11 +145,6 @@ export function DataPage() {
               <span className="inline-flex items-center gap-2">
                 数据表 <span className="text-ink-subtle">· {filteredTables.length}</span>
               </span>
-            }
-            extra={
-              <IconBtn title="新建表">
-                <Plus className="h-3 w-3" />
-              </IconBtn>
             }
             noBody
           >
@@ -110,17 +160,24 @@ export function DataPage() {
               </div>
             </div>
             <ul className="max-h-[480px] overflow-y-auto p-1.5 scrollbar-thin">
-              {filteredTables.length === 0 ? (
+              {isLoading ? (
+                <li className="px-3 py-6 text-center text-[12px] text-ink-subtle">加载中…</li>
+              ) : filteredTables.length === 0 ? (
                 <li className="px-3 py-6 text-center text-[12px] text-ink-subtle">
-                  {search ? '没有匹配的表' : '还没有业务表'}
+                  {search
+                    ? '没有匹配的表'
+                    : projectId === 'all'
+                      ? '还没有业务表（调用 insert 接口后自动创建）'
+                      : '该项目下接口未引用业务表'}
                 </li>
               ) : (
                 filteredTables.map((t) => (
                   <li key={t.name}>
                     <button
+                      type="button"
                       onClick={() => setSelectedTable(t.name)}
                       className={`group flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-[12.5px] transition-colors ${
-                        activeTable?.name === t.name
+                        activeMeta?.name === t.name
                           ? 'bg-canvas-deep font-medium text-ink-inverse'
                           : 'text-ink-secondary hover:bg-canvas-subtle hover:text-ink'
                       }`}
@@ -131,7 +188,7 @@ export function DataPage() {
                       </span>
                       <span
                         className={`rounded-full px-1.5 py-px text-[10px] font-medium ${
-                          activeTable?.name === t.name
+                          activeMeta?.name === t.name
                             ? 'bg-white/15 text-ink-inverse'
                             : 'bg-canvas-subtle text-ink-tertiary'
                         }`}
@@ -147,8 +204,13 @@ export function DataPage() {
         </aside>
 
         <section className="col-span-12 md:col-span-9">
-          {activeTable ? (
-            <TableDetail table={activeTable} />
+          {selectedTable ? (
+            <TableDetail
+              tableName={selectedTable}
+              columnsHint={activeMeta?.columns}
+              linkedApis={linkedApis}
+              onTableDropped={() => setSelectedTable(null)}
+            />
           ) : (
             <Card>
               <Empty
@@ -164,93 +226,254 @@ export function DataPage() {
   );
 }
 
-function TableDetail({ table }: { table: DataBrowserTable }) {
-  const [search, setSearch] = useState('');
+function TableDetail({
+  tableName,
+  columnsHint,
+  linkedApis,
+  onTableDropped,
+}: {
+  tableName: string;
+  columnsHint?: DataBrowserColumn[];
+  linkedApis: Array<{ id: number; name: string; method: string; path: string }>;
+  onTableDropped?: () => void;
+}) {
+  const [q, setQ] = useState('');
+  const [qApplied, setQApplied] = useState('');
+  const [page, setPage] = useState(1);
+  const [schemaOpen, setSchemaOpen] = useState(false);
+
+  useEffect(() => {
+    setQ('');
+    setQApplied('');
+    setPage(1);
+    setSchemaOpen(false);
+  }, [tableName]);
+
+  const { data, isLoading, isFetching } = useBusinessTableRows(tableName, {
+    page,
+    pageSize: PAGE_SIZE,
+    q: qApplied,
+  });
+  const deleteMut = useDeleteBusinessRow();
+  const clearMut = useClearBusinessTable();
+  const dropTableMut = useDropBusinessTable();
+
+  const columns = data?.columns ?? columnsHint ?? [];
+  const rows = data?.rows ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const to = Math.min(page * PAGE_SIZE, total);
+
+  const handleSearch = () => {
+    setQApplied(q.trim());
+    setPage(1);
+  };
+
+  const handleClear = async () => {
+    const ok = await confirm({
+      title: '清空表',
+      message: (
+        <span>
+          确定清空业务表 <b className="font-mono">{tableName}</b> 的全部 {total} 行数据吗？表结构将保留。
+        </span>
+      ),
+      confirmText: '清空',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const r = await clearMut.mutateAsync(tableName);
+      toast.success(`已清空 ${r.affected} 行`);
+      setPage(1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '清空失败');
+    }
+  };
+
+  const handleDeleteRow = async (rowId: number) => {
+    const ok = await confirm({
+      title: '删除记录',
+      message: (
+        <span>
+          确定删除 <b className="font-mono">{tableName}</b> 中 id={rowId} 的行吗？
+        </span>
+      ),
+      confirmText: '删除',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteMut.mutateAsync({ table: tableName, rowId });
+      toast.success('已删除');
+      if (rows.length === 1 && page > 1) setPage((p) => p - 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '删除失败');
+    }
+  };
+
+  const handleDropTable = async () => {
+    const ok = await confirm({
+      title: '删除表',
+      message: (
+        <span>
+          确定<strong className="text-danger">永久删除</strong>业务表{' '}
+          <b className="font-mono">{tableName}</b> 及其全部数据吗？此操作不可恢复。
+        </span>
+      ),
+      confirmText: '删除表',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await dropTableMut.mutateAsync(tableName);
+      toast.success(`表 ${tableName} 已删除`);
+      onTableDropped?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '删除表失败');
+    }
+  };
 
   return (
     <Card
       noBody
       title={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <DatabaseIcon className="h-3.5 w-3.5 text-ink-tertiary" />
           <span className="font-mono text-ink-subtle">/</span>
-          <span className="font-mono text-ink">{table.name}</span>
+          <span className="font-mono text-ink">{tableName}</span>
           <span className="tag tag-blue">业务表</span>
-          {table.columns.find((c) => c.pk) && <span className="tag tag-orange">PK</span>}
+          {columns.some((c) => c.pk) && <span className="tag tag-orange">PK</span>}
         </div>
       }
       extra={
         <div className="flex items-center gap-3 text-[12px] text-ink-tertiary">
           <span>
-            总记录数 <strong className="text-ink">{table.rowCount}</strong>
+            总记录数 <strong className="text-ink">{total}</strong>
           </span>
-          <span className="h-3 w-px bg-line" />
-          <span>
-            占用 <strong className="text-ink">{(table.rowCount * 0.3).toFixed(1)} KB</strong>
-          </span>
-          <span className="h-3 w-px bg-line" />
-          <span>最后写入 <strong className="text-ink">3 分钟前</strong></span>
+          {isFetching && <span className="text-ink-subtle">刷新中…</span>}
         </div>
       }
     >
-      <div className="px-5 pb-2 pt-4">
-        <CodeBlock
-          className="!rounded-md"
-          language="SQL"
-          tabs={<code style={{ color: '#A1A1AA' }}>// 在线查询 · 支持标准 SQL · 仅当前表</code>}
-        >
-          <span className="kw">SELECT</span> * <span className="kw">FROM</span> <span className="str">{table.name}</span> <span className="kw">WHERE</span> requestId <span className="kw">LIKE</span> <span className="str">'req_%'</span> <span className="kw">ORDER BY</span> createdAt <span className="kw">DESC</span> <span className="kw">LIMIT</span> <span className="num">10</span>;
-        </CodeBlock>
-      </div>
+      {linkedApis.length > 0 && (
+        <div className="border-b border-line-subtle px-5 py-2.5 text-[12px] text-ink-tertiary">
+          <span className="mr-2 font-medium text-ink-secondary">关联接口</span>
+          {linkedApis.map((a) => (
+            <span
+              key={a.id}
+              className="mr-2 inline-flex items-center gap-1 rounded-full border border-line bg-canvas-subtle px-2 py-0.5 font-mono text-[11px] text-ink-secondary"
+              title={a.name}
+            >
+              {a.method} {a.path}
+            </span>
+          ))}
+        </div>
+      )}
 
-      <div className="flex items-center justify-between border-y border-line-subtle bg-canvas px-5 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle bg-canvas px-5 py-2.5">
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-ink-subtle" />
             <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="搜索数据…"
-              className="form-input h-7 w-[200px] pl-7 text-[12px]"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearch();
+              }}
+              placeholder="搜索任意字段…"
+              className="form-input h-7 w-[220px] pl-7 text-[12px]"
             />
           </div>
-          <select className="form-select h-7 w-auto min-w-[120px] text-[12px]">
-            <option>全部字段</option>
-            {table.columns.map((c) => (
-              <option key={c.name}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" onClick={handleSearch}>
             <Search className="h-3 w-3" />
-            运行
+            搜索
           </Button>
-          <Button variant="ghost" size="sm" className="!text-danger">
+          {qApplied && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setQ('');
+                setQApplied('');
+                setPage(1);
+              }}
+            >
+              清除
+            </Button>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setSchemaOpen(true)}>
+            <Columns3 className="h-3 w-3" />
+            修改字段
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!text-danger"
+            onClick={handleClear}
+            disabled={clearMut.isPending || total === 0}
+          >
             <Trash2 className="h-3 w-3" />
             清空表
           </Button>
-          <Button variant="primary" size="sm">
-            <Plus className="h-3 w-3" />
-            新增记录
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!text-danger"
+            onClick={handleDropTable}
+            disabled={dropTableMut.isPending}
+          >
+            <Trash2 className="h-3 w-3" />
+            删除表
           </Button>
         </div>
       </div>
 
-      {table.rows.length === 0 ? (
+      {columns.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 border-b border-line-subtle px-5 py-2">
+          <span className="mr-1 text-[11px] text-ink-subtle">列</span>
+          {columns.map((c) => (
+            <span
+              key={c.name}
+              className="inline-flex items-center gap-1 rounded border border-line bg-white px-1.5 py-0.5 font-mono text-[10.5px] text-ink-secondary"
+            >
+              {c.name}
+              <span className="text-ink-subtle">{c.type || '?'}</span>
+              {c.pk && <span className="tag tag-orange !text-[9px]">PK</span>}
+              {RESERVED_COLS.has(c.name) && (
+                <span className="text-[9px] text-ink-subtle">系统</span>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {schemaOpen && (
+        <SchemaEditorModal
+          tableName={tableName}
+          columns={columns}
+          onClose={() => setSchemaOpen(false)}
+        />
+      )}
+
+      {isLoading ? (
+        <div className="py-12 text-center text-[13px] text-ink-tertiary">加载中…</div>
+      ) : rows.length === 0 ? (
         <Empty
-          title="该表暂无数据"
-          description="调用该表对应的 Mock 接口后，数据会自动写入"
+          title={qApplied ? '没有匹配的数据' : '该表暂无数据'}
+          description={
+            qApplied
+              ? '试试其他关键字'
+              : '调用配置了 insert 的 Mock 接口或脚本 db.insert 后，数据会写入此表'
+          }
         />
       ) : (
         <div className="overflow-x-auto scrollbar-thin">
           <table className="params-table">
             <thead>
               <tr>
-                <th style={{ width: 32 }}>
-                  <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer rounded accent-ink" />
-                </th>
-                {table.columns.map((c) => (
+                {columns.map((c) => (
                   <th key={c.name}>
                     <span className="inline-flex items-center gap-1.5">
                       <span className="font-mono normal-case tracking-normal">{c.name}</span>
@@ -258,44 +481,33 @@ function TableDetail({ table }: { table: DataBrowserTable }) {
                     </span>
                   </th>
                 ))}
-                <th style={{ width: 90 }}>操作</th>
+                <th style={{ width: 56 }}>操作</th>
               </tr>
             </thead>
             <tbody>
-              {table.rows.map((row, idx) => (
-                <tr key={idx} className="hover:bg-canvas">
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer rounded accent-ink" />
-                  </td>
-                  {table.columns.map((c) => (
-                    <td key={c.name} className="max-w-[280px]">
-                      {renderCell((row as Record<string, unknown>)[c.name], c.pk)}
-                    </td>
-                  ))}
-                  <td>
-                    <div className="flex items-center gap-0.5">
+              {rows.map((row, idx) => {
+                const rowId = Number(row.id);
+                return (
+                  <tr key={Number.isFinite(rowId) ? rowId : idx} className="hover:bg-canvas">
+                    {columns.map((c) => (
+                      <td key={c.name} className="max-w-[280px]">
+                        {renderCell(row[c.name], c.pk)}
+                      </td>
+                    ))}
+                    <td>
                       <button
-                        className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
-                        title="编辑"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                      <button
-                        className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
-                        title="更多"
-                      >
-                        <MoreHorizontal className="h-3 w-3" />
-                      </button>
-                      <button
-                        className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-danger-soft hover:text-danger"
+                        type="button"
+                        className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-danger-soft hover:text-danger disabled:opacity-40"
                         title="删除"
+                        disabled={!Number.isFinite(rowId) || deleteMut.isPending}
+                        onClick={() => handleDeleteRow(rowId)}
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -303,19 +515,224 @@ function TableDetail({ table }: { table: DataBrowserTable }) {
 
       <div className="flex items-center justify-between border-t border-line bg-canvas px-4 py-2.5 text-[12px] text-ink-tertiary">
         <span>
-          显示 1 - {Math.min(table.rows.length, 10)} 条 / 共 {table.rowCount} 条
+          显示 {from} - {to} 条 / 共 {total} 条
+          {qApplied ? ` · 筛选 “${qApplied}”` : ''}
         </span>
-        <div className="flex items-center gap-0.5">
-          <button className="page-btn">‹</button>
-          <button className="page-btn active">1</button>
-          <button className="page-btn">2</button>
-          <button className="page-btn">3</button>
-          <button className="page-btn">4</button>
-          <button className="page-btn">5</button>
-          <button className="page-btn">›</button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="page-btn"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            ‹
+          </button>
+          <span className="px-2 text-ink-secondary">
+            {page} / {totalPages}
+          </span>
+          <button
+            type="button"
+            className="page-btn"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
+          >
+            ›
+          </button>
         </div>
       </div>
     </Card>
+  );
+}
+
+function SchemaEditorModal({
+  tableName,
+  columns,
+  onClose,
+}: {
+  tableName: string;
+  columns: DataBrowserColumn[];
+  onClose: () => void;
+}) {
+  const addMut = useAddBusinessColumn();
+  const renameMut = useRenameBusinessColumn();
+  const dropColMut = useDropBusinessColumn();
+  const [newName, setNewName] = useState('');
+  const [newType, setNewType] = useState<ColumnType>('TEXT');
+  const [renameMap, setRenameMap] = useState<Record<string, string>>({});
+
+  const handleAdd = async () => {
+    const name = newName.trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+      toast.error('列名仅允许字母/数字/下划线，且不能以数字开头');
+      return;
+    }
+    if (RESERVED_COLS.has(name)) {
+      toast.error('不能使用系统保留列名');
+      return;
+    }
+    try {
+      await addMut.mutateAsync({ table: tableName, name, type: newType });
+      toast.success(`已新增列 ${name}`);
+      setNewName('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '新增列失败');
+    }
+  };
+
+  const handleRename = async (oldName: string) => {
+    const next = (renameMap[oldName] ?? oldName).trim();
+    if (next === oldName) return;
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(next)) {
+      toast.error('新列名格式不正确');
+      return;
+    }
+    try {
+      await renameMut.mutateAsync({ table: tableName, columnName: oldName, newName: next });
+      toast.success(`已重命名 ${oldName} → ${next}`);
+      setRenameMap((m) => {
+        const copy = { ...m };
+        delete copy[oldName];
+        return copy;
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '重命名失败');
+    }
+  };
+
+  const handleDropCol = async (columnName: string) => {
+    const ok = await confirm({
+      title: '删除列',
+      message: (
+        <span>
+          确定删除列 <b className="font-mono">{columnName}</b>？该列数据将丢失。
+        </span>
+      ),
+      confirmText: '删除列',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await dropColMut.mutateAsync({ table: tableName, columnName });
+      toast.success(`已删除列 ${columnName}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '删除列失败');
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`修改字段 · ${tableName}`}
+      width="lg"
+      footer={
+        <Button variant="secondary" onClick={onClose}>
+          关闭
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        <p className="text-[12px] text-ink-tertiary">
+          系统列 <code className="param-code">id</code> / <code className="param-code">created_at</code> /{' '}
+          <code className="param-code">updated_at</code> 不可修改或删除。
+        </p>
+
+        <div className="overflow-x-auto rounded-md border border-line">
+          <table className="params-table !mb-0">
+            <thead>
+              <tr>
+                <th>列名</th>
+                <th>类型</th>
+                <th>重命名</th>
+                <th style={{ width: 100 }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {columns.map((c) => {
+                const reserved = RESERVED_COLS.has(c.name);
+                return (
+                  <tr key={c.name}>
+                    <td className="font-mono text-[12.5px]">
+                      {c.name}
+                      {c.pk && <span className="tag tag-orange ml-1">PK</span>}
+                      {reserved && <span className="ml-1 text-[10px] text-ink-subtle">系统</span>}
+                    </td>
+                    <td className="font-mono text-[12px] text-ink-secondary">{c.type || 'TEXT'}</td>
+                    <td>
+                      {reserved ? (
+                        <span className="text-[12px] text-ink-subtle">—</span>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            className="mono h-7 !text-[12px]"
+                            value={renameMap[c.name] ?? c.name}
+                            onChange={(e) =>
+                              setRenameMap((m) => ({ ...m, [c.name]: e.target.value }))
+                            }
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="应用重命名"
+                            disabled={
+                              renameMut.isPending || (renameMap[c.name] ?? c.name) === c.name
+                            }
+                            onClick={() => handleRename(c.name)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      {reserved ? (
+                        <span className="text-[12px] text-ink-subtle">—</span>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="!text-danger"
+                          disabled={dropColMut.isPending}
+                          onClick={() => handleDropCol(c.name)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          删除
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="rounded-md border border-line bg-canvas-subtle/40 p-3">
+          <div className="mb-2 text-[12.5px] font-medium text-ink">新增列</div>
+          <div className="flex flex-wrap items-end gap-2">
+            <FormField label="列名" className="min-w-[160px] flex-1">
+              <Input
+                className="mono"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="例如 remark"
+              />
+            </FormField>
+            <FormField label="类型" className="w-[140px]">
+              <Select value={newType} onChange={(e) => setNewType(e.target.value as ColumnType)}>
+                <option value="TEXT">TEXT</option>
+                <option value="REAL">REAL</option>
+                <option value="INTEGER">INTEGER</option>
+                <option value="BLOB">BLOB</option>
+              </Select>
+            </FormField>
+            <Button variant="primary" loading={addMut.isPending} onClick={handleAdd}>
+              添加
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -326,13 +743,23 @@ function renderCell(v: unknown, isPk: boolean = false) {
   if (typeof v === 'object') {
     const json = JSON.stringify(v);
     return (
-      <span
-        className="cursor-pointer truncate font-mono text-[11.5px] text-ink-secondary"
-        title={json}
-      >
+      <span className="cursor-pointer truncate font-mono text-[11.5px] text-ink-secondary" title={json}>
         {`{ ${Object.keys(v as object).slice(0, 3).join(', ')}${Object.keys(v as object).length > 3 ? ', ...' : ''} }`}
       </span>
     );
+  }
+  // JSON 字符串尝试展示
+  if (typeof v === 'string' && (v.startsWith('{') || v.startsWith('['))) {
+    try {
+      JSON.parse(v);
+      return (
+        <span className="truncate font-mono text-[11.5px] text-ink-secondary" title={v}>
+          {v.length > 80 ? `${v.slice(0, 80)}…` : v}
+        </span>
+      );
+    } catch {
+      /* plain string */
+    }
   }
   if (isPk) {
     return (
@@ -340,7 +767,6 @@ function renderCell(v: unknown, isPk: boolean = false) {
         <span className="rounded border border-line bg-canvas-subtle px-1.5 py-0.5 font-mono text-[12px] text-ink">
           {String(v)}
         </span>
-        <span className="tag tag-orange">PK</span>
       </span>
     );
   }
