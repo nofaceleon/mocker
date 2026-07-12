@@ -13,7 +13,15 @@ type ScriptPanelProps = {
   saving?: boolean;
 };
 
-const STARTER = `// handle 返回值作为最终响应体；返回 undefined 则继续使用「响应配置」模板
+type Template = {
+  label: string;
+  code: string;
+};
+
+const TEMPLATES: Template[] = [
+  {
+    label: '默认示例 - 写入数据',
+    code: `// handle 返回值作为最终响应体；返回 undefined 则继续使用「响应配置」模板
 // 可用对象：req / db / log / dbResult（数据联动结果）
 async function handle(req, db, log) {
   const { name, imageUrl } = req.body || {};
@@ -40,19 +48,86 @@ async function handle(req, db, log) {
       createdAt: new Date().toISOString(),
     },
   };
-}`;
+}`,
+  },
+  {
+    label: 'dbResult - SELECT 标准格式',
+    code: `// 将数据联动的查询结果包装成标准 API 格式
+function handle(req, db, log) {
+  if (Array.isArray(dbResult)) {
+    return {
+      code: 0,
+      message: 'success',
+      data: dbResult,
+      total: dbResult.length
+    };
+  }
+  return { code: 0, data: dbResult };
+}`,
+  },
+  {
+    label: 'dbResult - SELECT 分页格式',
+    code: `// 查询结果包装成分页格式
+function handle(req, db, log) {
+  return {
+    code: 0,
+    data: {
+      list: dbResult,
+      total: dbResult.length,
+      page: Number(req.query.page) || 1,
+      pageSize: Number(req.query.pageSize) || 20
+    }
+  };
+}`,
+  },
+  {
+    label: 'dbResult - INSERT 返回简化结果',
+    code: `// 写入后只返回 id
+function handle(req, db, log) {
+  return {
+    code: 0,
+    message: '创建成功',
+    data: { id: dbResult.id }
+  };
+}`,
+  },
+  {
+    label: 'dbResult - UPDATE/DELETE 操作结果',
+    code: `// 更新/删除后返回影响行数
+function handle(req, db, log) {
+  return {
+    code: 0,
+    message: \`操作完成，影响 \${dbResult.affected} 条记录\`,
+    affected: dbResult.affected
+  };
+}`,
+  },
+];
+
+const DEFAULT_TEMPLATE = TEMPLATES[0].code;
 
 export function ScriptPanel({ formData, onChange, onSave, saving }: ScriptPanelProps) {
   const enabled = !!formData.script;
-  const [script, setScript] = useState(formData.script ?? STARTER);
+  const [script, setScript] = useState(formData.script ?? DEFAULT_TEMPLATE);
+  const [templateIdx, setTemplateIdx] = useState(0);
 
   useEffect(() => {
-    setScript(formData.script ?? STARTER);
+    setScript(formData.script ?? DEFAULT_TEMPLATE);
   }, [formData.script]);
+
+  const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const idx = Number(e.target.value);
+    setTemplateIdx(idx);
+    const newScript = TEMPLATES[idx].code;
+    setScript(newScript);
+    if (enabled) {
+      onChange({ ...formData, script: newScript });
+    }
+  };
 
   const handleToggle = (v: boolean) => {
     if (v) {
-      onChange({ ...formData, script: script || STARTER });
+      onChange({ ...formData, script: script || DEFAULT_TEMPLATE });
     } else {
       onChange({ ...formData, script: null });
     }
@@ -82,9 +157,23 @@ export function ScriptPanel({ formData, onChange, onSave, saving }: ScriptPanelP
       <Card
         className="mt-3"
         title={
-          <>
-            handle(req, db, log) <span className="font-normal text-ink-subtle">· JavaScript</span>
-          </>
+          <div className="flex flex-1 items-center justify-between gap-3">
+            <span className="shrink-0">
+              handle(req, db, log) <span className="font-normal text-ink-subtle">· JavaScript</span>
+            </span>
+            <select
+              value={templateIdx}
+              onChange={handleTemplateChange}
+              className="h-6 min-w-[180px] rounded border border-line bg-white px-2 text-[11px] text-ink-secondary"
+              disabled={!enabled}
+            >
+              {TEMPLATES.map((t, i) => (
+                <option key={i} value={i}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
         }
       >
         <div className="info-tip">

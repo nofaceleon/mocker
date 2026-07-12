@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link2 } from 'lucide-react';
+import { Copy, Database, Link2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, FormField, Input, Select, Switch } from '@/components/ui';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
-import { useBusinessTables } from '@/hooks/queries/use-data-browser';
+import { useBusinessTables, useBusinessTableRows } from '@/hooks/queries/use-data-browser';
 import type { DataOp } from '@/types/api';
 import { reportFieldError } from '@/lib/form-validation';
 import { PanelHeader } from '../PanelHeader';
@@ -259,6 +260,10 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
           </FormField>
         </div>
 
+        {enabled && tableName.trim() && TABLE_NAME_RE.test(tableName.trim()) && (
+          <TablePreview tableName={tableName.trim()} />
+        )}
+
         {needsPayload && (
           <FormField
             label="写入字段模板"
@@ -397,4 +402,158 @@ function tryParseObject(
   } catch (e) {
     return { value: null, error: e instanceof Error ? e.message : 'JSON 格式错误' };
   }
+}
+
+const RESERVED_COLS = new Set(['id', 'created_at', 'updated_at']);
+
+function TablePreview({ tableName }: { tableName: string }) {
+  const { data, isLoading, error } = useBusinessTableRows(tableName, { pageSize: 5 });
+
+  const columns = data?.columns ?? [];
+  const rows = data?.rows ?? [];
+  const total = data?.total ?? 0;
+  const notFound = error && !isLoading;
+
+  const userColumns = useMemo(
+    () => columns.filter((c) => !RESERVED_COLS.has(c.name)),
+    [columns],
+  );
+
+  const handleCopyFieldName = (name: string) => {
+    navigator.clipboard.writeText(name).then(() => {
+      toast.success(`已复制字段名: ${name}`);
+    });
+  };
+
+  const handleCopyAllFields = () => {
+    if (userColumns.length === 0) return;
+
+    const templateObj = userColumns.reduce(
+      (acc, c) => {
+        acc[c.name] = `{{req.body.${c.name}}}`;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+    const template = JSON.stringify(templateObj, null, 2);
+
+    navigator.clipboard.writeText(template).then(() => {
+      toast.success('已复制写入模板');
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-md border border-line bg-canvas-subtle/40 px-4 py-3 text-[12px] text-ink-tertiary">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        加载表结构中...
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div
+        className="mt-3 flex items-center gap-2 rounded-md border px-4 py-3 text-[12px]"
+        style={{ borderColor: '#FEF3C7', backgroundColor: '#FEFCE8', color: '#A16207' }}
+      >
+        <Database className="h-3.5 w-3.5" />
+        表 <b className="font-mono">{tableName}</b> 不存在
+      </div>
+    );
+  }
+
+  if (columns.length === 0) {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-md border border-line bg-canvas-subtle/40 px-4 py-3 text-[12px] text-ink-tertiary">
+        <Database className="h-3.5 w-3.5" />
+        表 <b className="font-mono text-ink-secondary">{tableName}</b> 暂无字段信息
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-md border border-line bg-canvas-subtle/40">
+      <div className="flex items-center justify-between border-b border-line-subtle px-4 py-2.5">
+        <div className="flex items-center gap-2 text-[12px] text-ink-secondary">
+          <Database className="h-3.5 w-3.5 text-ink-tertiary" />
+          <span className="font-medium">表结构预览</span>
+          <span className="text-ink-tertiary">
+            · {columns.length} 列 · {total} 条记录
+          </span>
+        </div>
+        {userColumns.length > 0 && (
+          <button
+            type="button"
+            onClick={handleCopyAllFields}
+            className="inline-flex items-center gap-1 rounded border border-line bg-white px-2 py-1 text-[11px] text-ink-secondary transition-colors hover:bg-canvas-subtle"
+            title="复制写入模板"
+          >
+            <Copy className="h-3 w-3" />
+            复制全部字段名
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-1.5 border-b border-line-subtle px-4 py-2.5">
+        {columns.map((c) => (
+          <button
+            key={c.name}
+            type="button"
+            onClick={() => handleCopyFieldName(c.name)}
+            className="inline-flex items-center gap-1 rounded border border-line bg-white px-1.5 py-0.5 font-mono text-[10.5px] text-ink-secondary transition-colors hover:bg-canvas-subtle hover:border-ink-subtle"
+            title={`点击复制字段名: ${c.name}`}
+          >
+            {c.name}
+            <span className="text-ink-subtle">{c.type || '?'}</span>
+            {c.pk && <span className="tag tag-orange !text-[9px]">PK</span>}
+            {RESERVED_COLS.has(c.name) && (
+              <span className="text-[9px] text-ink-subtle">系统</span>
+            )}
+            <Copy className="h-2.5 w-2.5 text-ink-subtle" />
+          </button>
+        ))}
+      </div>
+
+      {rows.length > 0 && (
+        <div className="px-4 py-2.5">
+          <div className="mb-2 text-[11px] text-ink-tertiary">
+            样本数据 (前 {rows.length} 行)
+          </div>
+          <div className="overflow-x-auto rounded border border-line bg-white scrollbar-thin">
+            <table className="params-table !text-[11px]">
+              <thead>
+                <tr>
+                  {columns.slice(0, 6).map((c) => (
+                    <th key={c.name} className="!py-1.5 !text-[10.5px]">
+                      <span className="font-mono normal-case tracking-normal">{c.name}</span>
+                    </th>
+                  ))}
+                  {columns.length > 6 && <th className="!py-1.5">...</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-canvas-subtle/50">
+                    {columns.slice(0, 6).map((c) => (
+                      <td key={c.name} className="max-w-[150px] truncate !py-1.5">
+                        {renderPreviewCell(row[c.name])}
+                      </td>
+                    ))}
+                    {columns.length > 6 && <td className="!py-1.5 text-ink-subtle">...</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderPreviewCell(value: unknown): string {
+  if (value === null || value === undefined) return '-';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
 }
