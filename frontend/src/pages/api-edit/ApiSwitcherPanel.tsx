@@ -50,14 +50,14 @@ export function ApiSwitcherPanel({
         </button>
       </div>
 
-      <div className="relative border-b border-line px-3 py-2">
-        <Search className="pointer-events-none absolute left-5.5 top-1/2 h-3 w-3 -translate-y-1/2 text-ink-subtle" />
+      <div className="relative border-b border-line px-3 py-2.5">
+        <Search className="pointer-events-none absolute left-[26px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-subtle" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="搜索接口…"
-          className="h-7 w-full rounded-md border border-line bg-canvas px-2.5 pl-7 text-[12px] transition-all focus:border-ink focus:bg-white focus:outline-none"
+          className="h-8 w-full rounded-lg border border-line-subtle bg-canvas-subtle px-3 pl-8 text-[12px] placeholder:text-ink-subtle transition-colors hover:border-line focus:border-ink-subtle focus:bg-white focus:outline-none"
         />
       </div>
 

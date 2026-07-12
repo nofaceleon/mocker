@@ -155,20 +155,20 @@ export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogCl
             ))}
           </div>
         ))}
+      </div>
 
-        <div className="border-t border-line-subtle px-3 py-3 text-[11px] leading-[1.8] text-ink-subtle">
-          <div>
-            上次保存 ·{' '}
-            <span className="text-ink-secondary">
-              {summary?.lastSavedAt ? formatRelative(summary.lastSavedAt) : '尚未保存'}
-            </span>
-          </div>
-          <div>
-            上次调用 ·{' '}
-            <span className="text-ink-secondary">
-              {summary?.lastCalledAt ? formatTime(summary.lastCalledAt) : '—'}
-            </span>
-          </div>
+      <div className="border-t border-line-subtle px-3 py-3 text-[11px] leading-[1.8] text-ink-subtle">
+        <div>
+          上次保存 ·{' '}
+          <span className="text-ink-secondary">
+            {summary?.lastSavedAt ? formatRelative(summary.lastSavedAt) : '尚未保存'}
+          </span>
+        </div>
+        <div>
+          上次调用 ·{' '}
+          <span className="text-ink-secondary">
+            {summary?.lastCalledAt ? formatTime(summary.lastCalledAt) : '—'}
+          </span>
         </div>
       </div>
     </aside>
