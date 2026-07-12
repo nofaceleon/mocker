@@ -100,8 +100,10 @@ export const mockApis = sqliteTable(
     dataOp: text('data_op', { enum: DATA_OPS }).notNull().default('none'),
     dataTable: text('data_table'),
     dataWhere: text('data_where', { mode: 'json' }).$type<Record<string, unknown>>(),
+    /** insert/update 写入字段模板，支持 {{req.body.x}}；为空则 insert/update 使用整包 body */
+    dataPayload: text('data_payload', { mode: 'json' }).$type<Record<string, unknown> | null>(),
 
-    // 自定义脚本 (P0 占位，P1 启用沙箱)
+    // 自定义脚本
     script: text('script'),
 
     ...timestamps,
@@ -185,6 +187,22 @@ export const callbackConfigs = sqliteTable(
 // ---------------- 7. callback_tasks (P0 schema only) ----------------
 export const CALLBACK_STATUS = ['pending', 'sent', 'failed'] as const;
 
+/** 单次回调尝试记录（请求 + 响应/错误） */
+export type CallbackAttemptLog = {
+  attempt: number;
+  at: string;
+  request: {
+    url: string;
+    method: string;
+    headers: Record<string, string> | null;
+    body: string | null;
+  };
+  responseStatus: number | null;
+  responseBody: string | null;
+  errorMessage: string | null;
+  outcome: 'success' | 'failed' | 'will_retry';
+};
+
 export const callbackTasks = sqliteTable(
   'callback_tasks',
   {
@@ -207,6 +225,8 @@ export const callbackTasks = sqliteTable(
     responseStatus: integer('response_status'),
     responseBody: text('response_body'),
     errorMessage: text('error_message'),
+    /** 每次发送尝试的完整记录（含失败响应） */
+    attemptLogs: text('attempt_logs', { mode: 'json' }).$type<CallbackAttemptLog[]>().default([]),
     scheduledAt: integer('scheduled_at', { mode: 'timestamp_ms' }).notNull(),
     sentAt: integer('sent_at', { mode: 'timestamp_ms' }),
     ...timestamps,

@@ -29,6 +29,20 @@
       "when": 1783659009420,
       "tag": "0003_overconfident_gamora",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1783810000000,
+      "tag": "0004_callback_attempt_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1783811000000,
+      "tag": "0005_data_payload",
+      "breakpoints": true
     }
   ]
 }
