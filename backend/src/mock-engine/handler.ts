@@ -445,11 +445,11 @@ function unwrapResult(r: ReturnType<typeof execute>): unknown {
   return { affected: r.affected };
 }
 
-/** 把 path 参数填进 dataWhere，构造运行时 where */
+/** 把 path 参数和 query 参数填进 dataWhere，构造运行时 where */
 function buildRuntimeWhere(api: MockApi, ctx: ReturnType<typeof extractContext>): Record<string, unknown> {
   const base = (parseObjectField(api.dataWhere) as Record<string, unknown> | null) ?? {};
-  // path 参数优先级最高（用于 /face/:id 这种按 id 查询）
-  const merged: Record<string, unknown> = { ...ctx.path, ...base };
+  // 优先级：用户配置的 dataWhere > query 参数 > 路径参数
+  const merged: Record<string, unknown> = { ...ctx.path, ...ctx.query, ...base };
   return merged;
 }
 

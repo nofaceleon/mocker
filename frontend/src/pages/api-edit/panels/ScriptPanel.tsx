@@ -157,10 +157,8 @@ export function ScriptPanel({ formData, onChange, onSave, saving }: ScriptPanelP
       <Card
         className="mt-3"
         title={
-          <div className="flex flex-1 items-center justify-between gap-3">
-            <span className="shrink-0">
-              handle(req, db, log) <span className="font-normal text-ink-subtle">· JavaScript</span>
-            </span>
+          <div className="flex flex-1 items-center justify-end gap-2">
+            <span className="text-[11.5px] text-ink-tertiary">选择模板</span>
             <select
               value={templateIdx}
               onChange={handleTemplateChange}

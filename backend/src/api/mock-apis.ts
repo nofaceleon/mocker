@@ -353,12 +353,26 @@ router.post(
     // SSE协议特殊处理：返回SSE配置信息，由前端使用EventSource测试
     if (api.protocol === 'SSE') {
       const sseConfig = api.responseBody as Record<string, unknown> | null;
+      const sseRawPath = input.path ?? api.path;
+      const sseQuestionIdx = sseRawPath.indexOf('?');
+      const ssePath = sseQuestionIdx >= 0 ? sseRawPath.slice(0, sseQuestionIdx) : sseRawPath;
+      let sseMergedQuery: Record<string, unknown> = { ...(input.query ?? {}) };
+      if (sseQuestionIdx >= 0) {
+        const qs = sseRawPath.slice(sseQuestionIdx + 1);
+        const params = new URLSearchParams(qs);
+        params.forEach((v, k) => {
+          if (!sseMergedQuery[k]) sseMergedQuery[k] = v;
+        });
+      }
+      const sseQueryString = Object.keys(sseMergedQuery).length > 0
+        ? `?${new URLSearchParams(sseMergedQuery as Record<string, string>).toString()}`
+        : '';
       res.success({
         apiId: api.id,
         protocol: 'SSE',
         method: 'GET',
-        path: input.path ?? api.path,
-        fullUrl: `http://localhost:${config.port}${input.path ?? api.path}`,
+        path: ssePath,
+        fullUrl: `http://localhost:${config.port}${ssePath}${sseQueryString}`,
         sseConfig: sseConfig ?? { events: [] },
         responseHeaders: api.responseHeaders ?? {},
       });
@@ -367,12 +381,25 @@ router.post(
 
     // 普通HTTP请求处理
     const headers: Record<string, string> = { 'content-type': 'application/json', ...(input.headers ?? {}) };
+    // 从 input.path 中提取纯路径部分和可能附带的 query string
+    const rawPath = input.path ?? api.path;
+    const questionIdx = rawPath.indexOf('?');
+    const inputPath = questionIdx >= 0 ? rawPath.slice(0, questionIdx) : rawPath;
+    // 合并 input.query 和路径中附带的 query string
+    let mergedQuery: Record<string, unknown> = { ...(input.query ?? {}) };
+    if (questionIdx >= 0) {
+      const qs = rawPath.slice(questionIdx + 1);
+      const params = new URLSearchParams(qs);
+      params.forEach((v, k) => {
+        if (!mergedQuery[k]) mergedQuery[k] = v;
+      });
+    }
     const fakeReq = {
       method: api.method,
-      path: input.path ?? api.path,
-      originalUrl: (input.path ?? api.path) + (input.query ? `?${new URLSearchParams(input.query as Record<string, string>).toString()}` : ''),
-      url: (input.path ?? api.path) + (input.query ? `?${new URLSearchParams(input.query as Record<string, string>).toString()}` : ''),
-      query: input.query ?? {},
+      path: inputPath,
+      originalUrl: inputPath + (Object.keys(mergedQuery).length > 0 ? `?${new URLSearchParams(mergedQuery as Record<string, string>).toString()}` : ''),
+      url: inputPath + (Object.keys(mergedQuery).length > 0 ? `?${new URLSearchParams(mergedQuery as Record<string, string>).toString()}` : ''),
+      query: mergedQuery,
       body: input.body ?? {},
       headers,
       get(name: string) {

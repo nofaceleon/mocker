@@ -7,7 +7,6 @@ import type { TestApiInput, TestApiOutput } from '@/hooks/queries/use-mock-apis'
 import { config as runtimeConfig } from '@/lib/runtime-config';
 import {
   buildMockRequestSample,
-  appendQueryToPath,
   type MockRequestSample,
 } from '@/lib/mock-request-sample';
 import { PanelHeader } from '../PanelHeader';
@@ -110,15 +109,13 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
       }
     }
 
-    const finalPath = appendQueryToPath(path, parsedQuery);
-
     if (isSSE) {
       // SSE测试：先获取配置信息，然后连接
       try {
         setRunning(true);
         const headers = headersText.trim() ? JSON.parse(headersText) : undefined;
         const body = api.method !== 'GET' && bodyText.trim() ? JSON.parse(bodyText) : undefined;
-        const r = await onRun({ path: finalPath, body, headers });
+        const r = await onRun({ path: path, query: parsedQuery, body, headers });
         setResult(r as unknown as TestApiOutput);
 
         const sseUrl = (r as unknown as Record<string, unknown>).fullUrl as string;
@@ -141,7 +138,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         const body = api.method !== 'GET' && bodyText.trim() ? JSON.parse(bodyText) : undefined;
         setRunning(true);
         const t0 = performance.now();
-        const r = await onRun({ path: finalPath, body, headers });
+        const r = await onRun({ path: path, query: parsedQuery, body, headers });
         setElapsed(Math.round(performance.now() - t0));
         setResult(r);
       } catch (e) {

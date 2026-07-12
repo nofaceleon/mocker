@@ -147,14 +147,3 @@ export function buildMockRequestSample(api: MockApi): MockRequestSample {
   };
 }
 
-/**
- * 把 query 对象拼到 path 末尾（?k=v&k=v）
- */
-export function appendQueryToPath(path: string, query: Record<string, string>): string {
-  const keys = Object.keys(query).filter((k) => query[k] !== '' && query[k] != null);
-  if (keys.length === 0) return path;
-  const qs = keys
-    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(query[k])}`)
-    .join('&');
-  return path.includes('?') ? `${path}&${qs}` : `${path}?${qs}`;
-}
