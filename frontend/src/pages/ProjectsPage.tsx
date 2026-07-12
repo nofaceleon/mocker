@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Download,
@@ -13,6 +13,7 @@ import {
   Activity,
   Zap,
   Clock,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -23,16 +24,21 @@ import {
   Input,
   Modal,
   PageHeader,
+  Select,
   StatCard,
   Tabs,
   Textarea,
   confirm,
 } from '@/components/ui';
 import {
+  exportProjectBundle,
   useCreateProject,
   useDeleteProject,
+  useImportProject,
   useProjects,
   useUpdateProject,
+  type ProjectExportBundle,
+  type ProjectImportMode,
 } from '@/hooks/queries/use-projects';
 import { useCallbackStats } from '@/hooks/queries/use-callback-tasks';
 import type { Project } from '@/types/api';
@@ -47,6 +53,7 @@ export function ProjectsPage() {
   const [search] = useState('');
   const [editing, setEditing] = useState<Project | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const filtered = useMemo(() => {
     if (!projects) return [];
@@ -109,8 +116,8 @@ export function ProjectsPage() {
         description="管理所有 Mock 项目，按业务系统隔离组织"
         actions={
           <>
-            <Button variant="secondary">
-              <Download className="h-3.5 w-3.5" />
+            <Button variant="secondary" onClick={() => setImportOpen(true)}>
+              <Upload className="h-3.5 w-3.5" />
               导入项目
             </Button>
             <Button variant="primary" onClick={() => setCreating(true)}>
@@ -205,6 +212,15 @@ export function ProjectsPage() {
               onOpen={() => navigate(`/projects/${p.id}`)}
               onEdit={() => setEditing(p)}
               onDelete={() => handleDelete(p)}
+              onExport={async () => {
+                try {
+                  const bundle = await exportProjectBundle(p.id, { includeData: true });
+                  downloadJson(`${p.name}-export.json`, bundle);
+                  toast.success(`已导出「${p.name}」`);
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : '导出失败');
+                }
+              }}
             />
           ))}
           <CreateCard onClick={() => setCreating(true)} />
@@ -215,6 +231,7 @@ export function ProjectsPage() {
       {editing && (
         <ProjectEditModal mode="edit" project={editing} onClose={() => setEditing(null)} />
       )}
+      {importOpen && <ProjectImportModal onClose={() => setImportOpen(false)} />}
     </div>
   );
 }
@@ -224,11 +241,13 @@ function ProjectCard({
   onOpen,
   onEdit,
   onDelete,
+  onExport,
 }: {
   project: Project;
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onExport: () => void;
 }) {
   return (
     <div
@@ -265,6 +284,17 @@ function ProjectCard({
           {formatRelative(project.updatedAt)}更新
         </span>
         <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onExport();
+            }}
+            className="grid h-7 w-7 place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
+            title="导出 JSON"
+          >
+            <Download className="h-3 w-3" />
+          </button>
           <button
             type="button"
             onClick={(e) => {
@@ -395,6 +425,116 @@ function ProjectEditModal({
       </div>
     </Modal>
   );
+}
+
+function ProjectImportModal({ onClose }: { onClose: () => void }) {
+  const importMut = useImportProject();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [bundle, setBundle] = useState<ProjectExportBundle | null>(null);
+  const [mode, setMode] = useState<ProjectImportMode>('create');
+  const [name, setName] = useState('');
+  const [parseErr, setParseErr] = useState<string | null>(null);
+
+  const onFile = async (file: File | null) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text) as ProjectExportBundle;
+      if (json.version !== 1 || !json.project?.name) {
+        setParseErr('无效的导出文件：需要 version=1 且包含 project.name');
+        setBundle(null);
+        return;
+      }
+      setParseErr(null);
+      setBundle(json);
+      setName(json.project.name);
+    } catch (e) {
+      setParseErr(e instanceof Error ? e.message : 'JSON 解析失败');
+      setBundle(null);
+    }
+  };
+
+  const submit = async () => {
+    if (!bundle) {
+      setParseErr('请先选择导出文件');
+      return;
+    }
+    try {
+      const result = await importMut.mutateAsync({
+        bundle,
+        mode,
+        name: name.trim() || undefined,
+      });
+      toast.success(
+        `已导入「${result.projectName}」：${result.groups} 功能组 · ${result.apis} 接口`,
+      );
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '导入失败');
+    }
+  };
+
+  const groupCount = bundle?.featureGroups?.length ?? 0;
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="导入项目"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            取消
+          </Button>
+          <Button variant="primary" loading={importMut.isPending} disabled={!bundle} onClick={submit}>
+            导入
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <FormField label="导出文件" hint="MockHub 项目 JSON（version=1）" error={parseErr ?? undefined}>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="block w-full text-[12.5px] text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-[12px] file:font-medium file:text-ink"
+            onChange={(e) => onFile(e.target.files?.[0] ?? null)}
+          />
+        </FormField>
+        {bundle && (
+          <div className="rounded-md border border-line bg-canvas-subtle/50 px-3 py-2 text-[12px] text-ink-secondary">
+            <div>
+              原项目：<b className="text-ink">{bundle.project.name}</b>
+            </div>
+            <div>
+              功能组 {groupCount} · 导出时间 {bundle.exportedAt ? new Date(bundle.exportedAt).toLocaleString() : '—'}
+            </div>
+          </div>
+        )}
+        <FormField label="导入后项目名">
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="可改名后导入" maxLength={100} />
+        </FormField>
+        <FormField label="同名冲突策略" hint="create=报错 · skip=跳过 · overwrite=覆盖重建">
+          <Select value={mode} onChange={(e) => setMode(e.target.value as ProjectImportMode)}>
+            <option value="create">创建（名称冲突则失败）</option>
+            <option value="skip">跳过（已存在则不动）</option>
+            <option value="overwrite">覆盖（删除同名后重建）</option>
+          </Select>
+        </FormField>
+      </div>
+    </Modal>
+  );
+}
+
+function downloadJson(filename: string, data: unknown) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function formatRelative(iso: string): string {

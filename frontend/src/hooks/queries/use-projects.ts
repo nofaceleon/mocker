@@ -8,6 +8,25 @@ const KEYS = {
   detail: (id: ID) => [...KEYS.all, 'detail', id] as const,
 };
 
+export type ProjectExportBundle = {
+  version: 1;
+  exportedAt: string;
+  project: { name: string; description: string | null };
+  featureGroups: unknown[];
+};
+
+export type ProjectImportResult = {
+  projectId: ID;
+  projectName: string;
+  created: boolean;
+  groups: number;
+  apis: number;
+  callbacks: number;
+  mockDataRows: number;
+};
+
+export type ProjectImportMode = 'create' | 'skip' | 'overwrite';
+
 export function useProjects() {
   return useQuery({
     queryKey: KEYS.list(),
@@ -49,5 +68,37 @@ export function useDeleteProject() {
   return useMutation({
     mutationFn: async (id: ID) => unwrap(await api.delete<{ id: ID; deleted: true }>(`/projects/${id}`)),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.all }),
+  });
+}
+
+export async function exportProjectBundle(
+  id: ID,
+  opts?: { includeData?: boolean; groups?: ID[] },
+): Promise<ProjectExportBundle> {
+  const params: Record<string, string> = {};
+  if (opts?.includeData) params.includeData = '1';
+  if (opts?.groups?.length) params.groups = opts.groups.join(',');
+  return unwrap(await api.get<ProjectExportBundle>(`/projects/${id}/export`, { params }));
+}
+
+export function useImportProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      bundle: ProjectExportBundle;
+      mode?: ProjectImportMode;
+      name?: string;
+    }) =>
+      unwrap(
+        await api.post<ProjectImportResult>('/projects/import', {
+          bundle: vars.bundle,
+          mode: vars.mode ?? 'create',
+          name: vars.name,
+        }),
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.all });
+      qc.invalidateQueries({ queryKey: ['mock-apis'] });
+    },
   });
 }

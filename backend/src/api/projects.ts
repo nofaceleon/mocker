@@ -4,6 +4,13 @@ import { eq, desc, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { projects, featureGroups, mockApis, mockData, requestLogs } from '../db/schema.js';
 import { ApiError, asyncHandler } from '../middleware/error-handler.js';
+import {
+  exportProject,
+  importProject,
+  EXPORT_VERSION,
+  type ProjectExportBundle,
+} from '../services/project-export.js';
+import { registry } from '../mock-engine/registry.js';
 
 const router = Router();
 
@@ -135,7 +142,73 @@ router.delete(
     // 但 mock_apis → feature_groups 需要 feature_groups 先被删（也 cascade）
     // 由于 SQLite 外键开启，删除 projects 时所有依赖行会自动级联
     db.delete(projects).where(eq(projects.id, id)).run();
+    registry.reload();
     res.success({ id: existing.id, deleted: true });
+  }),
+);
+
+// 导出项目配置 JSON
+const exportQuerySchema = z.object({
+  groups: z
+    .string()
+    .optional()
+    .transform((v) =>
+      v
+        ? v
+            .split(',')
+            .map((s) => Number(s.trim()))
+            .filter((n) => Number.isInteger(n) && n > 0)
+        : undefined,
+    ),
+  includeData: z
+    .enum(['0', '1', 'true', 'false'])
+    .optional()
+    .transform((v) => v === '1' || v === 'true'),
+});
+
+router.get(
+  '/:id/export',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = idParamSchema.parse(req.params);
+    const q = exportQuerySchema.parse(req.query);
+    const bundle = exportProject(id, {
+      groupIds: q.groups,
+      includeData: q.includeData ?? false,
+    });
+    res.success(bundle);
+  }),
+);
+
+// 导入项目配置 JSON
+const importSchema = z.object({
+  mode: z.enum(['create', 'skip', 'overwrite']).optional().default('create'),
+  name: z.string().min(1).max(100).optional(),
+  bundle: z.object({
+    version: z.literal(EXPORT_VERSION),
+    exportedAt: z.string().optional(),
+    project: z.object({
+      name: z.string().min(1).max(100),
+      description: z.string().max(2000).optional().nullable(),
+    }),
+    featureGroups: z.array(z.unknown()).default([]),
+  }),
+});
+
+router.post(
+  '/import',
+  asyncHandler(async (req: Request, res: Response) => {
+    // 兼容两种 body：{ bundle, mode } 或直接 bundle
+    const raw = req.body as Record<string, unknown>;
+    const payload =
+      raw && typeof raw === 'object' && 'bundle' in raw
+        ? raw
+        : { bundle: raw, mode: raw?.mode, name: raw?.name };
+    const body = importSchema.parse(payload);
+    const result = importProject(body.bundle as ProjectExportBundle, {
+      mode: body.mode,
+      name: body.name,
+    });
+    res.success(result, { status: 201 });
   }),
 );
 
