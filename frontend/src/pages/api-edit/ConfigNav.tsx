@@ -8,6 +8,8 @@ import {
   Code2,
   TestTube,
   BookOpen,
+  PanelRightOpen,
+  PanelRightClose,
 } from 'lucide-react';
 import { MethodBadge, Breadcrumb, CopyButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -61,9 +63,11 @@ type ConfigNavProps = {
   onLogClick?: () => void;
   summary?: { name?: string; isEnabled?: boolean; groupName?: string; calledCount?: number; lastSavedAt?: string; lastCalledAt?: string };
   featureState?: FeatureState;
+  showSwitcher?: boolean;
+  onToggleSwitcher?: () => void;
 };
 
-export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogClick, summary, featureState }: ConfigNavProps) {
+export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogClick, summary, featureState, showSwitcher, onToggleSwitcher }: ConfigNavProps) {
   const dynamicTabs = useMemo(() => {
     return TABS.map((tab) => {
       if (tab.value === 'callback') return { ...tab, badge: featureState?.hasCallback ? 'ON' : 'OFF' };
@@ -118,11 +122,25 @@ export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogCl
           <button
             type="button"
             onClick={onLogClick}
-            className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-ink-tertiary transition-colors hover:bg-canvas-subtle hover:text-ink-secondary"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-ink-tertiary transition-colors hover:bg-canvas-subtle hover:text-ink-secondary"
           >
             <BookOpen className="h-3 w-3" />
             日志
           </button>
+          {onToggleSwitcher && (
+            <button
+              type="button"
+              onClick={onToggleSwitcher}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-ink-tertiary transition-colors hover:bg-canvas-subtle hover:text-ink-secondary"
+              title={showSwitcher ? '隐藏接口列表' : '显示接口列表'}
+            >
+              {showSwitcher ? (
+                <PanelRightClose className="h-3 w-3" />
+              ) : (
+                <PanelRightOpen className="h-3 w-3" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 

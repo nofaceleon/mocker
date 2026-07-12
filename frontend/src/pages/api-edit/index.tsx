@@ -15,6 +15,7 @@ import { useProject } from '@/hooks/queries/use-projects';
 import { useFeatureGroups } from '@/hooks/queries/use-feature-groups';
 import type { MockApi } from '@/types/api';
 import { ConfigNav, type ConfigTab } from './ConfigNav';
+import { ApiSwitcherPanel } from './ApiSwitcherPanel';
 import { BasicPanel, type BasicExtra } from './panels/BasicPanel';
 import { ParamsPanel } from './panels/ParamsPanel';
 import { ResponsePanel } from './panels/ResponsePanel';
@@ -49,6 +50,7 @@ export function ApiEditPage() {
   const [tab, setTab] = useState<ConfigTab>('basic');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | undefined>(undefined);
+  const [showSwitcher, setShowSwitcher] = useState(true);
 
   const prevApiIdRef = useRef<number | undefined>(undefined);
   useEffect(() => {
@@ -180,7 +182,7 @@ export function ApiEditPage() {
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 54px)' }}>
-      <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: '264px 1fr' }}>
+      <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: showSwitcher && activeGroup && !isNew ? '264px 1fr 240px' : '264px 1fr' }}>
         <ConfigNav
           current={tab}
           onChange={setTab}
@@ -194,6 +196,8 @@ export function ApiEditPage() {
           onLogClick={() => navigate(`/logs?projectId=${projectId}${apiId ? `&apiId=${apiId}` : ''}`)}
           summary={configSummary}
           featureState={featureState}
+          showSwitcher={showSwitcher}
+          onToggleSwitcher={() => setShowSwitcher(!showSwitcher)}
         />
 
         <div className="overflow-y-auto bg-canvas">
@@ -219,6 +223,16 @@ export function ApiEditPage() {
             <TestPanel api={summary} onRun={async (input) => testMut.mutateAsync({ id: summary.id, input })} />
           )}
         </div>
+
+        {showSwitcher && activeGroup && !isNew && (
+          <ApiSwitcherPanel
+            projectId={projectId}
+            featureGroupId={activeGroup.id}
+            currentApiId={apiId}
+            onSwitch={(api) => navigate(`/projects/${projectId}/apis/${api.id}`)}
+            onClose={() => setShowSwitcher(false)}
+          />
+        )}
       </div>
 
       <Modal
