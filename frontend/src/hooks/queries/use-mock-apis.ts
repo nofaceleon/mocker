@@ -25,6 +25,7 @@ export type MockApiPayload = {
   dataOp?: MockApi['dataOp'];
   dataTable?: string | null;
   dataWhere?: Record<string, unknown> | null;
+  dataPayload?: Record<string, unknown> | null;
   script?: string | null;
 };
 

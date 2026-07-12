@@ -51,6 +51,7 @@ type ResponsePanelProps = {
 
 export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePanelProps) {
   const isSSE = formData.protocol === 'SSE';
+  const isWebSocket = formData.protocol === 'WebSocket';
 
   const [bodyText, setBodyText] = useState(() => safeStringify(formData.responseBody ?? {}));
   const [bodyErr, setBodyErr] = useState<string | null>(null);
@@ -152,12 +153,18 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
       <PanelHeader
         icon={Check}
         title="响应配置"
-        description={isSSE ? '配置 SSE（Server-Sent Events）事件流：事件类型、数据内容、发送间隔。' : '定义 Mock 接口如何响应外部请求：状态码、响应头、响应体、模拟延迟。'}
+        description={
+          isSSE
+            ? '配置 SSE（Server-Sent Events）事件流：事件类型、数据内容、发送间隔。'
+            : isWebSocket
+              ? '配置 WebSocket：welcome 欢迎消息、echo、pushInterval 推送、disconnectAfterMs 模拟断开。消息处理可用「自定义脚本」。'
+              : '定义 Mock 接口如何响应外部请求：状态码、响应头、响应体、模拟延迟。'
+        }
       />
 
       <Card title="响应基本信息">
         <div className="form-row three-col">
-          {!isSSE && (
+          {!isSSE && !isWebSocket && (
             <FormField label="状态码">
               <Select
                 value={formData.responseStatus ?? 200}
@@ -339,7 +346,19 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
           <div className="info-tip">
             <AlertCircle />
             <div>
-              支持变量：<code>{'{{req.body.xxx}}'}</code> 请求体、<code>{'{{req.query.xxx}}'}</code> 查询参数、<code>{'{{global.xxx}}'}</code> 全局变量
+              {isWebSocket ? (
+                <>
+                  WebSocket 配置示例：
+                  <code>{`{ "welcome": { "type": "welcome" }, "echo": true, "pushInterval": 0, "disconnectAfterMs": 0 }`}</code>
+                  。客户端消息默认 echo；启用脚本后由 <code>handle(req, db, log)</code> 返回回包。
+                </>
+              ) : (
+                <>
+                  支持变量：<code>{'{{req.body.xxx}}'}</code> 请求体、<code>{'{{req.query.xxx}}'}</code> 查询参数、
+                  <code>{'{{dbResult}}'}</code> 数据联动结果（insert 为行对象，select 为数组，update/delete 为{' '}
+                  <code>{'{ affected }'}</code>）
+                </>
+              )}
             </div>
           </div>
 
@@ -350,7 +369,7 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
               <>
                 <code style={{ color: '#C4B5FD' }}>{'{{req.body.*}}'}</code>
                 <code style={{ color: '#86EFAC' }}>{'{{req.query.*}}'}</code>
-                <code style={{ color: '#F0ABFC' }}>{'{{global.*}}'}</code>
+                <code style={{ color: '#FBBF24' }}>{'{{dbResult}}'}</code>
               </>
             }
           >

@@ -101,6 +101,7 @@ export function ApiEditPage() {
         dataOp: formData.dataOp ?? 'none',
         dataTable: formData.dataTable ?? null,
         dataWhere: formData.dataWhere ?? null,
+        dataPayload: formData.dataPayload ?? null,
         script: formData.script ?? null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -113,10 +114,10 @@ export function ApiEditPage() {
   const featureState = useMemo(
     () => ({
       hasCallback: summary.hasCallback,
-      hasDataLink: summary.dataOp !== 'none',
-      hasScript: !!(summary.script && summary.script.trim()),
+      hasDataLink: (formData.dataOp ?? 'none') !== 'none',
+      hasScript: !!(formData.script && formData.script.trim()),
     }),
-    [summary.hasCallback, summary.dataOp, summary.script],
+    [summary.hasCallback, formData.dataOp, formData.script],
   );
   const configSummary = {
     name: summary.name,
@@ -262,6 +263,7 @@ function newFormData(): MockApiPayload {
     dataOp: 'none',
     dataTable: null,
     dataWhere: {},
+    dataPayload: null,
     script: null,
   };
 }
@@ -285,6 +287,7 @@ function apiToFormData(api: MockApi): MockApiPayload {
     dataOp: api.dataOp,
     dataTable: api.dataTable,
     dataWhere: api.dataWhere,
+    dataPayload: api.dataPayload ?? null,
     script: api.script,
   };
 }

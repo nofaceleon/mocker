@@ -74,6 +74,7 @@ const createSchema = z.object({
   dataOp: z.enum(DATA_OPS).optional().default('none'),
   dataTable: z.string().max(100).regex(/^[A-Za-z_][A-Za-z0-9_]*$/).optional().nullable(),
   dataWhere: z.record(z.string(), z.unknown()).optional().nullable(),
+  dataPayload: z.record(z.string(), z.unknown()).optional().nullable(),
   script: z.string().optional().nullable(),
 });
 
@@ -119,6 +120,7 @@ router.get(
         dataOp: mockApis.dataOp,
         dataTable: mockApis.dataTable,
         dataWhere: mockApis.dataWhere,
+        dataPayload: mockApis.dataPayload,
         script: mockApis.script,
         createdAt: mockApis.createdAt,
         updatedAt: mockApis.updatedAt,
@@ -182,6 +184,7 @@ router.get(
         dataOp: mockApis.dataOp,
         dataTable: mockApis.dataTable,
         dataWhere: mockApis.dataWhere,
+        dataPayload: mockApis.dataPayload,
         script: mockApis.script,
         createdAt: mockApis.createdAt,
         updatedAt: mockApis.updatedAt,
@@ -240,6 +243,7 @@ router.post(
         dataOp: body.dataOp ?? 'none',
         dataTable: body.dataTable ?? null,
         dataWhere: body.dataWhere ?? null,
+        dataPayload: body.dataPayload ?? null,
         script: body.script ?? null,
       })
       .returning()
@@ -288,6 +292,7 @@ router.put(
       ...(body.dataOp !== undefined ? { dataOp: body.dataOp } : {}),
       ...(body.dataTable !== undefined ? { dataTable: body.dataTable } : {}),
       ...(body.dataWhere !== undefined ? { dataWhere: body.dataWhere } : {}),
+      ...(body.dataPayload !== undefined ? { dataPayload: body.dataPayload } : {}),
       ...(body.script !== undefined ? { script: body.script } : {}),
     };
     db.update(mockApis).set(patch).where(eq(mockApis.id, id)).run();

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Code2, AlertCircle } from 'lucide-react';
 import { Card, Switch } from '@/components/ui';
+import { CodeEditor } from '@/components/CodeEditor';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
 import { PanelHeader } from '../PanelHeader';
 import { PanelActions } from '../PanelActions';
@@ -12,18 +13,30 @@ type ScriptPanelProps = {
   saving?: boolean;
 };
 
-const STARTER = `// 在此处编写响应前的处理逻辑
-// 返回对象将作为最终响应体
-async function handle(req) {
-  const { name, imageUrl } = req.body;
+const STARTER = `// handle 返回值作为最终响应体；返回 undefined 则继续使用「响应配置」模板
+// 可用对象：req / db / log / dbResult（数据联动结果）
+async function handle(req, db, log) {
+  const { name, imageUrl } = req.body || {};
   if (!name || !imageUrl) {
-    throw new Error('参数不完整');
+    throw new Error('参数不完整：需要 name 与 imageUrl');
   }
+
+  const faceId = 'face_' + Date.now();
+  const row = db.insert('face_data', {
+    faceId,
+    name,
+    imageUrl,
+    requestId: req.body.requestId || '',
+  });
+  log.info('人脸已写入', row);
+
   return {
     code: 0,
     message: 'success',
     data: {
-      faceId: \`face_\${Date.now()}\`,
+      id: row.id,
+      faceId,
+      name,
       createdAt: new Date().toISOString(),
     },
   };
@@ -63,45 +76,49 @@ export function ScriptPanel({ formData, onChange, onSave, saving }: ScriptPanelP
             <Switch checked={enabled} onChange={handleToggle} />
           </div>
         }
-        description="编写 JavaScript 自定义响应逻辑。脚本会在响应前执行，返回对象将作为最终响应体。"
+        description="在隔离沙箱中执行 JavaScript：可访问 req / db / log，返回值作为响应体。无法访问文件系统与网络。"
       />
 
       <Card
         className="mt-3"
         title={
           <>
-            handle(req) <span className="font-normal text-ink-subtle">· JavaScript</span>
+            handle(req, db, log) <span className="font-normal text-ink-subtle">· JavaScript</span>
           </>
         }
       >
         <div className="info-tip">
           <AlertCircle />
           <div>
-            支持变量：<code>req.body</code> 请求体、<code>req.query</code> 查询参数、<code>req.params</code> 路径参数
+            <code>req.body</code> / <code>req.query</code> / <code>req.params</code> ·{' '}
+            <code>db.insert/select/update/delete</code> · <code>log.info</code> ·{' '}
+            <code>dbResult</code>（声明式数据联动结果）。超时 2s；抛错返回{' '}
+            <code>SCRIPT_ERROR</code>。
           </div>
         </div>
 
-        <div className="code-editor mt-2.5" style={{ borderRadius: 6 }}>
-          <div className="code-editor-toolbar">
-            <div className="code-editor-tabs-left">
-              <span className="lang">JavaScript</span>
-              <span style={{ color: '#52525B', fontSize: 11 }}>对象：</span>
-              <code style={{ color: '#C4B5FD' }}>req</code>
-            </div>
+        <div className="mt-2.5">
+          <div className="mb-0 flex items-center gap-2 rounded-t-md border border-b-0 border-[#27272A] bg-[#1f1f23] px-3 py-1.5 text-[11px]">
+            <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[#A1A1AA]">JavaScript</span>
+            <span style={{ color: '#52525B' }}>对象：</span>
+            <code style={{ color: '#C4B5FD' }}>req</code>
+            <code style={{ color: '#86EFAC' }}>db</code>
+            <code style={{ color: '#FBBF24' }}>log</code>
+            <code style={{ color: '#F0ABFC' }}>dbResult</code>
           </div>
-          <textarea
+          <CodeEditor
+            className="!rounded-t-none"
             value={script}
-            onChange={(e) => handleScriptChange(e.target.value)}
-            rows={20}
-            disabled={!enabled}
-            className="block w-full resize-y border-0 bg-transparent font-mono text-[12.5px] leading-[1.75] text-[#E4E4E7] outline-none focus:outline-none disabled:opacity-50"
-            spellCheck={false}
-            style={{ caretColor: '#E4E4E7' }}
+            onChange={handleScriptChange}
+            language="javascript"
+            height={440}
+            readOnly={!enabled}
+            path="mock-api-script.js"
           />
         </div>
       </Card>
 
-      <PanelActions hint="下次请求生效" onSave={onSave} saving={saving} />
+      <PanelActions hint="下次请求生效 · 脚本返回值优先于响应模板" onSave={onSave} saving={saving} />
     </div>
   );
 }

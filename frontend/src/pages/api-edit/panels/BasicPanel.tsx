@@ -59,9 +59,33 @@ export function BasicPanel({
 
   const handleProtocolChange = (newProtocol: Protocol) => {
     onExtraChange?.({ ...(extra ?? {}), protocol: newProtocol });
-    // SSE协议强制使用GET方法
+    // SSE / WebSocket 使用 GET 作为路由方法占位
     if (newProtocol === 'SSE') {
-      onChange({ ...formData, protocol: newProtocol, method: 'GET', responseContentType: 'text/event-stream' });
+      onChange({
+        ...formData,
+        protocol: newProtocol,
+        method: 'GET',
+        responseContentType: 'text/event-stream',
+      });
+    } else if (newProtocol === 'WebSocket') {
+      onChange({
+        ...formData,
+        protocol: newProtocol,
+        method: 'GET',
+        responseContentType: 'application/json',
+        responseBody:
+          formData.responseBody &&
+          typeof formData.responseBody === 'object' &&
+          formData.responseBody !== null &&
+          'welcome' in (formData.responseBody as object)
+            ? formData.responseBody
+            : {
+                welcome: { type: 'welcome', message: 'connected' },
+                echo: true,
+                pushInterval: 0,
+                disconnectAfterMs: 0,
+              },
+      });
     } else {
       onChange({ ...formData, protocol: newProtocol });
     }
