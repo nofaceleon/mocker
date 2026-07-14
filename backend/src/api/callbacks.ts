@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { and, desc, eq, gte, like, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, like, lte, or, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import {
   callbackConfigs,
@@ -311,6 +311,27 @@ router.post(
     const ok = cancelTask(taskId);
     callbackScheduler.cancel(taskId);
     res.success({ taskId, cancelled: ok });
+  }),
+);
+
+const batchDeleteSchema = z.object({
+  ids: z.array(z.coerce.number().int().positive()).min(1).max(500),
+});
+
+router.post(
+  '/callback-tasks/batch-delete',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { ids } = batchDeleteSchema.parse(req.body ?? {});
+    const db = getDb();
+    // 对其中 pending 任务先清调度器内存定时器，避免删除后仍被触发
+    const pending = db
+      .select({ id: callbackTasks.id })
+      .from(callbackTasks)
+      .where(and(inArray(callbackTasks.id, ids), eq(callbackTasks.status, 'pending')))
+      .all();
+    for (const t of pending) callbackScheduler.cancel(t.id);
+    const r = db.delete(callbackTasks).where(inArray(callbackTasks.id, ids)).run();
+    res.success({ deleted: r.changes ?? 0 });
   }),
 );
 

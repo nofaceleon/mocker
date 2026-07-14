@@ -21,7 +21,9 @@ export function Card({
       {(title || extra) && (
         <header className="card-header">
           {title && <div className="card-title">{title}</div>}
-          {extra && <div className="flex items-center gap-2">{extra}</div>}
+          {extra && (
+            <div className={cn('flex items-center gap-2', !title && 'flex-1')}>{extra}</div>
+          )}
         </header>
       )}
       {noBody ? children : <div className={cn('card-body', bodyClassName)}>{children}</div>}

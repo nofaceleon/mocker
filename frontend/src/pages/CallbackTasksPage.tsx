@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
   Activity,
   CheckCircle2,
@@ -9,6 +10,7 @@ import {
   RefreshCw,
   Search,
   Send,
+  Trash2,
   X,
   XCircle,
   Eye,
@@ -18,13 +20,16 @@ import {
   Card,
   Drawer,
   Empty,
+  LiveDot,
   MethodBadge,
+  Modal,
   PageHeader,
   StatCard,
   StatusBadge,
   Tabs,
 } from '@/components/ui';
 import {
+  useBatchDeleteCallbackTasks,
   useCallbackStats,
   useCallbackTask,
   useCallbackTasks,
@@ -85,7 +90,7 @@ export function CallbackTasksPage() {
     setPage(1);
   }, [range, customStart, customEnd]);
 
-  const { data: page1, isLoading } = useCallbackTasks({
+  const { data: page1, isLoading, refetch } = useCallbackTasks({
     apiId,
     status: status === 'all' ? undefined : status,
     keyword: keyword || undefined,
@@ -99,13 +104,59 @@ export function CallbackTasksPage() {
     pageSize,
   });
   const { data: stats } = useCallbackStats();
+
+  const [progress, setProgress] = useState(0);
+  // 进度条驱动的定时刷新（50ms × 100 步 = 5s）
+  useEffect(() => {
+    setProgress(0);
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          refetch();
+          return 0;
+        }
+        return prev + 1;
+      });
+    }, 50);
+    return () => clearInterval(interval);
+  }, [apiId, status, keyword, range, customStart, customEnd, page, refetch]);
   const retryMut = useRetryCallbackTask();
   const cancelMut = useCancelCallbackTask();
+  const batchDeleteMut = useBatchDeleteCallbackTasks();
 
   const [selected, setSelected] = useState<number | null>(null);
+  const [checkedIds, setCheckedIds] = useState<number[]>([]);
+  const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
 
   const total = page1?.total ?? 0;
   const items = page1?.items ?? [];
+
+  const allChecked = items.length > 0 && items.every((t) => checkedIds.includes(t.id));
+  const someChecked = checkedIds.length > 0;
+
+  function toggleCheckAll() {
+    if (allChecked) {
+      setCheckedIds((prev) => prev.filter((id) => !items.some((t) => t.id === id)));
+    } else {
+      setCheckedIds((prev) => Array.from(new Set([...prev, ...items.map((t) => t.id)])));
+    }
+  }
+
+  function toggleCheckOne(id: number) {
+    setCheckedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  async function handleBatchDelete() {
+    try {
+      const res = await batchDeleteMut.mutateAsync(checkedIds);
+      toast.success(`已删除 ${res.deleted} 条任务`);
+      setConfirmBatchDelete(false);
+      setCheckedIds([]);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '删除失败';
+      toast.error(msg);
+    }
+  }
 
   const successRate = useMemo(() => {
     if (!stats || stats.total === 0) return '—';
@@ -129,38 +180,58 @@ export function CallbackTasksPage() {
       </div>
 
       <Card
-        title="回调任务"
         noBody
         extra={
-          <div className="flex items-center gap-2">
-            {apiId !== undefined && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-line bg-canvas-subtle px-2 py-px text-[11px] text-ink-secondary">
-                API #{apiId}
-                <button
-                  type="button"
-                  className="ml-1 text-ink-tertiary hover:text-ink"
-                  onClick={() => {
-                    setApiId(undefined);
+          <div className="flex w-full items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-subtle" />
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(e) => {
+                    setKeyword(e.target.value);
                     setPage(1);
                   }}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-subtle" />
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => {
-                  setKeyword(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="搜索 URL / 接口 / body"
-                className="h-8 w-[220px] rounded-md border border-line bg-white pl-8 pr-3 text-[13px] outline-none focus:border-ink"
-              />
+                  placeholder="搜索 URL / 接口 / body"
+                  className="h-8 w-[220px] rounded-md border border-line bg-white pl-8 pr-3 text-[13px] outline-none focus:border-ink"
+                />
+              </div>
+              {apiId !== undefined && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-line bg-canvas-subtle px-2 py-px text-[11px] text-ink-secondary">
+                  API #{apiId}
+                  <button
+                    type="button"
+                    className="ml-1 text-ink-tertiary hover:text-ink"
+                    onClick={() => {
+                      setApiId(undefined);
+                      setPage(1);
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
             </div>
+            <div className="flex items-center gap-2">
+              <LiveDot />
+              <span className="text-[12px] text-ink-tertiary">实时刷新</span>
+              <div className="h-1.5 w-24 overflow-hidden rounded-full bg-line">
+                <div
+                  className="h-full rounded-full bg-ink transition-[width] duration-100 ease-linear"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className="w-8 text-right font-mono text-[11px] text-ink-tertiary">
+                {Math.ceil((100 - progress) * 50 / 1000)}s
+              </span>
+            </div>
+          </div>
+        }
+      >
+        <div className="flex flex-wrap items-center gap-3 border-b border-line-subtle px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-ink-tertiary">状态：</span>
             <Tabs<'all' | CallbackTaskStatus>
               variant="pill"
               value={status}
@@ -173,18 +244,17 @@ export function CallbackTasksPage() {
                 label: t.label,
               }))}
             />
-            <span className="text-[11px] text-ink-subtle">每 3s 自动刷新</span>
           </div>
-        }
-      >
-        <div className="flex flex-wrap items-center gap-2 border-b border-line-subtle px-4 py-2.5">
-          <span className="text-[12px] text-ink-tertiary">时间：</span>
-          <Tabs<CallbackTaskTimeRange>
-            variant="pill"
-            value={range}
-            onChange={setRange}
-            items={RANGE_TABS.map((t) => ({ value: t.value, label: t.label }))}
-          />
+          <span className="h-4 w-px bg-line" />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[12px] text-ink-tertiary">时间：</span>
+            <Tabs<CallbackTaskTimeRange>
+              variant="pill"
+              value={range}
+              onChange={setRange}
+              items={RANGE_TABS.map((t) => ({ value: t.value, label: t.label }))}
+            />
+          </div>
           {range === 'custom' && (
             <div className="flex items-center gap-1.5">
               <input
@@ -212,6 +282,24 @@ export function CallbackTasksPage() {
             </div>
           )}
         </div>
+        {someChecked && (
+          <div className="flex items-center justify-between border-b border-line bg-canvas-subtle px-4 py-2 text-[12px]">
+            <span className="text-ink-secondary">已选 {checkedIds.length} 条</span>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setCheckedIds([])}>
+                取消选择
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setConfirmBatchDelete(true)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                批量删除 ({checkedIds.length})
+              </Button>
+            </div>
+          </div>
+        )}
         {isLoading ? (
           <div className="py-12 text-center text-[13px] text-ink-tertiary">加载中…</div>
         ) : items.length === 0 ? (
@@ -228,6 +316,14 @@ export function CallbackTasksPage() {
           <table className="params-table">
             <thead>
               <tr>
+                <th style={{ width: 32 }}>
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 cursor-pointer rounded accent-ink"
+                    checked={allChecked}
+                    onChange={toggleCheckAll}
+                  />
+                </th>
                 <th>任务</th>
                 <th>接口</th>
                 <th>回调 URL · 方法</th>
@@ -243,6 +339,14 @@ export function CallbackTasksPage() {
                 const sm = STATUS_MAP[t.status];
                 return (
                   <tr key={t.id}>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 cursor-pointer rounded accent-ink"
+                        checked={checkedIds.includes(t.id)}
+                        onChange={() => toggleCheckOne(t.id)}
+                      />
+                    </td>
                     <td>
                       <div className="text-[12.5px] font-medium text-ink">#{t.id}</div>
                       {t.requestId && (
@@ -384,6 +488,31 @@ export function CallbackTasksPage() {
         taskId={selected}
         onClose={() => setSelected(null)}
       />
+
+      <Modal
+        open={confirmBatchDelete}
+        onClose={() => setConfirmBatchDelete(false)}
+        title={`删除选中的 ${checkedIds.length} 条任务？`}
+        width="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmBatchDelete(false)}>
+              取消
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleBatchDelete}
+              disabled={batchDeleteMut.isPending}
+            >
+              {batchDeleteMut.isPending ? '删除中…' : '确认删除'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[13px] text-ink-secondary">
+          删除后无法恢复。pending 状态的待发送任务会被一并取消。
+        </p>
+      </Modal>
     </div>
   );
 }

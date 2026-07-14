@@ -43,7 +43,6 @@ export function useCallbackTasks(query: QueryParams = {}) {
           params: buildQuery(query),
         }),
       ),
-    refetchInterval: 3_000,
   });
 }
 
@@ -81,6 +80,17 @@ export function useCancelCallbackTask() {
       unwrap(
         await api.post<{ taskId: ID; cancelled: boolean }>(`/callback-tasks/${taskId}/cancel`),
       ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['callback-tasks'] });
+    },
+  });
+}
+
+export function useBatchDeleteCallbackTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: ID[]) =>
+      unwrap(await api.post<{ deleted: number }>('/callback-tasks/batch-delete', { ids })),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['callback-tasks'] });
     },
