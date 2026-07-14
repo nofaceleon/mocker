@@ -23,7 +23,7 @@ const widthClasses = {
 export function Modal({ open, onClose, title, footer, width = 'md', children }: ModalProps) {
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 p-4">
       <div role="presentation" className="absolute inset-0" onClick={onClose} aria-hidden />
       <div
         role="dialog"
@@ -46,7 +46,9 @@ export function Modal({ open, onClose, title, footer, width = 'md', children }: 
             </button>
           </div>
         )}
-        <div className="max-h-[calc(100vh-180px)] overflow-auto px-5 py-4 scrollbar-modern">{children}</div>
+        <div className="max-h-[calc(100vh-180px)] overflow-auto px-5 py-4 scrollbar-modern">
+          {children}
+        </div>
         {footer && (
           <div className="flex items-center justify-end gap-2 border-t border-line bg-canvas-subtle/50 px-5 py-3">
             {footer}
@@ -90,10 +92,7 @@ function ConfirmDialog({
           <Button variant="ghost" onClick={() => handleClose(false)}>
             {opts.cancelText ?? '取消'}
           </Button>
-          <Button
-            variant={opts.danger ? 'danger' : 'primary'}
-            onClick={() => handleClose(true)}
-          >
+          <Button variant={opts.danger ? 'danger' : 'primary'} onClick={() => handleClose(true)}>
             {opts.confirmText ?? '确认'}
           </Button>
         </>
