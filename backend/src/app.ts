@@ -5,6 +5,7 @@ import cors from 'cors';
 import { config } from './config/index.js';
 import { handleMockRequest } from './mock-engine/index.js';
 import { apiRouter } from './api/index.js';
+import { agentsGuideRouter } from './api/agents-guide.js';
 import { responseMiddleware } from './middleware/response.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { logger } from './utils/logger.js';
@@ -62,6 +63,8 @@ export function createApp(): Express {
   }
 
   // Mock 引擎入口（根路径，用户自定义路由原样生效）
+  // 注意：agents-guide 的静态资源路径必须先注册，否则会被 mock 引擎的 404 兜底
+  app.use('/', agentsGuideRouter);
   app.use('/', handleMockRequest as unknown as express.RequestHandler);
 
   // 404

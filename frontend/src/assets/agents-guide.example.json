@@ -1,0 +1,219 @@
+{
+  "version": 2,
+  "exportedAt": "2025-01-01T00:00:00.000Z",
+  "project": {
+    "name": "AI 生成的演示项目（HTTP+SSE+WS+脚本+回调+数据联动）",
+    "description": "覆盖 MockHub 全部主要能力，导入后可直接联调。"
+  },
+  "featureGroups": [
+    {
+      "name": "示例功能组：人脸 CRUD（HTTP + 数据联动 + 校验 + 回调）",
+      "description": "展示完整 RESTful 流程：参数校验 → 写库 → 返回 dbResult → 异步通知",
+      "sortOrder": 0,
+      "apis": [
+        {
+          "name": "新增人脸（POST + insert）",
+          "description": "body 校验后插入 faces 表，回调模拟异步通知",
+          "protocol": "HTTP",
+          "method": "POST",
+          "path": "/face",
+          "isEnabled": true,
+          "sortOrder": 0,
+          "validationRules": {
+            "isEnabled": true,
+            "body": [
+              { "name": "name", "type": "string", "required": true, "min": 1, "max": 50 },
+              { "name": "age", "type": "number", "required": false, "min": 0, "max": 150 }
+            ],
+            "failStatus": 400,
+            "failMessage": "参数校验失败"
+          },
+          "dataOp": "insert",
+          "dataTable": "faces",
+          "dataPayload": {
+            "id": "face_{{req.body.name}}",
+            "name": "{{req.body.name}}",
+            "age": "{{req.body.age}}"
+          },
+          "responseStatus": 200,
+          "responseDelay": 0,
+          "responseDelayMax": 0,
+          "responseContentType": "application/json",
+          "responseBody": {
+            "code": 0,
+            "msg": "ok",
+            "data": { "id": "{{dbResult.id}}" }
+          },
+          "responses": null,
+          "script": null,
+          "callbacks": [
+            {
+              "name": "模拟异步通知",
+              "isEnabled": true,
+              "callbackUrl": "https://httpbin.org/post",
+              "callbackMethod": "POST",
+              "callbackHeaders": { "Content-Type": "application/json" },
+              "callbackBody": "{\"event\":\"face.created\",\"id\":\"{{dbResult.id}}\"}",
+              "delayType": "fixed",
+              "delayValue": "1500",
+              "retryEnabled": true,
+              "maxRetries": 3,
+              "retryInterval": 3000,
+              "retryStrategy": "exponential",
+              "retryCondition": "status>=500"
+            }
+          ]
+        },
+        {
+          "name": "查询人脸列表（GET + select + 模板）",
+          "description": "dataOp=select 读出全部行，{{dbResult}} 注入响应体",
+          "protocol": "HTTP",
+          "method": "GET",
+          "path": "/face",
+          "isEnabled": true,
+          "sortOrder": 1,
+          "validationRules": {
+            "isEnabled": true,
+            "query": [{ "name": "page", "type": "number", "default": 1, "min": 1 }]
+          },
+          "dataOp": "select",
+          "dataTable": "faces",
+          "responseStatus": 200,
+          "responseDelay": 0,
+          "responseDelayMax": 0,
+          "responseContentType": "application/json",
+          "responseBody": {
+            "code": 0,
+            "msg": "ok",
+            "data": "{{dbResult}}"
+          }
+        },
+        {
+          "name": "删除人脸（DELETE + dataOp=delete）",
+          "description": "路径参数 :name 命中并删除",
+          "protocol": "HTTP",
+          "method": "DELETE",
+          "path": "/face/:name",
+          "isEnabled": true,
+          "sortOrder": 2,
+          "validationRules": {
+            "isEnabled": true,
+            "path": [{ "name": "name", "type": "string", "required": true }]
+          },
+          "dataOp": "delete",
+          "dataTable": "faces",
+          "dataWhere": { "id": "face_{{req.path.name}}" },
+          "responseBody": { "code": 0, "msg": "deleted" }
+        }
+      ]
+    },
+    {
+      "name": "示例功能组：流式聊天（SSE 多响应）",
+      "description": "SSE 协议 + 多响应条件匹配",
+      "sortOrder": 1,
+      "apis": [
+        {
+          "name": "流式问答（SSE 多事件）",
+          "description": "客户端 body.type=long 走长回答；type=short 走短回答",
+          "protocol": "SSE",
+          "method": "POST",
+          "path": "/chat/stream",
+          "isEnabled": true,
+          "sortOrder": 0,
+          "responses": [
+            {
+              "id": "r_long",
+              "name": "长回答",
+              "isDefault": false,
+              "conditions": [
+                { "source": "body", "field": "type", "operator": "equals", "value": "long" }
+              ],
+              "responseContentType": "text/event-stream",
+              "responseBody": {
+                "comment": "stream start for {{req.body.question}}",
+                "interval": 300,
+                "loop": false,
+                "events": [
+                  { "event": "token", "data": { "text": "思考中…" } },
+                  { "event": "token", "data": { "text": "这是关于 " } },
+                  { "event": "token", "data": { "text": "{{req.body.question}}" } },
+                  { "event": "token", "data": { "text": " 的长篇回答。" } },
+                  { "event": "done", "data": { "finishReason": "stop" } }
+                ]
+              }
+            },
+            {
+              "id": "r_short",
+              "name": "短回答",
+              "isDefault": true,
+              "responseContentType": "text/event-stream",
+              "responseBody": {
+                "interval": 200,
+                "loop": false,
+                "events": [
+                  { "event": "token", "data": { "text": "ok" } },
+                  { "event": "done", "data": { "finishReason": "stop" } }
+                ]
+              }
+            }
+          ],
+          "responseBody": null
+        }
+      ]
+    },
+    {
+      "name": "示例功能组：实时通道（WebSocket + 自定义脚本）",
+      "description": "WS 协议：欢迎消息 + 定时心跳 + 脚本回声",
+      "sortOrder": 2,
+      "apis": [
+        {
+          "name": "通知通道（WS）",
+          "description": "客户端连接后立刻推 welcome，每 3 秒推心跳",
+          "protocol": "WebSocket",
+          "method": "GET",
+          "path": "/ws/notify",
+          "isEnabled": true,
+          "sortOrder": 0,
+          "responseBody": {
+            "welcome": { "type": "hello", "ts": 0 },
+            "echo": true,
+            "pushInterval": 3000,
+            "pushMessage": { "type": "heartbeat" },
+            "disconnectAfterMs": 0
+          }
+        },
+        {
+          "name": "脚本回声通道（WS + script）",
+          "description": "收到客户端消息后执行 handle，把结果回送",
+          "protocol": "WebSocket",
+          "method": "GET",
+          "path": "/ws/echo",
+          "isEnabled": true,
+          "sortOrder": 1,
+          "script": "async function handle(req, db, log) {\n  log.info('ws recv', req.body);\n  const list = db.select('faces');\n  return { type: 'echo', received: req.body, facesCount: list.length };\n}",
+          "responseBody": {
+            "welcome": { "type": "welcome", "channel": "echo" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "示例功能组：脚本 HTTP（自定义 handle）",
+      "description": "HTTP + script：返回 db 数据 + 计算字段",
+      "sortOrder": 3,
+      "apis": [
+        {
+          "name": "统计接口（HTTP + script）",
+          "description": "运行 handle 查 faces 表并统计",
+          "protocol": "HTTP",
+          "method": "GET",
+          "path": "/stats/face",
+          "isEnabled": true,
+          "sortOrder": 0,
+          "script": "async function handle(req, db, log) {\n  const rows = db.select('faces');\n  log.info('查询到 ' + rows.length + ' 行');\n  return { code: 0, total: rows.length, names: rows.map(r => r.name) };\n}",
+          "responseBody": null
+        }
+      ]
+    }
+  ]
+}

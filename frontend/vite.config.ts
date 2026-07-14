@@ -25,6 +25,15 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      // AGENTS 对接指南资源：交给后端显式带 charset=utf-8 响应（解决 .md / .json 浏览器默认编码乱码）
+      '/agents-guide.md': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/agents-guide.example.json': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
     },
   },
   build: {
