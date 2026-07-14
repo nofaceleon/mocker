@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import crypto from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { requestLogs, callbackConfigs, type MockApi } from '../db/schema.js';
 import { logger } from '../utils/logger.js';
@@ -621,9 +621,10 @@ function sanitizeHeaders(
 }
 
 /**
- * 响应写出后，异步入队该接口的回调任务。
+ * 响应写出后，异步入队该接口的回调链首条任务。
  * - 仅普通 HTTP 协议触发（SSE 跳过）
- * - 仅 callback_config.isEnabled 时触发
+ * - 仅 callback_configs.isEnabled=true 且按 sortOrder 排序的首条触发
+ * - 后续回调由 scheduler 在每条任务终态时通过 task:finished 事件推进
  * - 任何错误都不应影响主链路
  */
 function scheduleCallback(
@@ -633,12 +634,14 @@ function scheduleCallback(
 ): void {
   try {
     const db = getDb();
-    const cfg = db
+    const cfgs = db
       .select()
       .from(callbackConfigs)
-      .where(eq(callbackConfigs.apiId, api.id))
-      .get();
-    if (!cfg || !cfg.isEnabled) return;
+      .where(and(eq(callbackConfigs.apiId, api.id), eq(callbackConfigs.isEnabled, true)))
+      .orderBy(asc(callbackConfigs.sortOrder), asc(callbackConfigs.id))
+      .all();
+    const cfg = cfgs[0];
+    if (!cfg) return;
     const input = renderCallbackEnqueueInput(cfg, {
       req: reqCtxForTemplate,
       response: responseBody,

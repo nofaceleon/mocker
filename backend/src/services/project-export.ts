@@ -13,9 +13,10 @@ import {
 import { ApiError } from '../middleware/error-handler.js';
 import { registry } from '../mock-engine/registry.js';
 
-export const EXPORT_VERSION = 1 as const;
+export const EXPORT_VERSION = 2 as const;
 
 export type ExportedCallbackConfig = {
+  name: string | null;
   isEnabled: boolean;
   callbackUrl: string | null;
   callbackMethod: string;
@@ -55,7 +56,9 @@ export type ExportedApi = {
   dataWhere: Record<string, unknown> | null;
   dataPayload?: Record<string, unknown> | null;
   script: string | null;
+  /** 兼容 v1 导出：单条 callback。v2 起改用 callbacks[] */
   callback?: ExportedCallbackConfig | null;
+  callbacks?: ExportedCallbackConfig[];
   mockData?: ExportedMockData[];
 };
 
@@ -125,8 +128,18 @@ export function exportProject(projectId: number, options: ExportOptions = {}): P
   const callbacks =
     apiIds.length === 0
       ? []
-      : db.select().from(callbackConfigs).where(inArray(callbackConfigs.apiId, apiIds)).all();
-  const callbackByApi = new Map(callbacks.map((c) => [c.apiId, c]));
+      : db
+          .select()
+          .from(callbackConfigs)
+          .where(inArray(callbackConfigs.apiId, apiIds))
+          .orderBy(asc(callbackConfigs.sortOrder), asc(callbackConfigs.id))
+          .all();
+  const callbacksByApi = new Map<number, typeof callbacks>();
+  for (const c of callbacks) {
+    const list = callbacksByApi.get(c.apiId) ?? [];
+    list.push(c);
+    callbacksByApi.set(c.apiId, list);
+  }
 
   const dataRows =
     options.includeData && apiIds.length > 0
@@ -158,7 +171,7 @@ export function exportProject(projectId: number, options: ExportOptions = {}): P
       description: g.description,
       sortOrder: g.sortOrder,
       apis: (apisByGroup.get(g.id) ?? []).map((api) => {
-        const cb = callbackByApi.get(api.id);
+        const cbs = callbacksByApi.get(api.id) ?? [];
         const md = dataByApi.get(api.id) ?? [];
         return {
           name: api.name,
@@ -180,22 +193,21 @@ export function exportProject(projectId: number, options: ExportOptions = {}): P
           dataWhere: api.dataWhere,
           dataPayload: api.dataPayload ?? null,
           script: api.script,
-          callback: cb
-            ? {
-                isEnabled: cb.isEnabled,
-                callbackUrl: cb.callbackUrl,
-                callbackMethod: cb.callbackMethod,
-                callbackHeaders: cb.callbackHeaders,
-                callbackBody: cb.callbackBody,
-                delayType: cb.delayType,
-                delayValue: cb.delayValue,
-                retryEnabled: cb.retryEnabled,
-                maxRetries: cb.maxRetries,
-                retryInterval: cb.retryInterval,
-                retryStrategy: cb.retryStrategy,
-                retryCondition: cb.retryCondition,
-              }
-            : null,
+          callbacks: cbs.map((cb) => ({
+            name: cb.name ?? null,
+            isEnabled: cb.isEnabled,
+            callbackUrl: cb.callbackUrl,
+            callbackMethod: cb.callbackMethod,
+            callbackHeaders: cb.callbackHeaders,
+            callbackBody: cb.callbackBody,
+            delayType: cb.delayType,
+            delayValue: cb.delayValue,
+            retryEnabled: cb.retryEnabled,
+            maxRetries: cb.maxRetries,
+            retryInterval: cb.retryInterval,
+            retryStrategy: cb.retryStrategy,
+            retryCondition: cb.retryCondition,
+          })),
           mockData: options.includeData
             ? md.map((d) => ({ dataKey: d.dataKey, dataValue: d.dataValue }))
             : undefined,
@@ -209,7 +221,7 @@ export function importProject(
   bundle: ProjectExportBundle,
   options: { mode?: ImportMode; name?: string } = {},
 ): ImportResult {
-  if (!bundle || bundle.version !== EXPORT_VERSION) {
+  if (!bundle || (bundle.version !== EXPORT_VERSION && bundle.version !== 1)) {
     throw new ApiError('INVALID_EXPORT', `不支持的导出版本（需要 version=${EXPORT_VERSION}）`, 400);
   }
   if (!bundle.project?.name) {
@@ -301,11 +313,18 @@ export function importProject(
         .all();
       apiCount++;
 
-      if (a.callback) {
-        const cb = a.callback;
+      // v2 用 callbacks[]；v1 兼容 callback 单条字段
+      const cbList: ExportedCallbackConfig[] = Array.isArray(a.callbacks)
+        ? a.callbacks
+        : a.callback
+          ? [a.callback]
+          : [];
+      cbList.forEach((cb, idx) => {
         db.insert(callbackConfigs)
           .values({
             apiId: api.id,
+            name: cb.name ?? null,
+            sortOrder: idx,
             isEnabled: cb.isEnabled ?? false,
             callbackUrl: cb.callbackUrl ?? null,
             callbackMethod: cb.callbackMethod ?? 'POST',
@@ -321,7 +340,7 @@ export function importProject(
           })
           .run();
         callbackCount++;
-      }
+      });
 
       for (const d of a.mockData ?? []) {
         db.insert(mockData)

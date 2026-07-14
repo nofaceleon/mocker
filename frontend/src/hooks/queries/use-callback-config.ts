@@ -12,18 +12,19 @@ export function useCallbackConfig(apiId: ID | undefined) {
   return useQuery({
     queryKey: apiId ? KEYS.byApi(apiId) : (['callback-config', 'api', 'none'] as const),
     queryFn: async () =>
-      unwrap(
-        await api.get<CallbackConfig | null>(`/mock-apis/${apiId}/callback`),
-      ),
+      unwrap(await api.get<CallbackConfig[]>(`/mock-apis/${apiId}/callbacks`)),
     enabled: !!apiId,
   });
 }
 
+/** 整组保存（diff：新增 / 更新 / 删除） */
 export function useSaveCallbackConfig(apiId: ID) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: CallbackConfig) =>
-      unwrap(await api.put<CallbackConfig>(`/mock-apis/${apiId}/callback`, body)),
+    mutationFn: async (items: CallbackConfig[]) =>
+      unwrap(
+        await api.put<CallbackConfig[]>(`/mock-apis/${apiId}/callbacks`, { items }),
+      ),
     onSuccess: (data) => {
       qc.setQueryData(KEYS.byApi(apiId), data);
       qc.invalidateQueries({ queryKey: KEYS.root });
@@ -33,13 +34,34 @@ export function useSaveCallbackConfig(apiId: ID) {
   });
 }
 
+/** 单条删除 */
+export function useDeleteSingleCallback(apiId: ID) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (callbackId: ID) =>
+      unwrap(
+        await api.delete<{ apiId: ID; callbackId: ID; deleted: boolean }>(
+          `/mock-apis/${apiId}/callbacks/${callbackId}`,
+        ),
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.byApi(apiId) });
+      qc.invalidateQueries({ queryKey: ['mock-apis'] });
+      qc.invalidateQueries({ queryKey: ['mock-apis', 'detail', apiId] });
+    },
+  });
+}
+
+/** 删除整组（兼容旧用法：直接清空当前 api 所有回调） */
 export function useDeleteCallbackConfig(apiId: ID) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () =>
-      unwrap(await api.delete<{ apiId: ID; deleted: boolean }>(`/mock-apis/${apiId}/callback`)),
+      unwrap(
+        await api.put<CallbackConfig[]>(`/mock-apis/${apiId}/callbacks`, { items: [] }),
+      ),
     onSuccess: () => {
-      qc.setQueryData(KEYS.byApi(apiId), null);
+      qc.setQueryData(KEYS.byApi(apiId), []);
       qc.invalidateQueries({ queryKey: KEYS.root });
       qc.invalidateQueries({ queryKey: ['mock-apis'] });
       qc.invalidateQueries({ queryKey: ['mock-apis', 'detail', apiId] });

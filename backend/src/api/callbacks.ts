@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { and, desc, eq, gte, inArray, like, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, like, lte, or, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import {
   callbackConfigs,
@@ -15,11 +15,18 @@ import { cancelTask, reExecute } from '../mock-engine/callback/callback-engine.j
 
 const router = Router();
 
-// ----------------------- 配置 -----------------------
+// ----------------------- 配置（多回调链） -----------------------
 
 const apiIdParamSchema = z.object({ apiId: z.coerce.number().int().positive() });
+const callbackIdParamSchema = z.object({
+  apiId: z.coerce.number().int().positive(),
+  callbackId: z.coerce.number().int().positive(),
+});
 
-const configPutSchema = z.object({
+/** 单条回调的入参 schema（用于 PUT 整组时数组元素） */
+const configItemSchema = z.object({
+  id: z.number().int().positive().optional(),
+  name: z.string().max(100).nullable().optional(),
   isEnabled: z.boolean().optional().default(false),
   callbackUrl: z.string().min(1).max(2000),
   callbackMethod: z.enum(['POST', 'GET', 'PUT', 'PATCH', 'DELETE']).optional().default('POST'),
@@ -34,9 +41,16 @@ const configPutSchema = z.object({
   retryCondition: z.string().max(200).optional().nullable().default('server_error'),
 });
 
+const configListPutSchema = z.object({
+  items: z.array(configItemSchema).max(50),
+});
+
 /** 把 DB 行转成前端友好的"配置对象"（含必要默认值） */
 function configRowToApi(row: CallbackConfig): Record<string, unknown> {
   return {
+    id: row.id,
+    name: row.name ?? null,
+    sortOrder: row.sortOrder,
     isEnabled: row.isEnabled,
     callbackUrl: row.callbackUrl ?? '',
     callbackMethod: row.callbackMethod,
@@ -52,73 +66,126 @@ function configRowToApi(row: CallbackConfig): Record<string, unknown> {
   };
 }
 
+function listCallbacksForApi(apiId: number): CallbackConfig[] {
+  const db = getDb();
+  return db
+    .select()
+    .from(callbackConfigs)
+    .where(eq(callbackConfigs.apiId, apiId))
+    .orderBy(asc(callbackConfigs.sortOrder), asc(callbackConfigs.id))
+    .all();
+}
+
 router.get(
-  '/mock-apis/:apiId/callback',
+  '/mock-apis/:apiId/callbacks',
   asyncHandler(async (req: Request, res: Response) => {
     const { apiId } = apiIdParamSchema.parse(req.params);
     const db = getDb();
     const api = db.select({ id: mockApis.id }).from(mockApis).where(eq(mockApis.id, apiId)).get();
     if (!api) throw new ApiError('NOT_FOUND', `接口 ${apiId} 不存在`, 404);
-    const row = db.select().from(callbackConfigs).where(eq(callbackConfigs.apiId, apiId)).get();
-    res.success(row ? configRowToApi(row) : null);
+    const rows = listCallbacksForApi(apiId);
+    res.success(rows.map(configRowToApi));
   }),
 );
 
+/** 整组保存：diff 已有 id / 新增 / 删除，失败则整组回滚 */
 router.put(
-  '/mock-apis/:apiId/callback',
+  '/mock-apis/:apiId/callbacks',
   asyncHandler(async (req: Request, res: Response) => {
     const { apiId } = apiIdParamSchema.parse(req.params);
-    const body = configPutSchema.parse(req.body ?? {});
+    const { items } = configListPutSchema.parse(req.body ?? {});
     const db = getDb();
     const api = db.select({ id: mockApis.id }).from(mockApis).where(eq(mockApis.id, apiId)).get();
     if (!api) throw new ApiError('NOT_FOUND', `接口 ${apiId} 不存在`, 404);
-    const existing = db.select().from(callbackConfigs).where(eq(callbackConfigs.apiId, apiId)).get();
-    const values = {
-      apiId,
-      isEnabled: body.isEnabled,
-      callbackUrl: body.callbackUrl,
-      callbackMethod: body.callbackMethod,
-      callbackHeaders: body.callbackHeaders ?? {},
-      callbackBody: body.callbackBody ?? null,
-      delayType: body.delayType,
-      delayValue: body.delayValue,
-      retryEnabled: body.retryEnabled,
-      maxRetries: body.maxRetries,
-      retryInterval: body.retryInterval,
-      retryStrategy: body.retryStrategy,
-      retryCondition: body.retryCondition ?? 'server_error',
-    };
-    let saved;
-    if (existing) {
-      db.update(callbackConfigs).set(values).where(eq(callbackConfigs.id, existing.id)).run();
-      saved = db.select().from(callbackConfigs).where(eq(callbackConfigs.id, existing.id)).get()!;
-    } else {
-      const [row] = db.insert(callbackConfigs).values(values).returning().all();
-      saved = row;
+
+    const existing = listCallbacksForApi(apiId);
+    const existingById = new Map(existing.map((r) => [r.id, r]));
+    const keepIds = new Set<number>();
+
+    db.transaction((tx) => {
+      items.forEach((item, idx) => {
+        const sortOrder = idx;
+        const baseValues = {
+          apiId,
+          name: item.name ?? null,
+          sortOrder,
+          isEnabled: item.isEnabled ?? false,
+          callbackUrl: item.callbackUrl,
+          callbackMethod: item.callbackMethod ?? 'POST',
+          callbackHeaders: item.callbackHeaders ?? {},
+          callbackBody: item.callbackBody ?? null,
+          delayType: item.delayType ?? 'fixed',
+          delayValue: item.delayValue ?? '0',
+          retryEnabled: item.retryEnabled ?? false,
+          maxRetries: item.maxRetries ?? 3,
+          retryInterval: item.retryInterval ?? 5000,
+          retryStrategy: item.retryStrategy ?? 'fixed',
+          retryCondition: item.retryCondition ?? 'server_error',
+        };
+        if (item.id && existingById.has(item.id)) {
+          keepIds.add(item.id);
+          tx.update(callbackConfigs)
+            .set(baseValues)
+            .where(eq(callbackConfigs.id, item.id))
+            .run();
+        } else {
+          tx.insert(callbackConfigs).values(baseValues).run();
+        }
+      });
+    });
+
+    // 事务外删除：被移除的回调 → 先取消其 pending task，再删除行
+    const removedIds = existing.filter((r) => !keepIds.has(r.id)).map((r) => r.id);
+    if (removedIds.length > 0) {
+      const pending = db
+        .select({ id: callbackTasks.id })
+        .from(callbackTasks)
+        .where(
+          and(
+            eq(callbackTasks.apiId, apiId),
+            eq(callbackTasks.status, 'pending'),
+            inArray(callbackTasks.callbackConfigId, removedIds),
+          ),
+        )
+        .all();
+      for (const t of pending) callbackScheduler.cancel(t.id);
+      db.delete(callbackConfigs).where(inArray(callbackConfigs.id, removedIds)).run();
     }
-    res.success(configRowToApi(saved));
+
+    const rows = listCallbacksForApi(apiId);
+    res.success(rows.map(configRowToApi));
   }),
 );
 
+/** 单条删除 */
 router.delete(
-  '/mock-apis/:apiId/callback',
+  '/mock-apis/:apiId/callbacks/:callbackId',
   asyncHandler(async (req: Request, res: Response) => {
-    const { apiId } = apiIdParamSchema.parse(req.params);
+    const { apiId, callbackId } = callbackIdParamSchema.parse(req.params);
     const db = getDb();
-    const existing = db.select().from(callbackConfigs).where(eq(callbackConfigs.apiId, apiId)).get();
+    const existing = db
+      .select()
+      .from(callbackConfigs)
+      .where(and(eq(callbackConfigs.id, callbackId), eq(callbackConfigs.apiId, apiId)))
+      .get();
     if (!existing) {
-      res.success({ apiId, deleted: false });
+      res.success({ apiId, callbackId, deleted: false });
       return;
     }
-    // 取消该 api 关联的所有 pending 任务
     const pending = db
       .select({ id: callbackTasks.id })
       .from(callbackTasks)
-      .where(and(eq(callbackTasks.apiId, apiId), eq(callbackTasks.status, 'pending')))
+      .where(
+        and(
+          eq(callbackTasks.apiId, apiId),
+          eq(callbackTasks.callbackConfigId, callbackId),
+          eq(callbackTasks.status, 'pending'),
+        ),
+      )
       .all();
     for (const t of pending) callbackScheduler.cancel(t.id);
-    db.delete(callbackConfigs).where(eq(callbackConfigs.id, existing.id)).run();
-    res.success({ apiId, deleted: true });
+    db.delete(callbackConfigs).where(eq(callbackConfigs.id, callbackId)).run();
+    res.success({ apiId, callbackId, deleted: true });
   }),
 );
 

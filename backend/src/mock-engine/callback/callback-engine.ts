@@ -29,6 +29,11 @@ export type EnqueueTaskInput = {
   retryStrategy: 'fixed' | 'exponential';
   retryInterval: number;
   retryCondition: BuiltinRetryCondition | { kind: 'custom'; expr: string };
+  /**
+   * 渲染上下文（原始 API 调用的 req/response），用于多回调链推进时
+   * 后续节点继续沿用同一上下文做模板替换。
+   */
+  templateContext?: Record<string, unknown> | null;
 };
 
 export type BuiltinRetryCondition = 'always' | 'server_error' | 'success_only';
@@ -77,6 +82,7 @@ export function enqueueCallbackTask(input: EnqueueTaskInput): CallbackTask | nul
         attemptLogs: [],
         sentAt: null,
         nextRetryAt: null,
+        templateContext: input.templateContext ?? null,
       })
       .returning()
       .all();
@@ -123,6 +129,7 @@ export function renderCallbackEnqueueInput(
     retryStrategy: cfg.retryStrategy,
     retryInterval: cfg.retryInterval,
     retryCondition: cond,
+    templateContext: { req: ctx.req, response: ctx.response },
   };
 }
 
@@ -279,6 +286,13 @@ export async function executeTask(task: CallbackTask, cfg: CallbackConfig | null
     { taskId: task.id, status: finalStatus, responseStatus: status, attempts: attemptLogs.length },
     'callback task finished',
   );
+
+  // 链推进：当前任务进入终态后通知 scheduler 找下一条
+  callbackEvents.emit('task:finished', {
+    taskId: task.id,
+    apiId: task.apiId,
+    callbackConfigId: task.callbackConfigId,
+  });
 }
 
 function parseAttemptLogs(raw: unknown): CallbackAttemptLog[] {

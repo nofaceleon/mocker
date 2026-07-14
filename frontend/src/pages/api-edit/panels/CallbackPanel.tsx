@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Send, AlertCircle, ExternalLink, Save, Trash2 } from 'lucide-react';
+import { Send, AlertCircle, ExternalLink, Save, Plus, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Button, Card, FormField, Input, Select, Switch } from '@/components/ui';
-import type { CallbackConfig, CallbackConditionPreset } from '@/types/api';
+import { Button, Switch } from '@/components/ui';
+import type { CallbackConfig } from '@/types/api';
 import {
   useCallbackConfig,
   useDeleteCallbackConfig,
+  useDeleteSingleCallback,
   useSaveCallbackConfig,
 } from '@/hooks/queries/use-callback-config';
 import { ApiError } from '@/lib/api';
-import { reportFieldError } from '@/lib/form-validation';
 import { PanelHeader } from '../PanelHeader';
+import { CallbackItemCard } from './CallbackItemCard';
 
 type CallbackPanelProps = {
   apiId: number | undefined;
@@ -19,8 +20,9 @@ type CallbackPanelProps = {
   saving?: boolean;
 };
 
-const DEFAULT_CONFIG: CallbackConfig = {
-  isEnabled: false,
+const DEFAULT_CONFIG = (idx: number): CallbackConfig => ({
+  isEnabled: true,
+  name: `回调 ${idx + 1}`,
   callbackUrl: '',
   callbackMethod: 'POST',
   callbackHeaders: { 'Content-Type': 'application/json' },
@@ -33,19 +35,7 @@ const DEFAULT_CONFIG: CallbackConfig = {
   retryStrategy: 'fixed',
   retryCondition: 'server_error',
   retryConditionExpr: 'statusCode != 200',
-};
-
-const RETRY_CONDITION_OPTIONS: { value: CallbackConditionPreset; label: string; hint?: string }[] = [
-  { value: 'server_error', label: '服务端错误（status >= 500）' },
-  { value: 'always', label: '任何非 2xx 响应' },
-  { value: 'success_only', label: '只有 2xx 才不重试' },
-  { value: 'custom', label: '自定义表达式' },
-];
-
-type FieldErrors = {
-  callbackUrl?: string;
-  retryConditionExpr?: string;
-};
+});
 
 export function CallbackPanel({ apiId, onSave, saving }: CallbackPanelProps) {
   if (apiId === undefined) {
@@ -78,126 +68,198 @@ function CallbackPanelForm({
 }) {
   const { data: serverCfg, isLoading } = useCallbackConfig(apiId);
   const saveMut = useSaveCallbackConfig(apiId);
-  const deleteMut = useDeleteCallbackConfig(apiId);
+  const deleteAllMut = useDeleteCallbackConfig(apiId);
+  const deleteOneMut = useDeleteSingleCallback(apiId);
 
-  const initial = useMemo<CallbackConfig>(() => {
-    if (serverCfg) return { ...DEFAULT_CONFIG, ...serverCfg };
-    return DEFAULT_CONFIG;
+  const initial = useMemo<CallbackConfig[]>(() => {
+    if (serverCfg && Array.isArray(serverCfg)) return serverCfg.map(normalize);
+    return [];
   }, [serverCfg]);
 
-  const [formData, setFormData] = useState<CallbackConfig>(initial);
+  const [items, setItems] = useState<CallbackConfig[]>(initial);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [chainEnabled, setChainEnabled] = useState<boolean>(initial.some((c) => c.isEnabled));
   const [dirty, setDirty] = useState(false);
-  const [errors, setErrors] = useState<FieldErrors>({});
   const lastSavedRef = useRef<string>(JSON.stringify(initial));
-  const urlRef = useRef<HTMLInputElement>(null);
-  const exprRef = useRef<HTMLInputElement>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    setFormData(initial);
+    setItems(initial);
+    setChainEnabled(initial.some((c) => c.isEnabled));
     setDirty(false);
-    setErrors({});
+    setExpanded(new Set());
     lastSavedRef.current = JSON.stringify(initial);
   }, [initial]);
 
-  const update = (patch: Partial<CallbackConfig>) => {
-    setFormData((d) => {
-      const next = { ...d, ...patch };
-      setDirty(JSON.stringify(next) !== lastSavedRef.current);
-      return next;
-    });
-    setErrors((prev) => {
-      const next = { ...prev };
-      if ('callbackUrl' in patch) delete next.callbackUrl;
-      if ('retryConditionExpr' in patch || 'retryCondition' in patch || 'retryEnabled' in patch) {
-        delete next.retryConditionExpr;
-      }
+  const markDirty = (next: CallbackConfig[]) => {
+    setDirty(JSON.stringify(next) !== lastSavedRef.current);
+  };
+
+  const updateItem = (idx: number, patch: CallbackConfig) => {
+    setItems((prev) => {
+      const next = prev.slice();
+      next[idx] = patch;
+      markDirty(next);
       return next;
     });
   };
 
-  const validate = (): FieldErrors => {
-    const next: FieldErrors = {};
-    if (!formData.callbackUrl.trim()) {
-      next.callbackUrl = '请填写回调 URL';
+  const addItem = () => {
+    setItems((prev) => {
+      const next = [...prev, DEFAULT_CONFIG(prev.length)];
+      markDirty(next);
+      return next;
+    });
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.add(items.length);
+      return next;
+    });
+  };
+
+  const removeItem = async (idx: number) => {
+    const target = items[idx];
+    const label = target.name?.trim() || `回调 ${idx + 1}`;
+    if (!confirm(`确认删除「${label}」？如有 pending 任务会一并取消。`)) return;
+
+    // 已保存到后端的：调用单条删除接口
+    if (target.id) {
+      try {
+        await deleteOneMut.mutateAsync(target.id);
+        toast.success(`已删除「${label}」`);
+      } catch (err) {
+        const msg = err instanceof ApiError ? err.message : '删除失败';
+        toast.error(msg);
+        return;
+      }
     }
-    if (
-      formData.retryEnabled &&
-      formData.retryCondition === 'custom' &&
-      !(formData.retryConditionExpr ?? '').trim()
-    ) {
-      next.retryConditionExpr = '请填写自定义表达式';
+    setItems((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      markDirty(next);
+      return next;
+    });
+    setExpanded((prev) => {
+      const next = new Set<number>();
+      prev.forEach((i) => {
+        if (i < idx) next.add(i);
+        else if (i > idx) next.add(i - 1);
+      });
+      return next;
+    });
+  };
+
+  const removeAll = async () => {
+    if (!items.length) return;
+    if (!confirm(`确认清空全部 ${items.length} 条回调配置？所有关联的 pending 任务会被取消。`)) return;
+    try {
+      await deleteAllMut.mutateAsync();
+      setItems([]);
+      setChainEnabled(false);
+      setExpanded(new Set());
+      setDirty(false);
+      lastSavedRef.current = JSON.stringify([]);
+      toast.success('已清空回调配置');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : '清空失败';
+      toast.error(msg);
     }
-    return next;
+  };
+
+  const onDragStart = (idx: number) => (e: React.DragEvent) => {
+    setDragIndex(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onDragOver = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(idx);
+  };
+
+  const onDrop = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const from = dragIndex;
+    setDragIndex(null);
+    setDragOverIndex(null);
+    if (from === null || from === idx) return;
+    setItems((prev) => {
+      const next = prev.slice();
+      const [moved] = next.splice(from, 1);
+      next.splice(idx, 0, moved);
+      markDirty(next);
+      return next;
+    });
+    setExpanded((prev) => {
+      const next = new Set<number>();
+      prev.forEach((i) => {
+        if (i === from) next.add(idx);
+        else if (from < i && i <= idx) next.add(i - 1);
+        else if (from > i && i >= idx) next.add(i + 1);
+        else next.add(i);
+      });
+      return next;
+    });
+  };
+
+  const onDragEnd = () => () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const toggleExpand = (idx: number) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  const validateAll = (): string | null => {
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.isEnabled && !it.callbackUrl.trim()) {
+        return `第 ${i + 1} 条回调：请填写回调 URL`;
+      }
+      if (
+        it.isEnabled &&
+        it.retryEnabled &&
+        it.retryCondition === 'custom' &&
+        !(it.retryConditionExpr ?? '').trim()
+      ) {
+        return `第 ${i + 1} 条回调：请填写自定义失败条件表达式`;
+      }
+    }
+    return null;
   };
 
   const handleSave = async () => {
-    const nextErrors = validate();
-    if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
-      if (nextErrors.callbackUrl) {
-        reportFieldError(nextErrors.callbackUrl, urlRef.current);
-      } else if (nextErrors.retryConditionExpr) {
-        reportFieldError(nextErrors.retryConditionExpr, exprRef.current);
-      }
+    const err = validateAll();
+    if (err) {
+      toast.error(err);
       return;
     }
-
+    if (!chainEnabled && items.some((c) => c.isEnabled)) {
+      // 用户禁用总开关时，仍允许保存（链不触发即可）
+    }
     try {
-      await saveMut.mutateAsync(formData);
-      lastSavedRef.current = JSON.stringify(formData);
+      const payload = items.map((it, idx) => ({
+        ...it,
+        sortOrder: idx,
+      }));
+      const saved = await saveMut.mutateAsync(payload);
+      setItems(saved);
+      setChainEnabled(saved.some((c) => c.isEnabled));
       setDirty(false);
-      setErrors({});
-      toast.success('回调配置已保存');
+      setExpanded(new Set());
+      lastSavedRef.current = JSON.stringify(saved);
+      toast.success(`已保存 ${saved.length} 条回调`);
       onSave?.();
     } catch (err) {
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : '保存失败';
+      const msg = err instanceof ApiError ? err.message : '保存失败';
       toast.error(msg);
     }
-  };
-
-  const handleDelete = async () => {
-    if (!serverCfg) return;
-    if (!confirm('确认删除该接口的回调配置？所有关联的待发送任务会被取消。')) return;
-    try {
-      await deleteMut.mutateAsync();
-      setFormData(DEFAULT_CONFIG);
-      lastSavedRef.current = JSON.stringify(DEFAULT_CONFIG);
-      setDirty(false);
-      setErrors({});
-      toast.success('回调配置已删除');
-    } catch (err) {
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : '删除失败';
-      toast.error(msg);
-    }
-  };
-
-  const serialiseHeaders = (h: Record<string, string>): string =>
-    Object.keys(h).length === 0 ? '' : JSON.stringify(h, null, 2);
-
-  const parseHeaders = (raw: string): Record<string, string> => {
-    const trimmed = raw.trim();
-    if (!trimmed) return {};
-    try {
-      const obj = JSON.parse(trimmed);
-      if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-        const out: Record<string, string> = {};
-        for (const [k, v] of Object.entries(obj)) out[k] = String(v);
-        return out;
-      }
-    } catch {
-      // ignore
-    }
-    return {};
   };
 
   return (
@@ -216,197 +278,85 @@ function CallbackPanelForm({
               <ExternalLink className="h-3.5 w-3.5" />
               查看任务
             </Link>
-            <span className="text-[11.5px] text-ink-tertiary">{formData.isEnabled ? '已启用' : '未启用'}</span>
-            <Switch checked={formData.isEnabled} onChange={(v) => update({ isEnabled: v })} />
+            <span className="text-[11.5px] text-ink-tertiary">
+              {chainEnabled ? '已启用' : '未启用'}
+            </span>
+            <Switch
+              checked={chainEnabled}
+              onChange={setChainEnabled}
+              title="启用整条回调链（任意一条启用即触发）"
+            />
           </div>
         }
-        description="启用后，接口响应后会自动按设定延迟向回调 URL 发送请求。常用于模拟支付、识别等异步通知。"
+        description="启用后，接口响应后会自动按设定顺序与间隔依次触发每条回调。常用于模拟支付、识别等异步通知链。"
       />
 
       <div className="info-tip">
         <AlertCircle />
         <div>
-          <strong>说明</strong>：回调 URL / Headers / Body 中支持 <code>{'{{req.body.xxx}}'}</code> 与{' '}
-          <code>{'{{response.xxx}}'}</code> 变量。任务执行日志可在「回调任务」页查看。
+          <strong>说明</strong>：每条回调支持独立 URL / Headers / Body 与重试策略。
+          链路语义为<strong>链式</strong>：第 1 条相对 API 响应延时，后续每条相对上一条
+          <strong>终态后</strong>（含重试）等待设定毫秒触发。上一条失败不会中断链路。
         </div>
       </div>
 
-      <Card className="mt-3" title="回调请求">
-        <div className="form-row">
-          <FormField
-            label="回调 URL"
-            required
-            className="col-span-2"
-            error={errors.callbackUrl}
-          >
-            <Input
-              ref={urlRef}
-              className="mono"
-              value={formData.callbackUrl}
-              onChange={(e) => update({ callbackUrl: e.target.value })}
-              placeholder="https://example.com/callback 或 {{req.body.callbackUrl}}"
-              disabled={!formData.isEnabled}
-              invalid={!!errors.callbackUrl}
-            />
-            {!errors.callbackUrl && (
-              <div className="form-helper">
-                支持变量替换，例 <code>{'{{req.body.callbackUrl}}'}</code> 或固定 URL
-              </div>
-            )}
-          </FormField>
-          <FormField label="回调方法">
-            <Select
-              value={formData.callbackMethod}
-              onChange={(e) => update({ callbackMethod: e.target.value as CallbackConfig['callbackMethod'] })}
-              disabled={!formData.isEnabled}
-            >
-              <option value="POST">POST</option>
-              <option value="GET">GET</option>
-              <option value="PUT">PUT</option>
-              <option value="PATCH">PATCH</option>
-              <option value="DELETE">DELETE</option>
-            </Select>
-          </FormField>
-        </div>
-        <div className="form-row three-col">
-          <FormField label="延迟类型">
-            <Select
-              value={formData.delayType}
-              onChange={(e) => update({ delayType: e.target.value as CallbackConfig['delayType'] })}
-              disabled={!formData.isEnabled}
-            >
-              <option value="fixed">固定</option>
-              <option value="random">随机范围</option>
-            </Select>
-          </FormField>
-          <FormField label="延迟时间" hint={formData.delayType === 'random' ? '范围：最小-最大（毫秒）' : '毫秒'}>
-            <Input
-              value={formData.delayValue}
-              onChange={(e) => update({ delayValue: e.target.value })}
-              placeholder={formData.delayType === 'random' ? '3000-8000' : '5000'}
-              disabled={!formData.isEnabled}
-            />
-          </FormField>
-        </div>
-        <FormField label="回调请求头" hint="JSON 对象">
-          <textarea
-            className="form-textarea mono mono-dark !text-[12.5px]"
-            rows={3}
-            value={serialiseHeaders(formData.callbackHeaders)}
-            onChange={(e) => update({ callbackHeaders: parseHeaders(e.target.value) })}
-            disabled={!formData.isEnabled}
-            placeholder='{"Content-Type": "application/json"}'
-          />
-        </FormField>
-        <FormField
-          label="回调请求体"
-          hint="支持 JSON 文本或文本；变量 {{req.body.x}} / {{response.x}} 会被替换"
-        >
-          <textarea
-            className="form-textarea mono mono-dark !text-[12.5px]"
-            rows={6}
-            value={formData.callbackBody}
-            onChange={(e) => update({ callbackBody: e.target.value })}
-            disabled={!formData.isEnabled}
-            placeholder='{"faceId": "{{req.body.faceId}}", "result": "{{response.data}}"}'
-          />
-        </FormField>
-      </Card>
-
-      <Card className="mt-4" title="重试策略">
-        <div className="form-row">
-          <FormField label="启用自动重试" className="col-span-2">
-            <Switch
-              checked={formData.retryEnabled}
-              onChange={(v) => update({ retryEnabled: v })}
-              disabled={!formData.isEnabled}
-            />
-          </FormField>
-        </div>
-        <div className="form-row three-col">
-          <FormField label="最大重试次数">
-            <Input
-              type="number"
-              min={0}
-              max={10}
-              value={formData.maxRetries}
-              onChange={(e) => update({ maxRetries: Math.max(0, Number(e.target.value) || 0) })}
-              disabled={!formData.isEnabled || !formData.retryEnabled}
-            />
-          </FormField>
-          <FormField label="重试间隔" hint="毫秒">
-            <Input
-              type="number"
-              min={100}
-              value={formData.retryInterval}
-              onChange={(e) => update({ retryInterval: Math.max(100, Number(e.target.value) || 100) })}
-              disabled={!formData.isEnabled || !formData.retryEnabled}
-            />
-          </FormField>
-          <FormField label="间隔策略">
-            <Select
-              value={formData.retryStrategy}
-              onChange={(e) => update({ retryStrategy: e.target.value as CallbackConfig['retryStrategy'] })}
-              disabled={!formData.isEnabled || !formData.retryEnabled}
-            >
-              <option value="fixed">固定间隔</option>
-              <option value="exponential">指数退避</option>
-            </Select>
-          </FormField>
-        </div>
-        <div className="form-row">
-          <FormField
-            label="失败条件"
-            hint="满足此条件才会触发自动重试"
-            className="col-span-2"
-          >
-            <Select
-              value={formData.retryCondition}
-              onChange={(e) =>
-                update({ retryCondition: e.target.value as CallbackConfig['retryCondition'] })
-              }
-              disabled={!formData.isEnabled || !formData.retryEnabled}
-            >
-              {RETRY_CONDITION_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        </div>
-        {formData.retryCondition === 'custom' && (
-          <div className="form-row">
-            <FormField
-              label="自定义表达式"
-              required
-              hint={errors.retryConditionExpr ? undefined : '可用变量：statusCode（HTTP 状态码）'}
-              error={errors.retryConditionExpr}
-              className="col-span-2"
-            >
-              <Input
-                ref={exprRef}
-                className="mono"
-                value={formData.retryConditionExpr ?? ''}
-                onChange={(e) => update({ retryConditionExpr: e.target.value })}
-                disabled={!formData.isEnabled || !formData.retryEnabled}
-                placeholder="statusCode != 200"
-                invalid={!!errors.retryConditionExpr}
-              />
-            </FormField>
+      <div className="mt-4 space-y-2">
+        {isLoading ? (
+          <div className="rounded-md border border-dashed border-line bg-canvas-subtle/50 px-4 py-8 text-center text-[12.5px] text-ink-tertiary">
+            加载中…
           </div>
+        ) : items.length === 0 ? (
+          <div className="rounded-md border border-dashed border-line bg-canvas-subtle/50 px-4 py-10 text-center">
+            <div className="text-[13px] text-ink-secondary">还没有配置任何回调</div>
+            <div className="mt-1 text-[11.5px] text-ink-tertiary">
+              点击下方「新增回调」添加第一条
+            </div>
+          </div>
+        ) : (
+          items.map((it, idx) => (
+            <CallbackItemCard
+              key={it.id ?? `new-${idx}`}
+              index={idx}
+              item={it}
+              isExpanded={expanded.has(idx)}
+              chainEnabled={chainEnabled}
+              dragHandleProps={{
+                draggable: true,
+                onDragStart: onDragStart(idx),
+                onDragOver: onDragOver(idx),
+                onDrop: onDrop(idx),
+                onDragEnd: onDragEnd(),
+              }}
+              isDragOver={dragOverIndex === idx && dragIndex !== null && dragIndex !== idx}
+              isDragging={dragIndex === idx}
+              onToggleExpand={() => toggleExpand(idx)}
+              onChange={(next) => updateItem(idx, next)}
+              onRemove={() => removeItem(idx)}
+            />
+          ))
         )}
-      </Card>
 
-      <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
+        <Button
+          variant="secondary"
+          size="md"
+          onClick={addItem}
+          className="w-full mt-2"
+          disabled={!chainEnabled}
+        >
+          <Plus className="mr-1 h-3.5 w-3.5" />
+          新增回调
+        </Button>
+      </div>
+
+      <div className="mt-5 flex items-center justify-between border-t border-line pt-4">
         <button
           type="button"
-          onClick={handleDelete}
-          disabled={!serverCfg || deleteMut.isPending}
+          onClick={removeAll}
+          disabled={items.length === 0 || deleteAllMut.isPending}
           className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-[12.5px] text-danger-text transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Trash2 className="h-3.5 w-3.5" />
-          删除回调配置
+          清空全部
         </button>
         <div className="flex items-center gap-3">
           <span className="text-[12px] text-ink-subtle">
@@ -424,4 +374,25 @@ function CallbackPanelForm({
       </div>
     </div>
   );
+}
+
+function normalize(c: CallbackConfig): CallbackConfig {
+  return {
+    isEnabled: c.isEnabled ?? false,
+    name: c.name ?? null,
+    id: c.id,
+    sortOrder: c.sortOrder,
+    callbackUrl: c.callbackUrl ?? '',
+    callbackMethod: c.callbackMethod ?? 'POST',
+    callbackHeaders: c.callbackHeaders ?? {},
+    callbackBody: c.callbackBody ?? '',
+    delayType: c.delayType ?? 'fixed',
+    delayValue: c.delayValue ?? '5000',
+    retryEnabled: c.retryEnabled ?? false,
+    maxRetries: c.maxRetries ?? 3,
+    retryInterval: c.retryInterval ?? 5000,
+    retryStrategy: c.retryStrategy ?? 'fixed',
+    retryCondition: c.retryCondition ?? 'server_error',
+    retryConditionExpr: c.retryConditionExpr ?? '',
+  };
 }

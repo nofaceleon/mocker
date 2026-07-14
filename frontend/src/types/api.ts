@@ -228,6 +228,12 @@ export type SwaggerImportCommitResponse = {
 export type CallbackConditionPreset = 'always' | 'server_error' | 'success_only' | 'custom';
 
 export type CallbackConfig = {
+  /** 已存在回调的 id；新建时为空 */
+  id?: ID;
+  /** 友好标签（可空） */
+  name?: string | null;
+  /** 链路顺序（仅服务端权威返回；前端读取后展示即可） */
+  sortOrder?: number;
   isEnabled: boolean;
   callbackUrl: string;
   callbackMethod: HttpMethod;

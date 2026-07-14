@@ -13,7 +13,7 @@
 set -euo pipefail
 
 BASE="http://127.0.0.1:3000"
-LOG_DIR="$(mktemp -d -t callback-smoke)"
+LOG_DIR="$(mktemp -d -t callback-smoke-XXXXXX)"
 RECEIVED="$LOG_DIR/received.log"
 ECHO_PID=""
 PROJECT_ID=""
@@ -89,22 +89,32 @@ API_ID=$(curl -sS -X POST -H 'content-type: application/json' \
   | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 echo "  api_id=$API_ID"
 
-echo "▶ 4/6 配置回调（POST http://127.0.0.1:9888/cb，延迟 3s，body 含 traceId）"
+echo "▶ 4/6 配置回调链（先发 /cb，3s 后发 /cb2）"
 CB_BODY=$(cat <<EOF
-{"isEnabled":true,
- "callbackUrl":"http://127.0.0.1:9888/cb",
- "callbackMethod":"POST",
- "callbackHeaders":{"Content-Type":"application/json"},
- "callbackBody":"{\"traceId\":\"{{req.body.traceId}}\",\"result\":\"{{response.data}}\"}",
- "delayType":"fixed","delayValue":"3000",
- "retryEnabled":true,"maxRetries":2,"retryInterval":1500,
- "retryStrategy":"fixed","retryCondition":"server_error"}
+{"items":[
+ {"name":"通知-1","isEnabled":true,
+  "callbackUrl":"http://127.0.0.1:9888/cb",
+  "callbackMethod":"POST",
+  "callbackHeaders":{"Content-Type":"application/json"},
+  "callbackBody":"{\"traceId\":\"{{req.body.traceId}}\",\"result\":\"{{response.data}}\"}",
+  "delayType":"fixed","delayValue":"3000",
+  "retryEnabled":true,"maxRetries":2,"retryInterval":1500,
+  "retryStrategy":"fixed","retryCondition":"server_error"},
+ {"name":"通知-2","isEnabled":true,
+  "callbackUrl":"http://127.0.0.1:9888/cb2",
+  "callbackMethod":"POST",
+  "callbackHeaders":{"Content-Type":"application/json"},
+  "callbackBody":"{\"traceId\":\"{{req.body.traceId}}\",\"step\":2}",
+  "delayType":"fixed","delayValue":"2000",
+  "retryEnabled":false,"maxRetries":0,"retryInterval":1000,
+  "retryStrategy":"fixed","retryCondition":"server_error"}
+]}
 EOF
 )
-echo "  PUT /api/mock-apis/$API_ID/callback"
+echo "  PUT /api/mock-apis/$API_ID/callbacks"
 curl -sS -X PUT -H 'content-type: application/json' \
   -d "$CB_BODY" \
-  "$BASE/api/mock-apis/$API_ID/callback"
+  "$BASE/api/mock-apis/$API_ID/callbacks" | head -c 400
 echo ""
 
 echo "▶ 5/6 触发 mock 接口（应立即返回）"
@@ -115,27 +125,27 @@ curl -sS -X POST -H 'content-type: application/json' \
 echo ""
 echo "  triggered at $TIME"
 
-echo "▶ 6/6 等待 5s，验证 echo 收到回调"
-sleep 5
+echo "▶ 6/6 等待 8s，验证 echo 收到全部回调（含链式第 2 条）"
+sleep 8
 if [[ -s "$RECEIVED" ]]; then
   echo "  ✓ echo received:"
   cat "$RECEIVED"
   COUNT=$(wc -l < "$RECEIVED" | tr -d ' ')
-  if [[ "$COUNT" -lt 1 ]]; then
-    echo "✗ echo did not receive callback"; exit 1
+  if [[ "$COUNT" -lt 2 ]]; then
+    echo "✗ expected at least 2 callbacks (chain), got $COUNT"; exit 1
   fi
 else
   echo "✗ echo did not receive callback"; exit 1
 fi
 
-echo "▶ 校验 callback_tasks"
+echo "▶ 校验 callback_tasks（应有 2 条 sent）"
 TASK_JSON=$(curl -sS "$BASE/api/callback-tasks?apiId=$API_ID")
 echo "  $TASK_JSON"
-STATUS=$(echo "$TASK_JSON" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print(d["items"][0]["status"] if d["items"] else "EMPTY")')
-if [[ "$STATUS" == "sent" ]]; then
-  echo "  ✓ task status=sent"
+SENT_COUNT=$(echo "$TASK_JSON" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print(sum(1 for x in d["items"] if x["status"]=="sent"))')
+if [[ "$SENT_COUNT" -ge 2 ]]; then
+  echo "  ✓ both chain tasks sent"
 else
-  echo "✗ task status=$STATUS (expected sent)"; exit 1
+  echo "✗ expected >=2 sent tasks, got $SENT_COUNT"; exit 1
 fi
 
 echo ""

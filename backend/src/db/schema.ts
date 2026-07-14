@@ -170,6 +170,8 @@ export const callbackConfigs = sqliteTable(
     apiId: integer('api_id')
       .notNull()
       .references(() => mockApis.id, { onDelete: 'cascade' }),
+    name: text('name'),
+    sortOrder: integer('sort_order').notNull().default(0),
     isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(false),
   callbackUrl: text('callback_url'),
   callbackMethod: text('callback_method').notNull().default('POST'),
@@ -184,7 +186,7 @@ export const callbackConfigs = sqliteTable(
   retryCondition: text('retry_condition'),
   ...timestamps,
   },
-  (t) => [uniqueIndex('uniq_callback_api').on(t.apiId)],
+  (t) => [index('idx_cc_api_sort').on(t.apiId, t.sortOrder)],
 );
 
 // ---------------- 7. callback_tasks (P0 schema only) ----------------
@@ -232,6 +234,11 @@ export const callbackTasks = sqliteTable(
     attemptLogs: text('attempt_logs', { mode: 'json' }).$type<CallbackAttemptLog[]>().default([]),
     scheduledAt: integer('scheduled_at', { mode: 'timestamp_ms' }).notNull(),
     sentAt: integer('sent_at', { mode: 'timestamp_ms' }),
+    /**
+     * 渲染上下文：用于多回调链推进时，沿用原 API 调用的 req/response
+     * 模板变量（{{req.body.x}} 等）。
+     */
+    templateContext: text('template_context', { mode: 'json' }).$type<Record<string, unknown>>(),
     ...timestamps,
   },
   (t) => [
