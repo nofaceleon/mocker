@@ -220,6 +220,142 @@ export function exportProject(projectId: number, options: ExportOptions = {}): P
   };
 }
 
+type ImportRouteItem = {
+  method: string;
+  path: string;
+  name: string;
+  groupName: string;
+  isEnabled: boolean;
+};
+
+function collectImportRoutes(bundle: ProjectExportBundle): ImportRouteItem[] {
+  const routes: ImportRouteItem[] = [];
+  for (const g of bundle.featureGroups ?? []) {
+    for (const a of g.apis ?? []) {
+      if (!a?.method || typeof a.path !== 'string' || !a.path) {
+        throw new ApiError(
+          'INVALID_EXPORT',
+          `接口缺少 method/path：功能组「${g.name ?? '?'}」·「${a?.name ?? '?'}」`,
+          400,
+        );
+      }
+      routes.push({
+        method: a.method,
+        path: a.path,
+        name: a.name || a.path,
+        groupName: g.name ?? '',
+        isEnabled: a.isEnabled ?? true,
+      });
+    }
+  }
+  return routes;
+}
+
+/**
+ * 导入前校验 method+path：
+ * 1. 包内启用接口不得出现完全相同的 method+path
+ * 2. 不得与库中已启用接口冲突（overwrite 时排除将被删除的同名项目）
+ */
+function assertImportPathsOk(
+  db: ReturnType<typeof getDb>,
+  bundle: ProjectExportBundle,
+  excludeProjectId?: number,
+): void {
+  const enabled = collectImportRoutes(bundle).filter((r) => r.isEnabled);
+
+  const byKey = new Map<string, ImportRouteItem[]>();
+  for (const r of enabled) {
+    const key = `${r.method}\0${r.path}`;
+    const list = byKey.get(key) ?? [];
+    list.push(r);
+    byKey.set(key, list);
+  }
+
+  const internal = [...byKey.entries()]
+    .filter(([, list]) => list.length > 1)
+    .map(([, list]) => ({
+      method: list[0]!.method,
+      path: list[0]!.path,
+      apis: list.map((a) => ({ name: a.name, group: a.groupName })),
+    }));
+
+  if (internal.length > 0) {
+    const summary = internal
+      .slice(0, 3)
+      .map((d) => `${d.method} ${d.path}`)
+      .join('、');
+    throw new ApiError(
+      'ROUTE_CONFLICT',
+      `导入包内存在重复路由（method+path 完全相同）：${summary}${
+        internal.length > 3 ? ` 等 ${internal.length} 处` : ''
+      }。请修改后再导入。`,
+      409,
+      { kind: 'internal', conflicts: internal },
+    );
+  }
+
+  let existingApis = db
+    .select({
+      id: mockApis.id,
+      name: mockApis.name,
+      method: mockApis.method,
+      path: mockApis.path,
+      featureGroupId: mockApis.featureGroupId,
+    })
+    .from(mockApis)
+    .where(eq(mockApis.isEnabled, true))
+    .all();
+
+  if (excludeProjectId != null) {
+    const groupIds = new Set(
+      db
+        .select({ id: featureGroups.id })
+        .from(featureGroups)
+        .where(eq(featureGroups.projectId, excludeProjectId))
+        .all()
+        .map((g) => g.id),
+    );
+    existingApis = existingApis.filter((a) => !groupIds.has(a.featureGroupId));
+  }
+
+  const existingByKey = new Map(existingApis.map((a) => [`${a.method}\0${a.path}`, a]));
+  const external: Array<{
+    method: string;
+    path: string;
+    importName: string;
+    existingId: number;
+    existingName: string;
+  }> = [];
+
+  for (const r of enabled) {
+    const hit = existingByKey.get(`${r.method}\0${r.path}`);
+    if (hit) {
+      external.push({
+        method: r.method,
+        path: r.path,
+        importName: r.name,
+        existingId: hit.id,
+        existingName: hit.name,
+      });
+    }
+  }
+
+  if (external.length > 0) {
+    const summary = external
+      .slice(0, 3)
+      .map((d) => `${d.method} ${d.path}（与 #${d.existingId}「${d.existingName}」冲突）`)
+      .join('；');
+    throw new ApiError(
+      'ROUTE_CONFLICT',
+      `导入接口与现有启用路由冲突：${summary}${
+        external.length > 3 ? ` 等 ${external.length} 处` : ''
+      }。请修改 path、禁用冲突接口后再导入。`,
+      409,
+      { kind: 'external', conflicts: external },
+    );
+  }
+}
+
 export function importProject(
   bundle: ProjectExportBundle,
   options: { mode?: ImportMode; name?: string } = {},
@@ -254,6 +390,12 @@ export function importProject(
     if (mode === 'create') {
       throw new ApiError('CONFLICT', `项目名 "${targetName}" 已存在，请改名或选择覆盖/跳过`, 409);
     }
+  }
+
+  // 写入前校验 method+path；覆盖同名项目时排除其现有路由
+  assertImportPathsOk(db, bundle, mode === 'overwrite' && existing ? existing.id : undefined);
+
+  if (existing && mode === 'overwrite') {
     // overwrite: 删除后重建（级联）
     db.delete(projects).where(eq(projects.id, existing.id)).run();
   }

@@ -30,6 +30,7 @@ import {
   Empty,
   FormField,
   Input,
+  MethodBadge,
   Modal,
   PageHeader,
   StatCard,
@@ -48,7 +49,8 @@ import {
   type ProjectImportMode,
 } from '@/hooks/queries/use-projects';
 import { useCallbackStats } from '@/hooks/queries/use-callback-tasks';
-import type { Project } from '@/types/api';
+import { ApiError } from '@/lib/api';
+import type { HttpMethod, Project } from '@/types/api';
 import { AgentsGuideModal } from '@/components/AgentsGuideModal';
 
 export function ProjectsPage() {
@@ -454,6 +456,225 @@ const IMPORT_MODES: {
   },
 ];
 
+type PathConflict = {
+  method: string;
+  path: string;
+  apis: Array<{ name: string; group: string }>;
+};
+
+type ImportRouteItem = {
+  method: string;
+  path: string;
+  detail: string;
+};
+
+type ImportAlert = {
+  title: string;
+  description?: string;
+  tips?: string[];
+  routes?: ImportRouteItem[];
+};
+
+/** 包内启用接口的 method+path 完全重复 */
+function findInternalPathConflicts(bundle: ProjectExportBundle): PathConflict[] {
+  type Item = { method: string; path: string; name: string; group: string };
+  const byKey = new Map<string, Item[]>();
+
+  for (const g of bundle.featureGroups ?? []) {
+    const group = g as { name?: string; apis?: Array<Record<string, unknown>> };
+    const groupName = typeof group.name === 'string' ? group.name : '';
+    for (const a of group.apis ?? []) {
+      if (a.isEnabled === false) continue;
+      const method = typeof a.method === 'string' ? a.method : '';
+      const path = typeof a.path === 'string' ? a.path : '';
+      if (!method || !path) continue;
+      const key = `${method}\0${path}`;
+      const list = byKey.get(key) ?? [];
+      list.push({
+        method,
+        path,
+        name: typeof a.name === 'string' && a.name ? a.name : path,
+        group: groupName,
+      });
+      byKey.set(key, list);
+    }
+  }
+
+  return [...byKey.values()]
+    .filter((list) => list.length > 1)
+    .map((list) => ({
+      method: list[0]!.method,
+      path: list[0]!.path,
+      apis: list.map((a) => ({ name: a.name, group: a.group })),
+    }));
+}
+
+function internalConflictsToAlert(conflicts: PathConflict[]): ImportAlert {
+  return {
+    title: `包内路由冲突 · ${conflicts.length} 处`,
+    description: '同一导出包里，启用接口的 method + path 不能完全相同，否则 Mock 引擎无法区分请求。',
+    tips: [
+      '修改 JSON 中重复接口的 path，或关闭多余接口的 isEnabled',
+      '确认无重复后再重新选择文件导入',
+    ],
+    routes: conflicts.map((c) => ({
+      method: c.method,
+      path: c.path,
+      detail: c.apis
+        .map((a) => (a.group ? `${a.group} / ${a.name}` : a.name))
+        .join('  ·  '),
+    })),
+  };
+}
+
+function errorToImportAlert(err: unknown): ImportAlert {
+  if (err instanceof ApiError) {
+    if (err.code === 'ROUTE_CONFLICT') {
+      const details = err.details as
+        | {
+            kind?: 'internal' | 'external';
+            conflicts?: Array<Record<string, unknown>>;
+          }
+        | undefined;
+
+      if (details?.kind === 'internal' && Array.isArray(details.conflicts)) {
+        const routes: ImportRouteItem[] = details.conflicts.map((c) => {
+          const apis = Array.isArray(c.apis)
+            ? (c.apis as Array<{ name?: string; group?: string }>)
+                .map((a) => (a.group ? `${a.group} / ${a.name ?? '?'}` : (a.name ?? '?')))
+                .join('  ·  ')
+            : '';
+          return {
+            method: String(c.method ?? ''),
+            path: String(c.path ?? ''),
+            detail: apis || '包内重复',
+          };
+        });
+        return {
+          title: `包内路由冲突 · ${routes.length} 处`,
+          description:
+            '导出包内存在 method + path 完全相同的启用接口，无法导入。',
+          tips: ['修改 JSON 中重复接口的 path，或将多余接口设为 isEnabled: false'],
+          routes,
+        };
+      }
+
+      if (details?.kind === 'external' && Array.isArray(details.conflicts)) {
+        const routes: ImportRouteItem[] = details.conflicts.map((c) => ({
+          method: String(c.method ?? ''),
+          path: String(c.path ?? ''),
+          detail: `导入「${String(c.importName ?? '')}」与已有 #${String(c.existingId ?? '')}「${String(c.existingName ?? '')}」冲突`,
+        }));
+        return {
+          title: `与现有路由冲突 · ${routes.length} 处`,
+          description:
+            '导入接口的 method + path 与系统中已启用的接口完全相同，会互相抢流量。',
+          tips: [
+            '修改导入包中的 path，或先禁用/删除已有冲突接口',
+            '若是覆盖同名项目，请选择「覆盖重建」策略',
+          ],
+          routes,
+        };
+      }
+
+      return {
+        title: '路由冲突',
+        description: err.message,
+        tips: ['请调整 path，或禁用已有冲突接口后再试'],
+      };
+    }
+
+    if (err.code === 'CONFLICT') {
+      return {
+        title: '项目名已存在',
+        description: err.message,
+        tips: [
+          '修改上方「导入后项目名」',
+          '或改用「跳过 / 覆盖重建」策略',
+        ],
+      };
+    }
+
+    if (err.code === 'INVALID_EXPORT') {
+      return {
+        title: '导出文件无效',
+        description: err.message,
+        tips: ['请确认文件来自 MockHub 导出，或符合 AGENTS 对接指南格式'],
+      };
+    }
+
+    return {
+      title: '导入失败',
+      description: err.message,
+    };
+  }
+
+  return {
+    title: '导入失败',
+    description: err instanceof Error ? err.message : '未知错误',
+  };
+}
+
+function ImportAlertPanel({ alert }: { alert: ImportAlert }) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-danger-border bg-danger-soft">
+      <div className="flex items-start gap-2.5 px-3.5 py-3">
+        <div className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/80 text-danger">
+          <AlertTriangle className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-semibold text-danger">{alert.title}</div>
+          {alert.description && (
+            <p className="mt-1 text-[12px] leading-relaxed text-danger/90">{alert.description}</p>
+          )}
+        </div>
+      </div>
+
+      {alert.routes && alert.routes.length > 0 && (
+        <div className="border-t border-danger-border/60 bg-white/70 px-3 py-2.5">
+          <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-danger/70">
+            冲突路由
+          </div>
+          <ul className="max-h-44 space-y-2 overflow-auto scrollbar-modern">
+            {alert.routes.map((r, i) => (
+              <li
+                key={`${r.method}:${r.path}:${i}`}
+                className="rounded-md border border-line bg-white px-2.5 py-2 shadow-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <MethodBadge method={(r.method as HttpMethod) || 'GET'} />
+                  <code className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">
+                    {r.path}
+                  </code>
+                </div>
+                {r.detail && (
+                  <p className="mt-1.5 pl-0.5 text-[11.5px] leading-snug text-ink-tertiary">
+                    {r.detail}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {alert.tips && alert.tips.length > 0 && (
+        <div className="border-t border-danger-border/60 px-3.5 py-2.5">
+          <div className="mb-1 text-[11px] font-medium text-danger/70">建议处理</div>
+          <ul className="space-y-0.5 text-[12px] leading-relaxed text-danger/85">
+            {alert.tips.map((tip) => (
+              <li key={tip} className="flex gap-1.5">
+                <span className="shrink-0 text-danger/50">·</span>
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProjectImportModal({ onClose }: { onClose: () => void }) {
   const importMut = useImportProject();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -462,22 +683,36 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
   const [fileSize, setFileSize] = useState(0);
   const [mode, setMode] = useState<ProjectImportMode>('create');
   const [name, setName] = useState('');
-  const [parseErr, setParseErr] = useState<string | null>(null);
+  const [alert, setAlert] = useState<ImportAlert | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  const pathConflicts = useMemo(
+    () => (bundle ? findInternalPathConflicts(bundle) : []),
+    [bundle],
+  );
+
+  const displayAlert = useMemo(() => {
+    if (pathConflicts.length > 0) return internalConflictsToAlert(pathConflicts);
+    return alert;
+  }, [pathConflicts, alert]);
 
   const clearFile = () => {
     setBundle(null);
     setFileName('');
     setFileSize(0);
     setName('');
-    setParseErr(null);
+    setAlert(null);
     if (fileRef.current) fileRef.current.value = '';
   };
 
   const onFile = async (file: File | null) => {
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      setParseErr(`文件过大（${(file.size / 1024 / 1024).toFixed(1)} MB），最大支持 10 MB`);
+      setAlert({
+        title: '文件过大',
+        description: `当前 ${(file.size / 1024 / 1024).toFixed(1)} MB，最大支持 10 MB`,
+        tips: ['请压缩或拆分导出包后再试'],
+      });
       setBundle(null);
       setFileName('');
       return;
@@ -486,19 +721,30 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
       const text = await file.text();
       const json = JSON.parse(text) as ProjectExportBundle;
       if ((json.version !== 1 && json.version !== 2) || !json.project?.name) {
-        setParseErr('无效的导出文件：需要 version=1 或 2，且包含 project.name');
+        setAlert({
+          title: '无效的导出文件',
+          description: '需要 version 为 1 或 2，且包含 project.name 字段。',
+          tips: [
+            '请使用 MockHub「导出 JSON」生成的文件',
+            '或按 AGENTS 对接指南让 AI 生成合法项目包',
+          ],
+        });
         setBundle(null);
         setFileName(file.name);
         setFileSize(file.size);
         return;
       }
-      setParseErr(null);
+      setAlert(null);
       setBundle(json);
       setFileName(file.name);
       setFileSize(file.size);
       setName(json.project.name);
     } catch (e) {
-      setParseErr(e instanceof Error ? e.message : 'JSON 解析失败');
+      setAlert({
+        title: 'JSON 解析失败',
+        description: e instanceof Error ? e.message : '无法读取该文件',
+        tips: ['请确认文件是合法的 UTF-8 JSON 文本'],
+      });
       setBundle(null);
       setFileName(file.name);
       setFileSize(file.size);
@@ -507,10 +753,15 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
 
   const submit = async () => {
     if (!bundle) {
-      setParseErr('请先选择导出文件');
+      setAlert({
+        title: '尚未选择文件',
+        description: '请先上传 MockHub 项目导出 JSON。',
+      });
       return;
     }
+    if (pathConflicts.length > 0) return;
     try {
+      setAlert(null);
       const result = await importMut.mutateAsync({
         bundle,
         mode,
@@ -521,7 +772,9 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
       );
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '导入失败');
+      const next = errorToImportAlert(err);
+      setAlert(next);
+      toast.error(next.title);
     }
   };
 
@@ -545,7 +798,7 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
           <Button
             variant="primary"
             loading={importMut.isPending}
-            disabled={!bundle}
+            disabled={!bundle || pathConflicts.length > 0}
             onClick={submit}
           >
             导入
@@ -625,12 +878,7 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
           />
         </div>
 
-        {parseErr && (
-          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12.5px] text-red-700">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>{parseErr}</span>
-          </div>
-        )}
+        {displayAlert && <ImportAlertPanel alert={displayAlert} />}
 
         {bundle && (
           <div className="overflow-hidden rounded-lg border border-line bg-white">
