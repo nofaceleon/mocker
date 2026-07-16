@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Database, HardDrive, Info, RotateCcw, Trash2 } from 'lucide-react';
+import { Database, HardDrive, Info, RotateCcw, Trash2, Globe, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Button,
   Card,
   Empty,
+  FormField,
+  Input,
   PageHeader,
+  Select,
   StatCard,
   TagPill,
   confirm,
@@ -16,14 +19,58 @@ import {
   useDeleteBackup,
   useRestoreBackup,
 } from '@/hooks/queries/use-backups';
+import { api, unwrap } from '@/lib/api';
 import { config } from '@/lib/runtime-config';
+
+type ProbeResult = {
+  ok: boolean;
+  reachable: boolean;
+  status: number | null;
+  statusText: string | null;
+  elapsedMs: number;
+  contentType: string | null;
+  error: string | null;
+};
 
 export function SettingsPage() {
   const { data: backups, isLoading } = useBackups();
   const createMut = useCreateBackup();
   const restoreMut = useRestoreBackup();
   const deleteMut = useDeleteBackup();
-  const [tab, setTab] = useState<'backups' | 'runtime' | 'about'>('backups');
+  const [tab, setTab] = useState<'backups' | 'runtime' | 'tools' | 'about'>('backups');
+
+  const [probeUrl, setProbeUrl] = useState('https://');
+  const [probeMethod, setProbeMethod] = useState('GET');
+  const [probeLoading, setProbeLoading] = useState(false);
+  const [probeResult, setProbeResult] = useState<ProbeResult | null>(null);
+
+  const handleProbe = async () => {
+    const url = probeUrl.trim();
+    if (!url) {
+      toast.error('请输入 URL');
+      return;
+    }
+    setProbeLoading(true);
+    setProbeResult(null);
+    try {
+      const r = await unwrap(
+        await api.post<ProbeResult>('/admin/probe-url', {
+          url,
+          method: probeMethod,
+        }),
+      );
+      setProbeResult(r);
+      if (r.reachable) {
+        toast.success(r.ok ? `可访问 · HTTP ${r.status}` : `已连通 · HTTP ${r.status}`);
+      } else {
+        toast.error(r.error ?? '无法访问');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '探测失败');
+    } finally {
+      setProbeLoading(false);
+    }
+  };
 
   const handleBackup = async () => {
     try {
@@ -94,6 +141,13 @@ export function SettingsPage() {
           size="sm"
         >
           运行时
+        </Button>
+        <Button
+          variant={tab === 'tools' ? 'primary' : 'secondary'}
+          onClick={() => setTab('tools')}
+          size="sm"
+        >
+          工具
         </Button>
         <Button
           variant={tab === 'about' ? 'primary' : 'secondary'}
@@ -217,6 +271,78 @@ export function SettingsPage() {
               运行时配置由启动参数 / 环境变量 / 配置文件决定。修改后需重启服务生效，详情参见项目文档。
             </div>
           </div>
+        </Card>
+      )}
+
+      {tab === 'tools' && (
+        <Card
+          title="URL 连通性测试"
+          extra={
+            <Button variant="primary" size="sm" loading={probeLoading} onClick={handleProbe}>
+              <Play className="h-3 w-3" />
+              测试访问
+            </Button>
+          }
+        >
+          <p className="mb-4 text-[12.5px] leading-[1.7] text-ink-secondary">
+            由后端发起请求探测目标地址是否可达（绕过浏览器 CORS），适合验证回调 URL、第三方接口等。
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <FormField label="请求方法" className="sm:w-[120px]">
+              <Select value={probeMethod} onChange={(e) => setProbeMethod(e.target.value)}>
+                {['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'].map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="URL 地址" className="flex-1" required>
+              <Input
+                className="mono"
+                value={probeUrl}
+                onChange={(e) => setProbeUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void handleProbe();
+                }}
+                placeholder="https://example.com/health"
+              />
+            </FormField>
+          </div>
+
+          {probeResult && (
+            <div
+              className={`mt-4 rounded-lg border px-4 py-3 text-[12.5px] ${
+                probeResult.reachable
+                  ? probeResult.ok
+                    ? 'border-success-border bg-success-soft'
+                    : 'border-warning-border bg-warning-soft'
+                  : 'border-danger-border bg-danger-soft'
+              }`}
+            >
+              <div className="mb-2 flex items-center gap-2 font-medium text-ink">
+                <Globe className="h-3.5 w-3.5" />
+                {probeResult.reachable
+                  ? probeResult.ok
+                    ? '访问成功'
+                    : '已连通（非 2xx/3xx）'
+                  : '无法访问'}
+              </div>
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                <Row
+                  label="HTTP 状态"
+                  value={
+                    probeResult.status != null
+                      ? `${probeResult.status}${probeResult.statusText ? ` ${probeResult.statusText}` : ''}`
+                      : '—'
+                  }
+                />
+                <Row label="耗时" value={`${probeResult.elapsedMs} ms`} />
+                <Row label="Content-Type" value={probeResult.contentType ?? '—'} />
+                <Row label="错误" value={probeResult.error ?? '—'} />
+              </div>
+            </div>
+          )}
         </Card>
       )}
 

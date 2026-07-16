@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import path from 'node:path';
 import fs from 'node:fs';
+import axios from 'axios';
 import { config } from '../config/index.js';
 import { backup, restore, listBackups, deleteBackup } from '../utils/backup.js';
 import { closeDb, getDb } from '../db/index.js';
@@ -12,6 +13,26 @@ const router = Router();
 
 const restoreSchema = z.object({
   name: z.string().min(1),
+});
+
+const probeUrlSchema = z.object({
+  url: z
+    .string()
+    .min(1)
+    .max(2048)
+    .refine((v) => {
+      try {
+        const u = new URL(v);
+        return u.protocol === 'http:' || u.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    }, '请输入有效的 http(s) URL'),
+  method: z
+    .enum(['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'])
+    .optional()
+    .default('GET'),
+  timeoutMs: z.number().int().min(1000).max(30_000).optional().default(10_000),
 });
 
 // 创建备份
@@ -79,4 +100,57 @@ router.get(
   }),
 );
 
-export { router as adminRouter };
+// 探测给定 URL 是否可访问（服务端发起，绕过浏览器 CORS）
+router.post(
+  '/probe-url',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { url, method, timeoutMs } = probeUrlSchema.parse(req.body);
+    const started = Date.now();
+    try {
+      // 连通性探测只需状态码/头，用 stream 拿到响应后立刻丢弃 body，避免大响应触发 maxContentLength
+      const resp = await axios.request({
+        url,
+        method,
+        timeout: timeoutMs,
+        maxRedirects: 5,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        responseType: 'stream',
+        validateStatus: () => true,
+        headers: {
+          'User-Agent': 'MockStudio-URL-Probe/1.0',
+          Accept: '*/*',
+        },
+      });
+      const stream = resp.data as { destroy?: () => void } | null;
+      stream?.destroy?.();
+      const elapsedMs = Date.now() - started;
+      const status = resp.status;
+      res.success({
+        ok: status >= 200 && status < 400,
+        reachable: true,
+        status,
+        statusText: resp.statusText || null,
+        elapsedMs,
+        contentType: (resp.headers['content-type'] as string | undefined) ?? null,
+        error: null,
+      });
+    } catch (err) {
+      const elapsedMs = Date.now() - started;
+      const ax = err as { code?: string; message?: string };
+      const message = ax.message ?? (err instanceof Error ? err.message : String(err));
+      logger.info({ url, method, err: message, code: ax.code }, 'probe-url failed');
+      res.success({
+        ok: false,
+        reachable: false,
+        status: null,
+        statusText: null,
+        elapsedMs,
+        contentType: null,
+        error: ax.code ? `${ax.code}: ${message}` : message,
+      });
+    }
+  }),
+);
+
+export { router as adminRouter };

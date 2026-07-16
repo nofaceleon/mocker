@@ -184,7 +184,7 @@ const importSchema = z.object({
   mode: z.enum(['create', 'skip', 'overwrite']).optional().default('create'),
   name: z.string().min(1).max(100).optional(),
   bundle: z.object({
-    version: z.literal(EXPORT_VERSION),
+    version: z.union([z.literal(EXPORT_VERSION), z.literal(1)]),
     exportedAt: z.string().optional(),
     project: z.object({
       name: z.string().min(1).max(100),

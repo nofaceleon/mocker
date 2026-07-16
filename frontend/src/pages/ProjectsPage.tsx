@@ -433,8 +433,8 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
     try {
       const text = await file.text();
       const json = JSON.parse(text) as ProjectExportBundle;
-      if (json.version !== 1 || !json.project?.name) {
-        setParseErr('无效的导出文件：需要 version=1 且包含 project.name');
+      if ((json.version !== 1 && json.version !== 2) || !json.project?.name) {
+        setParseErr('无效的导出文件：需要 version=1 或 2，且包含 project.name');
         setBundle(null);
         return;
       }
@@ -493,7 +493,7 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
       <div className="space-y-4">
         <FormField
           label="导出文件"
-          hint="MockHub 项目 JSON（version=1）"
+          hint="MockHub 项目 JSON（version=1 或 2）"
           error={parseErr ?? undefined}
         >
           <input
