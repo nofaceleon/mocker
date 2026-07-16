@@ -31,6 +31,7 @@ import {
   useDropBusinessColumn,
   useDropBusinessTable,
   useRenameBusinessColumn,
+  useUpdateBusinessRow,
   type BusinessTableMeta,
   type ColumnType,
 } from '@/hooks/queries/use-data-browser';
@@ -103,7 +104,7 @@ export function DataPage() {
     <div className="page-container">
       <PageHeader
         title="数据管理"
-        description="查看与清理数据联动产生的业务表数据"
+        description="查看、编辑与清理数据联动产生的业务表数据"
         actions={
           <div className="flex items-center gap-2">
             <span className="text-[12px] text-ink-tertiary">项目</span>
@@ -255,6 +256,7 @@ function TableDetail({
     q: qApplied,
   });
   const deleteMut = useDeleteBusinessRow();
+  const updateMut = useUpdateBusinessRow();
   const clearMut = useClearBusinessTable();
   const dropTableMut = useDropBusinessTable();
 
@@ -309,6 +311,26 @@ function TableDetail({
       if (rows.length === 1 && page > 1) setPage((p) => p - 1);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '删除失败');
+    }
+  };
+
+  const handleUpdateCell = async (
+    rowId: number,
+    column: string,
+    raw: string,
+    colType: string,
+  ) => {
+    try {
+      const value = parseCellInput(raw, colType);
+      await updateMut.mutateAsync({
+        table: tableName,
+        rowId,
+        patch: { [column]: value },
+      });
+      toast.success('已保存');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '保存失败');
+      throw err;
     }
   };
 
@@ -489,11 +511,24 @@ function TableDetail({
                 const rowId = Number(row.id);
                 return (
                   <tr key={Number.isFinite(rowId) ? rowId : idx} className="hover:bg-canvas">
-                    {columns.map((c) => (
-                      <td key={c.name} className="max-w-[280px]">
-                        {renderCell(row[c.name], c.pk)}
-                      </td>
-                    ))}
+                    {columns.map((c) => {
+                      const editable =
+                        Number.isFinite(rowId) && !c.pk && !RESERVED_COLS.has(c.name);
+                      return (
+                        <td key={c.name} className="max-w-[280px]">
+                          {editable ? (
+                            <EditableCell
+                              value={row[c.name]}
+                              isPk={!!c.pk}
+                              disabled={updateMut.isPending}
+                              onSave={(raw) => handleUpdateCell(rowId, c.name, raw, c.type || 'TEXT')}
+                            />
+                          ) : (
+                            renderCell(row[c.name], c.pk)
+                          )}
+                        </td>
+                      );
+                    })}
                     <td>
                       <button
                         type="button"
@@ -736,6 +771,123 @@ function SchemaEditorModal({
   );
 }
 
+function cellToEditText(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'object') {
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return String(v);
+    }
+  }
+  return String(v);
+}
+
+function parseCellInput(raw: string, colType: string): string | number | boolean | null {
+  const t = raw.trim();
+  if (t === '' || t.toUpperCase() === 'NULL') return null;
+  const upper = colType.toUpperCase();
+  if (upper.includes('INT')) {
+    const n = Number(t);
+    if (!Number.isFinite(n) || !Number.isInteger(n)) {
+      throw new Error('请输入整数');
+    }
+    return n;
+  }
+  if (upper.includes('REAL') || upper.includes('FLOAT') || upper.includes('DOUBLE')) {
+    const n = Number(t);
+    if (!Number.isFinite(n)) {
+      throw new Error('请输入数字');
+    }
+    return n;
+  }
+  if (t === 'true') return true;
+  if (t === 'false') return false;
+  return raw;
+}
+
+function EditableCell({
+  value,
+  isPk,
+  disabled,
+  onSave,
+}: {
+  value: unknown;
+  isPk: boolean;
+  disabled?: boolean;
+  onSave: (raw: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = () => {
+    if (disabled || saving) return;
+    setDraft(cellToEditText(value));
+    setEditing(true);
+  };
+
+  const cancel = () => {
+    setEditing(false);
+    setDraft('');
+  };
+
+  const commit = async () => {
+    const original = cellToEditText(value);
+    if (draft === original) {
+      cancel();
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(draft);
+      setEditing(false);
+    } catch {
+      /* toast already shown */
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        disabled={saving}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          void commit();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            void commit();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancel();
+          }
+        }}
+        className="form-input mono h-7 w-full min-w-[80px] !text-[12px]"
+        title="Enter 保存 · Esc 取消 · 空或 NULL 置空"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onDoubleClick={startEdit}
+      disabled={disabled}
+      className="group flex w-full max-w-full items-center gap-1 rounded px-0.5 py-0.5 text-left transition-colors hover:bg-canvas-subtle disabled:opacity-50"
+      title="双击编辑"
+    >
+      <span className="min-w-0 flex-1 truncate">{renderCell(value, isPk)}</span>
+      <Pencil className="h-2.5 w-2.5 flex-shrink-0 text-ink-subtle opacity-0 transition-opacity group-hover:opacity-100" />
+    </button>
+  );
+}
+
 function renderCell(v: unknown, isPk: boolean = false) {
   if (v === null || v === undefined) {
     return <span className="text-ink-subtle">NULL</span>;
@@ -743,7 +895,7 @@ function renderCell(v: unknown, isPk: boolean = false) {
   if (typeof v === 'object') {
     const json = JSON.stringify(v);
     return (
-      <span className="cursor-pointer truncate font-mono text-[11.5px] text-ink-secondary" title={json}>
+      <span className="truncate font-mono text-[11.5px] text-ink-secondary" title={json}>
         {`{ ${Object.keys(v as object).slice(0, 3).join(', ')}${Object.keys(v as object).length > 3 ? ', ...' : ''} }`}
       </span>
     );

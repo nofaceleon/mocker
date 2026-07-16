@@ -189,6 +189,51 @@ router.get(
   }),
 );
 
+// 更新单行字段（按 id）
+router.patch(
+  '/data-browser/tables/:tableName/rows/:rowId',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { tableName, rowId } = rowIdParamSchema.parse(req.params);
+    assertBusinessTable(tableName);
+    const patch = updateRowSchema.parse(req.body ?? {});
+    const sqlite = getRawSqlite();
+    const columns = listColumns(sqlite, tableName);
+    const colNames = new Set(columns.map((c) => c.name));
+
+    const entries = Object.entries(patch).filter(([, v]) => v !== undefined);
+    if (entries.length === 0) {
+      throw new ApiError('BAD_REQUEST', '至少提供一个要更新的字段', 400);
+    }
+
+    for (const [key] of entries) {
+      if (isReservedColumn(key) || key === 'id') {
+        throw new ApiError('FORBIDDEN', `列 ${key} 为系统保留字段，不可修改`, 403);
+      }
+      if (!colNames.has(key)) {
+        throw new ApiError('BAD_REQUEST', `列 ${key} 不存在`, 400);
+      }
+      validateIdentifier(key);
+    }
+
+    const setClause = entries.map(([k]) => `"${k}" = ?`).join(', ');
+    const values = entries.map(([, v]) => {
+      if (v === null) return null;
+      if (typeof v === 'object') return JSON.stringify(v);
+      return v;
+    });
+    const info = sqlite
+      .prepare(`UPDATE "${tableName}" SET ${setClause}, updated_at = ? WHERE id = ?`)
+      .run(...values, Date.now(), rowId);
+    if (info.changes === 0) {
+      throw new ApiError('NOT_FOUND', `行 id=${rowId} 不存在`, 404);
+    }
+    const row = sqlite
+      .prepare(`SELECT * FROM "${tableName}" WHERE id = ?`)
+      .get(rowId) as Record<string, unknown> | undefined;
+    res.success({ table: tableName, id: rowId, row });
+  }),
+);
+
 // 删除单行（按 id）
 router.delete(
   '/data-browser/tables/:tableName/rows/:rowId',
@@ -232,6 +277,11 @@ router.delete(
     db.update(mockApis).set({ dataTable: null }).where(eq(mockApis.dataTable, tableName)).run();
     res.success({ table: tableName, deleted: true });
   }),
+);
+
+const updateRowSchema = z.record(
+  z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/),
+  z.union([z.string(), z.number(), z.boolean(), z.null()]),
 );
 
 const addColumnSchema = z.object({

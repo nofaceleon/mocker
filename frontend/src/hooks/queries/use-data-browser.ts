@@ -59,6 +59,26 @@ export function useBusinessTableRows(
   });
 }
 
+export function useUpdateBusinessRow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      table: string;
+      rowId: number;
+      patch: Record<string, string | number | boolean | null>;
+    }) =>
+      unwrap(
+        await api.patch<{ table: string; id: number; row: Record<string, unknown> }>(
+          `/data-browser/tables/${vars.table}/rows/${vars.rowId}`,
+          vars.patch,
+        ),
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['data-browser'] });
+    },
+  });
+}
+
 export function useDeleteBusinessRow() {
   const qc = useQueryClient();
   return useMutation({
