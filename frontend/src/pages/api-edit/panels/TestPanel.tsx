@@ -504,6 +504,32 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         </div>
       )}
 
+      {result?.routeConflict && (
+        <div className="mt-3 flex items-start gap-2 rounded-md border border-warning-border bg-warning-soft px-3 py-2.5 text-[12.5px] text-warning">
+          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+          <div className="min-w-0 space-y-1">
+            <div className="font-medium">路由冲突（method + path 完全相同）</div>
+            <div className="leading-relaxed opacity-90">{result.routeConflict.message}</div>
+            <div className="text-[11.5px] opacity-80">
+              冲突接口：
+              {result.routeConflict.apis.map((a, i) => (
+                <span key={a.id}>
+                  {i > 0 ? '、' : ''}
+                  <strong>
+                    #{a.id} {a.method} {a.path}
+                  </strong>
+                  （{a.name}）
+                </span>
+              ))}
+            </div>
+            <div className="text-[11.5px] opacity-70">
+              在线测试已强制使用当前接口 #{result.apiId}；真实请求会命中 #
+              {result.routeConflict.winnerId}。请禁用或修改重复 path。
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SSE事件流显示 */}
       {isSSE && (sseEvents.length > 0 || sseConnected) && (
         <Card

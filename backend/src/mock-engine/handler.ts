@@ -4,8 +4,16 @@ import { and, asc, eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { requestLogs, callbackConfigs, type MockApi } from '../db/schema.js';
 import { logger } from '../utils/logger.js';
-import { matchBest, type Candidate } from './matcher.js';
+import {
+  matchBest,
+  matchSingle,
+  findExactPathConflicts,
+  buildRouteConflict,
+  type Candidate,
+  type RouteConflict,
+} from './matcher.js';
 import { registry } from './registry.js';
+import { compileRoute } from './router.js';
 import { extractContext, type RequestContext } from './request.js';
 import { validate, buildFailResponse } from './validator.js';
 import {
@@ -43,8 +51,8 @@ export async function handleMockRequest(
     const method = req.method;
 
     registry.ensureLoaded();
-    const matched = matchBest(method, path, registry.list() as Candidate[]);
-    if (!matched) {
+    const result = matchBest(method, path, registry.list() as Candidate[]);
+    if (!result) {
       // 不静默吞掉，统一返回 404 但仍写日志（apiId = null）
       sendNotFound(res, method, path);
       writeLogSafely({
@@ -64,7 +72,19 @@ export async function handleMockRequest(
       return;
     }
 
-    await executeMatched(req, res, matched.api, matched.params, start, meta);
+    const routeConflict = buildRouteConflict(
+      result.matched.api,
+      result.exactPathConflicts,
+    );
+    await executeMatched(
+      req,
+      res,
+      result.matched.api,
+      result.matched.params,
+      start,
+      meta,
+      routeConflict,
+    );
   } catch (err) {
     logger.error({ err, path: req.path, method: req.method }, 'mock engine crashed');
     if (!res.headersSent) {
@@ -76,6 +96,45 @@ export async function handleMockRequest(
   }
 }
 
+/**
+ * 按指定 API 定义直接执行（用于在线测试）。
+ * 不走全局路由匹配，避免同 path 下 id 更小的冲突接口抢走请求。
+ * 若存在 method+path 完全相同的其它启用接口，仍会写入冲突提示头。
+ */
+export async function executeMockApi(
+  api: MockApi,
+  req: Request,
+  res: Response,
+): Promise<RouteConflict | null> {
+  const start = Date.now();
+  const meta = extractRequestMeta(req);
+  try {
+    registry.ensureLoaded();
+    const others = findExactPathConflicts(
+      api.method,
+      api.path,
+      registry.list() as Candidate[],
+      api.id,
+    );
+    const routeConflict = buildRouteConflict(api, others, { forced: true });
+    const path = req.path || '/';
+    const compiled = compileRoute(api.path);
+    const matched = matchSingle({ api, compiled }, api.method, path);
+    const pathParams = matched?.params ?? {};
+    await executeMatched(req, res, api, pathParams, start, meta, routeConflict);
+    return routeConflict;
+  } catch (err) {
+    logger.error({ err, apiId: api.id, path: req.path, method: req.method }, 'executeMockApi failed');
+    if (!res.headersSent) {
+      res.status(500).json({
+        code: 'INTERNAL_ERROR',
+        message: err instanceof Error ? err.message : 'mock engine failed',
+      });
+    }
+    return null;
+  }
+}
+
 async function executeMatched(
   req: Request,
   res: Response,
@@ -83,7 +142,10 @@ async function executeMatched(
   pathParams: Record<string, string>,
   start: number,
   meta: RequestMeta,
+  routeConflict: RouteConflict | null = null,
 ): Promise<void> {
+  applyRouteConflictHeaders(res, api, routeConflict);
+
   // 1. 提取参数
   const reqCtx = extractContext(req, pathParams);
 
@@ -454,6 +516,32 @@ function sendNotFound(res: Response, method: string, path: string): void {
     code: 'NOT_FOUND',
     message: `No mock matched ${method} ${path}`,
   });
+}
+
+/** 写入命中接口 id；若有完全相同 path 冲突则打明显提示头并打 warn 日志 */
+function applyRouteConflictHeaders(
+  res: Response,
+  api: MockApi,
+  routeConflict: RouteConflict | null,
+): void {
+  res.setHeader('X-Mock-Api-Id', String(api.id));
+  if (!routeConflict) return;
+
+  res.setHeader('X-Mock-Route-Conflict', 'true');
+  res.setHeader(
+    'X-Mock-Route-Conflict-Apis',
+    routeConflict.apis.map((a) => String(a.id)).join(','),
+  );
+  res.setHeader('X-Mock-Route-Conflict-Message', encodeURIComponent(routeConflict.message));
+  logger.warn(
+    {
+      winnerId: routeConflict.winnerId,
+      conflictIds: routeConflict.apis.map((a) => a.id),
+      method: api.method,
+      path: api.path,
+    },
+    routeConflict.message,
+  );
 }
 
 function unwrapResult(r: ReturnType<typeof execute>): unknown {

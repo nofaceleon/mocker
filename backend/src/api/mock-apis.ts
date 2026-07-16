@@ -16,7 +16,7 @@ import {
   RESPONSE_OPERATORS,
 } from '../db/schema.js';
 import { ApiError, asyncHandler } from '../middleware/error-handler.js';
-import { handleMockRequest } from '../mock-engine/handler.js';
+import { executeMockApi } from '../mock-engine/handler.js';
 import { registry } from '../mock-engine/index.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
@@ -462,7 +462,8 @@ router.post(
       headersSent: false,
     } as unknown as Response;
 
-    await handleMockRequest(fakeReq, fakeRes, (() => {}) as never);
+    // 按当前接口 id 直接执行，避免同 path 冲突时被其它接口抢走
+    const routeConflict = await executeMockApi(api, fakeReq, fakeRes);
     res.success({
       apiId: api.id,
       method: api.method,
@@ -470,6 +471,7 @@ router.post(
       responseStatus: responseState.status,
       responseHeaders: responseState.headers,
       responseBody: responseState.body,
+      routeConflict: routeConflict ?? null,
     });
   }),
 );

@@ -16,6 +16,7 @@ import {
   Search,
   SquareCheck,
   Trash2,
+  Sparkles,
   Upload,
   XCircle,
 } from 'lucide-react';
@@ -54,6 +55,7 @@ import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/cn';
 import type { FeatureGroup, MockApi } from '@/types/api';
 import { SwaggerImportModal } from '@/components/SwaggerImportModal';
+import { AgentsEditModal } from '@/components/AgentsEditModal';
 import { buildMockRequestSample } from '@/lib/mock-request-sample';
 import { copyToClipboard } from '@/lib/clipboard';
 
@@ -67,6 +69,7 @@ export function ProjectDetailPage() {
   const setSelectedGroup = useUiStore((s) => s.setSelectedFeatureGroup);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [sidebarSearch, setSidebarSearch] = useState('');
+  const [agentsEditOpen, setAgentsEditOpen] = useState(false);
 
   // 首次进入或组列表变化时，默认选中第一个
   useEffect(() => {
@@ -121,7 +124,7 @@ export function ProjectDetailPage() {
       />
 
       <main className="flex-1 overflow-y-auto bg-canvas">
-        <div className="border-b border-line bg-white/85 px-6 py-3 backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-white/85 px-6 py-3 backdrop-blur">
           <Breadcrumb
             items={[
               { label: '项目', to: '/projects' },
@@ -129,6 +132,10 @@ export function ProjectDetailPage() {
               ...(activeGroup ? [{ label: activeGroup.name, current: true }] : []),
             ]}
           />
+          <Button variant="secondary" size="sm" onClick={() => setAgentsEditOpen(true)}>
+            <Sparkles className="h-3.5 w-3.5" />
+            AI 对话编辑
+          </Button>
         </div>
 
         {activeGroup ? (
@@ -159,6 +166,12 @@ export function ProjectDetailPage() {
           onClose={() => setEditingGroup(null)}
         />
       )}
+      <AgentsEditModal
+        open={agentsEditOpen}
+        onClose={() => setAgentsEditOpen(false)}
+        projectId={pid}
+        projectName={project.name}
+      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename);
  * 把 MockHub 给 AI 用的「AGENTS 对接指南」资源以正确 Content-Type 暴露。
  * - /agents-guide.md            → text/markdown; charset=utf-8
  * - /agents-guide.example.json  → application/json; charset=utf-8
+ * - /agents-edit.md             → text/markdown; charset=utf-8
  *
  * 由 frontend dev server 通过 proxy 转发到 :3000，prod 则由 Express 直接服务。
  * 显式设 charset 是为了绕开某些浏览器对 .md / .json 默认按本地编码解码导致中文乱码的问题。
@@ -44,6 +45,7 @@ const ASSETS: Record<string, Asset> = {
     filename: 'agents-guide.example.json',
     contentType: 'application/json; charset=utf-8',
   },
+  '/agents-edit.md': { filename: 'agents-edit.md', contentType: 'text/markdown; charset=utf-8' },
 };
 
 function serveAsset(asset: Asset) {

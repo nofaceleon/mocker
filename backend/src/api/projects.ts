@@ -1,8 +1,15 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { eq, desc, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import { projects, featureGroups, mockApis, mockData, requestLogs } from '../db/schema.js';
+import {
+  projects,
+  featureGroups,
+  mockApis,
+  requestLogs,
+  callbackConfigs,
+  HTTP_METHODS,
+} from '../db/schema.js';
 import { ApiError, asyncHandler } from '../middleware/error-handler.js';
 import {
   exportProject,
@@ -11,6 +18,7 @@ import {
   type ProjectExportBundle,
 } from '../services/project-export.js';
 import { registry } from '../mock-engine/registry.js';
+import { config } from '../config/index.js';
 
 const router = Router();
 
@@ -75,6 +83,165 @@ router.get(
       .orderBy(featureGroups.sortOrder, featureGroups.id)
       .all();
     res.success({ ...project, featureGroups: groups });
+  }),
+);
+
+/**
+ * AI 对话编辑：项目全景树（轻量列表，不含大字段）。
+ * 改接口前先调此接口定位 featureGroupId / apiId。
+ */
+router.get(
+  '/:id/agent-tree',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = idParamSchema.parse(req.params);
+    const db = getDb();
+    const project = notFoundOr(
+      db.select().from(projects).where(eq(projects.id, id)).get(),
+      id,
+    );
+
+    const groups = db
+      .select()
+      .from(featureGroups)
+      .where(eq(featureGroups.projectId, id))
+      .orderBy(asc(featureGroups.sortOrder), asc(featureGroups.id))
+      .all();
+
+    const groupIds = groups.map((g) => g.id);
+    const apis =
+      groupIds.length === 0
+        ? []
+        : db
+            .select({
+              id: mockApis.id,
+              featureGroupId: mockApis.featureGroupId,
+              name: mockApis.name,
+              description: mockApis.description,
+              protocol: mockApis.protocol,
+              method: mockApis.method,
+              path: mockApis.path,
+              isEnabled: mockApis.isEnabled,
+              sortOrder: mockApis.sortOrder,
+              dataOp: mockApis.dataOp,
+              dataTable: mockApis.dataTable,
+            })
+            .from(mockApis)
+            .where(inArray(mockApis.featureGroupId, groupIds))
+            .orderBy(asc(mockApis.sortOrder), asc(mockApis.id))
+            .all();
+
+    const apiIds = apis.map((a) => a.id);
+    const enabledCallbacks =
+      apiIds.length === 0
+        ? []
+        : db
+            .select({ apiId: callbackConfigs.apiId })
+            .from(callbackConfigs)
+            .where(
+              and(inArray(callbackConfigs.apiId, apiIds), eq(callbackConfigs.isEnabled, true)),
+            )
+            .all();
+    const callbackSet = new Set(enabledCallbacks.map((c) => c.apiId));
+
+    const host = req.get('host') || `localhost:${config.port}`;
+    const protocol = req.protocol || 'http';
+    const baseUrl = `${protocol}://${host}`;
+
+    const apisByGroup = new Map<number, typeof apis>();
+    for (const api of apis) {
+      const list = apisByGroup.get(api.featureGroupId) ?? [];
+      list.push(api);
+      apisByGroup.set(api.featureGroupId, list);
+    }
+
+    res.success({
+      project: {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+      },
+      baseUrl,
+      featureGroups: groups.map((g) => ({
+        id: g.id,
+        name: g.name,
+        description: g.description,
+        sortOrder: g.sortOrder,
+        apis: (apisByGroup.get(g.id) ?? []).map((a) => ({
+          id: a.id,
+          name: a.name,
+          description: a.description,
+          protocol: a.protocol,
+          method: a.method,
+          path: a.path,
+          isEnabled: a.isEnabled,
+          sortOrder: a.sortOrder,
+          dataOp: a.dataOp,
+          dataTable: a.dataTable,
+          hasCallback: callbackSet.has(a.id),
+          fullUrl: `${baseUrl}${a.path}`,
+        })),
+      })),
+    });
+  }),
+);
+
+/**
+ * AI 对话编辑：按 method + path 在项目内定位接口。
+ * GET /api/projects/:id/mock-apis?method=POST&path=/face
+ */
+const agentLookupQuerySchema = z.object({
+  method: z.enum(HTTP_METHODS).optional(),
+  path: z.string().min(1).max(500).optional(),
+  name: z.string().min(1).max(100).optional(),
+});
+
+router.get(
+  '/:id/mock-apis',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = idParamSchema.parse(req.params);
+    const q = agentLookupQuerySchema.parse(req.query);
+    const db = getDb();
+    const project = notFoundOr(
+      db.select({ id: projects.id }).from(projects).where(eq(projects.id, id)).get(),
+      id,
+    );
+
+    const groups = db
+      .select({ id: featureGroups.id })
+      .from(featureGroups)
+      .where(eq(featureGroups.projectId, project.id))
+      .all();
+    const groupIds = groups.map((g) => g.id);
+    if (groupIds.length === 0) {
+      res.success([]);
+      return;
+    }
+
+    let rows = db
+      .select({
+        id: mockApis.id,
+        featureGroupId: mockApis.featureGroupId,
+        name: mockApis.name,
+        description: mockApis.description,
+        protocol: mockApis.protocol,
+        method: mockApis.method,
+        path: mockApis.path,
+        isEnabled: mockApis.isEnabled,
+        sortOrder: mockApis.sortOrder,
+      })
+      .from(mockApis)
+      .where(inArray(mockApis.featureGroupId, groupIds))
+      .orderBy(asc(mockApis.sortOrder), asc(mockApis.id))
+      .all();
+
+    if (q.method) rows = rows.filter((r) => r.method === q.method);
+    if (q.path) rows = rows.filter((r) => r.path === q.path);
+    if (q.name) {
+      const keyword = q.name.toLowerCase();
+      rows = rows.filter((r) => r.name.toLowerCase().includes(keyword));
+    }
+
+    res.success(rows);
   }),
 );
 

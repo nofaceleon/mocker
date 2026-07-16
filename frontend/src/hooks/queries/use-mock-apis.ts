@@ -102,6 +102,19 @@ export type TestApiInput = {
   headers?: Record<string, string>;
 };
 
+export type RouteConflictApi = {
+  id: ID;
+  name: string;
+  method: string;
+  path: string;
+};
+
+export type RouteConflict = {
+  message: string;
+  apis: RouteConflictApi[];
+  winnerId: ID;
+};
+
 export type TestApiOutput = {
   apiId: ID;
   method: HttpMethod;
@@ -109,6 +122,8 @@ export type TestApiOutput = {
   responseStatus: number;
   responseHeaders: Record<string, string>;
   responseBody: unknown;
+  /** method+path 与其它启用接口完全相同时返回 */
+  routeConflict?: RouteConflict | null;
 };
 
 export function useTestMockApi() {
