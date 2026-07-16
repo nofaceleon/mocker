@@ -57,26 +57,27 @@ Project 1───* FeatureGroup 1───* MockApi ─┬─ * CallbackConfig�
 | `responseContentType` | string | – | 默认 `application/json` |
 | `responseHeaders` | object \| null | – | 额外响应头 |
 | `responseBody` | any | – | 默认响应体；HTTP/SSE/WS 含义不同，详见 §5 |
-| `validationRules` | object \| null | – | 校验规则，详见 §6 |
+| `validationRules` | object \| null | – | 校验规则，详见 §7 |
 | `dataOp` | enum | – | `none` \| `insert` \| `select` \| `update` \| `delete` |
 | `dataTable` | string \| null | – | 业务表名；首次 insert 时自动建表 |
 | `dataWhere` | object \| null | – | 等值匹配条件 |
-| `dataPayload` | object \| null | – | insert/update 写入字段模板，详见 §7 |
-| `script` | string \| null | – | 自定义脚本，详见 §8 |
+| `dataPayload` | object \| null | – | insert/update 写入字段模板，详见 §8 |
+| `script` | string \| null | – | 自定义脚本，详见 §10 |
 | `responses` | array \| null | – | 多响应配置，详见 §9 |
-| `callbacks` | array | – | 延时回调，详见 §10 |
+| `callbacks` | array | – | 延时回调，详见 §11 |
 
 ## 4. 路径匹配规则
 
 - `/users`：精确匹配（优先级最高）
 - `/users/:id`：参数匹配，捕获 :id
 - `/static/*`：通配符匹配剩余路径
-- 优先级：精确 < 参数 < 通配符；同精度内按 `sortOrder`
+- 优先级：精确 > 参数 > 通配符；同精度内按 `sortOrder`
 
 ## 5. responseBody 三种协议的语义
 
 ### 5.1 HTTP（最常见）
-任意 JSON 值，直接作为响应体返回。
+任意 JSON 值，直接作为响应体返回。**字段名/结构必须贴近用户描述的真实响应**，
+不要编造与业务无关的 `foo/bar`。能用模板就用 `{{req.body.x}}` 回显请求字段。
 
 ### 5.2 WebSocket
 `responseBody` 是 **WsConfig 对象**：
@@ -140,25 +141,58 @@ Project 1───* FeatureGroup 1───* MockApi ─┬─ * CallbackConfig�
 例：`{ "msg": "hello {{req.body.name}}" }` → `{ "msg": "hello 张三" }`
 例：`{ "id": "{{req.body.name}}_{{req.body.age}}" }` → 字符串拼接
 
-## 7. 参数校验 validationRules
+## 7. 参数校验 validationRules（极易出错，请严格遵守）
 
 ```json
 {
   "isEnabled": true,
   "query":  [{ "name": "page", "type": "number", "default": 1, "min": 1 }],
-  "body":   [{ "name": "name", "type": "string", "required": true, "max": 50 }],
-  "path":   [{ "name": "id", "type": "string", "required": true }],
-  "header": [{ "name": "authorization", "type": "string", "required": true }],
+  "body":   [
+    { "name": "name", "type": "string", "required": true, "min": 1, "max": 50, "default": "demo" },
+    { "name": "age", "type": "number", "required": false, "min": 0, "max": 150, "default": 18 }
+  ],
+  "path":   [{ "name": "id", "type": "string", "required": true, "default": "1" }],
+  "header": [{ "name": "authorization", "type": "string", "required": true, "default": "Bearer demo-token" }],
   "failStatus": 400,
   "failMessage": "参数校验失败"
 }
 ```
 
-- `type`：`string` `number` `boolean` `array` `object`
-- 字符串规则：`min` `max` `pattern`（正则） `enum` `default`
-- 数字规则：`min` `max` `enum` `default`
-- 失败响应默认 400，结构：`{ code:"VALIDATION_ERROR", message, errors:[...] }`
-- 字段名要和请求里的 key 一致；body/query 会自动转驼峰，规则 name 也写驼峰
+### 7.1 字段说明
+
+| 字段 | 说明 |
+|---|---|
+| `name` | 参数名，**必须与真实请求 key 一致**；body/query 引擎会转驼峰，规则 name 也写驼峰 |
+| `type` | `string` `number` `boolean` `array` `object` |
+| `required` | 是否必填 |
+| `default` | **强烈建议每个规则都写**。缺省时引擎会填入；在线测试也会用它生成假数据 |
+| `min` / `max` | string=长度；number=数值范围 |
+| `pattern` | 正则字符串。**若写了 pattern，default 必须能通过该正则** |
+| `enum` | 枚举数组。**若写了 enum，default 必须是 enum 中的一个** |
+| `failStatus` / `failMessage` | 校验失败时的 HTTP 状态与文案 |
+
+### 7.2 类型与位置（关键）
+
+- **query / path / header** 在 HTTP 里原始值是字符串；引擎会对 `number`/`boolean` 做 coerce
+  （`"1"`→`1`，`"true"`→`true`）。你仍可写 `type:"number"`，但 **default 请用正确 JSON 类型**
+  （number 写 `1` 不要写 `"1"`；boolean 写 `true` 不要写 `"true"`）。
+- **body**（JSON）保持真实类型：number 就是数字，boolean 就是布尔。
+- path 参数名必须与 path 里的 `:param` 同名（如 path=`/users/:id` → path 规则 name=`id`）。
+
+### 7.3 假数据必须能通过自己的校验（硬性）
+
+MockHub 会按 validationRules 自动生成示例请求做批量测试。你写的每条规则必须满足：
+
+1. 有 `required:true` 的字段 → **必须**有合理 `default`（或 `enum` 非空，测试会取首项）
+2. `default` 必须满足同条规则的 `type` / `min` / `max` / `pattern` / `enum`
+3. 不要写过严且无 default 的 pattern（如邮箱正则却不给 default）
+4. 用户给了真实接口规格时：**validationRules 的字段名、类型、必填、枚举必须对齐规格**，
+   不要漏字段、不要改名、不要把 number 写成 string（除非规格就是字符串）
+5. 不需要校验时写 `null` 或 `{"isEnabled":false}`，不要写一堆假规则
+
+### 7.4 失败响应结构
+
+失败默认 400：`{ "code":"VALIDATION_ERROR", "message":"...", "errors":[...] }`
 
 ## 8. 数据联动 dataOp
 
@@ -174,6 +208,7 @@ delete  → 删除；dataTable + dataWhere
 - `dataWhere`：`{ "userId": "{{req.query.uid}}" }` 也支持模板
 - `dataPayload` 模板：`{ "name": "{{req.body.name}}", "age": "{{req.body.age}}" }`
 - `responseBody` 里可用 `{{dbResult}}` 引用 select 结果
+- **dataPayload / dataWhere 里引用的 req 字段，必须在 validationRules 里声明**（并给 default）
 
 例：列表分页查询
 ```json
@@ -182,6 +217,10 @@ delete  → 删除；dataTable + dataWhere
   "path": "/face",
   "dataOp": "select",
   "dataTable": "faces",
+  "validationRules": {
+    "isEnabled": true,
+    "query": [{ "name": "page", "type": "number", "default": 1, "min": 1 }]
+  },
   "responseBody": { "code": 0, "data": "{{dbResult}}" }
 }
 ```
@@ -216,6 +255,7 @@ delete  → 删除；dataTable + dataWhere
 
 - `source`：`query` | `body` | `header` | `path`
 - `operator`：`equals` `not_equals` `contains` `gt` `lt` `gte` `lte` `regex`
+- 条件字段若会出现在请求里，建议在 validationRules 里声明并给 default
 
 ## 10. 自定义脚本 script
 
@@ -275,12 +315,19 @@ async function handle(req, db, log) {
 
 1) **拆解**：把用户的描述拆成 N 个功能组（一个业务域 = 一个功能组）
 2) **列接口**：每个功能组下用「动词 + 资源」识别 method + path
-3) **选协议**：默认 HTTP；需要服务端推送流选 SSE；需要双向长连接选 WebSocket
-4) **设计响应**：优先固定值；需要动态拼接就用 `{{...}}` 模板；需要真业务数据用 dataOp；需要复杂逻辑用 script
-5) **校验**：识别必填字段、长度、枚举，写到 validationRules
-6) **回调**：识别需要异步触发的下游，写到 callbacks
-7) **组装**：把上面的结果填入 v2 bundle，**确保顶层 `version: 2`**
-8) **自检**：检查 JSON 可被 `JSON.parse`、所有枚举值合法、不要写 id 字段
+3) **对齐规格**：用户给了字段表/OpenAPI/示例请求时，**原样映射**到 validationRules 与 responseBody，禁止臆造字段
+4) **选协议**：默认 HTTP；需要服务端推送流选 SSE；需要双向长连接选 WebSocket
+5) **设计响应**：优先固定值；需要动态拼接就用 `{{...}}` 模板；需要真业务数据用 dataOp；需要复杂逻辑用 script
+6) **校验**：识别必填字段、长度、枚举；每条规则写能通过校验的 `default`
+7) **回调**：识别需要异步触发的下游，写到 callbacks
+8) **组装**：把上面的结果填入 v2 bundle，**确保顶层 `version: 2`**
+9) **自检**（输出前必须过一遍）：
+   - JSON 可被 `JSON.parse`
+   - 所有枚举值合法；不要写 id 字段
+   - 每个 `required:true` 的规则都有合法 `default`
+   - `default` 满足 `min/max/pattern/enum/type`
+   - path 中的每个 `:param` 在 `validationRules.path` 有对应项
+   - `{{req.body.x}}` / `{{req.query.x}}` 引用的 x 在 validationRules 中存在
 
 ## 13. 输出约束（重要）
 
@@ -290,3 +337,4 @@ async function handle(req, db, log) {
 - 时间戳字段统一 ISO8601 字符串
 - 一个项目下功能组名不重复；一个功能组下接口 path + method 不重复
 - 用户提到"加几个接口"也要落到具体功能组里，不要凭空出现在顶层
+- **宁可少写校验，也不要写无法通过的假规则**

@@ -22,8 +22,8 @@
           "validationRules": {
             "isEnabled": true,
             "body": [
-              { "name": "name", "type": "string", "required": true, "min": 1, "max": 50 },
-              { "name": "age", "type": "number", "required": false, "min": 0, "max": 150 }
+              { "name": "name", "type": "string", "required": true, "min": 1, "max": 50, "default": "demo" },
+              { "name": "age", "type": "number", "required": false, "min": 0, "max": 150, "default": 18 }
             ],
             "failStatus": 400,
             "failMessage": "参数校验失败"
@@ -86,7 +86,10 @@
             "code": 0,
             "msg": "ok",
             "data": "{{dbResult}}"
-          }
+          },
+          "responses": null,
+          "script": null,
+          "callbacks": []
         },
         {
           "name": "删除人脸（DELETE + dataOp=delete）",
@@ -98,7 +101,7 @@
           "sortOrder": 2,
           "validationRules": {
             "isEnabled": true,
-            "path": [{ "name": "name", "type": "string", "required": true }]
+            "path": [{ "name": "name", "type": "string", "required": true, "default": "demo" }]
           },
           "dataOp": "delete",
           "dataTable": "faces",

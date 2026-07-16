@@ -56,6 +56,8 @@ export type ExportedApi = {
   dataWhere: Record<string, unknown> | null;
   dataPayload?: Record<string, unknown> | null;
   script: string | null;
+  /** 多响应配置 */
+  responses?: unknown;
   /** 兼容 v1 导出：单条 callback。v2 起改用 callbacks[] */
   callback?: ExportedCallbackConfig | null;
   callbacks?: ExportedCallbackConfig[];
@@ -193,6 +195,7 @@ export function exportProject(projectId: number, options: ExportOptions = {}): P
           dataWhere: api.dataWhere,
           dataPayload: api.dataPayload ?? null,
           script: api.script,
+          responses: api.responses ?? null,
           callbacks: cbs.map((cb) => ({
             name: cb.name ?? null,
             isEnabled: cb.isEnabled,
@@ -308,6 +311,7 @@ export function importProject(
           dataWhere: a.dataWhere ?? null,
           dataPayload: a.dataPayload ?? null,
           script: a.script ?? null,
+          responses: (a.responses as never) ?? null,
         })
         .returning()
         .all();

@@ -9,7 +9,7 @@ const KEYS = {
 };
 
 export type ProjectExportBundle = {
-  version: 1;
+  version: 1 | 2;
   exportedAt: string;
   project: { name: string; description: string | null };
   featureGroups: unknown[];

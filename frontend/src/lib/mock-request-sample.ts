@@ -7,13 +7,16 @@ import type { MockApi, ValidationParamRule } from '@/types/api';
 export function buildSampleFromRule(rule: ValidationParamRule): unknown {
   if (rule.default !== undefined && rule.default !== null) return rule.default;
   if (Array.isArray(rule.enum) && rule.enum.length > 0) return rule.enum[0];
-  if (typeof rule.min === 'number') return rule.min;
 
   switch (rule.type) {
     case 'string':
       return sampleString(rule);
-    case 'number':
-      return typeof rule.max === 'number' && rule.max > 0 ? 1 : 0;
+    case 'number': {
+      // 优先落在 [min, max] 内；避免旧逻辑在 min>1 时仍返回 1 导致校验失败
+      if (typeof rule.min === 'number') return rule.min;
+      if (typeof rule.max === 'number') return Math.min(0, rule.max);
+      return 0;
+    }
     case 'boolean':
       return false;
     case 'array':
@@ -27,33 +30,43 @@ export function buildSampleFromRule(rule: ValidationParamRule): unknown {
 
 function sampleString(rule: ValidationParamRule): string {
   const name = rule.name.toLowerCase();
+  let value = '';
   // 常见字段名兜底（提升测试请求通过校验的概率）
-  if (name === 'email') return 'user@example.com';
-  if (name === 'mobile' || name === 'phone') return '13800000000';
-  if (name === 'username' || name === 'user_name') return 'demo_user';
-  if (name === 'password') return 'demo_pass_123';
-  if (name === 'url' || name === 'imageurl' || name.endsWith('url')) return 'https://example.com';
-  if (name === 'id' || name.endsWith('_id') || name.endsWith('id')) return '1';
-  if (name === 'name' || name.endsWith('name')) return 'demo';
-  if (name === 'type' || name.endsWith('_type')) return 'hlht';
-  if (name === 'batch_id') return '8f3e2a1b6c4d09e7';
-  if (name === 'remark' || name === 'description' || name === 'desc') return 'demo备注';
-  if (name === 'keyword' || name === 'search') return '';
-  if (name === 'pageindex' || name === 'page_index' || name === 'page') return '1';
-  if (name === 'pagenum' || name === 'page_size' || name === 'pagesize') return '20';
-  if (name === 'status') return '1';
-  if (name === 'env') return '1';
-  if (name.includes('time')) return '2026-07-04 14:30:00';
-  if (rule.pattern) {
+  if (name === 'email') value = 'user@example.com';
+  else if (name === 'mobile' || name === 'phone') value = '13800000000';
+  else if (name === 'username' || name === 'user_name') value = 'demo_user';
+  else if (name === 'password') value = 'demo_pass_123';
+  else if (name === 'url' || name === 'imageurl' || name.endsWith('url')) value = 'https://example.com';
+  else if (name === 'id' || name.endsWith('_id') || name.endsWith('id')) value = '1';
+  else if (name === 'name' || name.endsWith('name')) value = 'demo';
+  else if (name === 'type' || name.endsWith('_type')) value = 'hlht';
+  else if (name === 'batch_id') value = '8f3e2a1b6c4d09e7';
+  else if (name === 'remark' || name === 'description' || name === 'desc') value = 'demo备注';
+  else if (name === 'keyword' || name === 'search') value = 'demo';
+  else if (name === 'pageindex' || name === 'page_index' || name === 'page') value = '1';
+  else if (name === 'pagenum' || name === 'page_size' || name === 'pagesize') value = '20';
+  else if (name === 'status') value = '1';
+  else if (name === 'env') value = '1';
+  else if (name.includes('time')) value = '2026-07-04 14:30:00';
+  else if (rule.pattern) {
     // 用一个能通过常见 pattern 的示例值
-    if (rule.pattern.includes('@')) return 'user@example.com';
-    if (rule.pattern.includes('https?://')) return 'https://example.com';
-    return `demo-${rule.name}`;
+    if (rule.pattern.includes('@')) value = 'user@example.com';
+    else if (rule.pattern.includes('https?://')) value = 'https://example.com';
+    else value = `demo-${rule.name}`;
+  } else {
+    value = `demo-${rule.name}`;
   }
-  if (typeof rule.max === 'number') {
-    return 'a'.repeat(Math.max(1, Math.min(8, Math.floor(rule.max / 2))));
+
+  // 满足 min/max 长度，避免 required+min 规则把短样本判失败
+  const minLen = typeof rule.min === 'number' ? Math.max(0, rule.min) : 0;
+  const maxLen = typeof rule.max === 'number' ? rule.max : undefined;
+  if (value.length < minLen) {
+    value = value + 'x'.repeat(minLen - value.length);
   }
-  return `demo-${rule.name}`;
+  if (maxLen !== undefined && value.length > maxLen) {
+    value = value.slice(0, Math.max(minLen, maxLen));
+  }
+  return value;
 }
 
 /**
