@@ -15,6 +15,13 @@ import {
   Zap,
   Clock,
   Upload,
+  UploadCloud,
+  FileText,
+  X,
+  AlertTriangle,
+  Check,
+  RefreshCw,
+  SkipForward,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -25,7 +32,6 @@ import {
   Input,
   Modal,
   PageHeader,
-  Select,
   StatCard,
   Tabs,
   Textarea,
@@ -420,30 +426,82 @@ function ProjectEditModal({
   );
 }
 
+const IMPORT_MODES: {
+  value: ProjectImportMode;
+  label: string;
+  desc: string;
+  icon: typeof Check;
+  danger?: boolean;
+}[] = [
+  {
+    value: 'create',
+    label: '创建新项目',
+    desc: '名称冲突时失败，最安全',
+    icon: Check,
+  },
+  {
+    value: 'skip',
+    label: '跳过',
+    desc: '已存在同名则不动',
+    icon: SkipForward,
+  },
+  {
+    value: 'overwrite',
+    label: '覆盖重建',
+    desc: '删除同名后重新导入',
+    icon: RefreshCw,
+    danger: true,
+  },
+];
+
 function ProjectImportModal({ onClose }: { onClose: () => void }) {
   const importMut = useImportProject();
   const fileRef = useRef<HTMLInputElement>(null);
   const [bundle, setBundle] = useState<ProjectExportBundle | null>(null);
+  const [fileName, setFileName] = useState('');
+  const [fileSize, setFileSize] = useState(0);
   const [mode, setMode] = useState<ProjectImportMode>('create');
   const [name, setName] = useState('');
   const [parseErr, setParseErr] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const clearFile = () => {
+    setBundle(null);
+    setFileName('');
+    setFileSize(0);
+    setName('');
+    setParseErr(null);
+    if (fileRef.current) fileRef.current.value = '';
+  };
 
   const onFile = async (file: File | null) => {
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setParseErr(`文件过大（${(file.size / 1024 / 1024).toFixed(1)} MB），最大支持 10 MB`);
+      setBundle(null);
+      setFileName('');
+      return;
+    }
     try {
       const text = await file.text();
       const json = JSON.parse(text) as ProjectExportBundle;
       if ((json.version !== 1 && json.version !== 2) || !json.project?.name) {
         setParseErr('无效的导出文件：需要 version=1 或 2，且包含 project.name');
         setBundle(null);
+        setFileName(file.name);
+        setFileSize(file.size);
         return;
       }
       setParseErr(null);
       setBundle(json);
+      setFileName(file.name);
+      setFileSize(file.size);
       setName(json.project.name);
     } catch (e) {
       setParseErr(e instanceof Error ? e.message : 'JSON 解析失败');
       setBundle(null);
+      setFileName(file.name);
+      setFileSize(file.size);
     }
   };
 
@@ -468,12 +526,17 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
   };
 
   const groupCount = bundle?.featureGroups?.length ?? 0;
+  const apiCount = (bundle?.featureGroups ?? []).reduce<number>((sum, g) => {
+    const apis = (g as { apis?: unknown[] })?.apis;
+    return sum + (Array.isArray(apis) ? apis.length : 0);
+  }, 0);
 
   return (
     <Modal
       open
       onClose={onClose}
       title="导入项目"
+      width="lg"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -490,46 +553,186 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
         </>
       }
     >
-      <div className="space-y-4">
-        <FormField
-          label="导出文件"
-          hint="MockHub 项目 JSON（version=1 或 2）"
-          error={parseErr ?? undefined}
+      <div className="space-y-5">
+        <div className="rounded-md border border-line bg-canvas-subtle/40 px-3 py-2.5 text-[12px] leading-relaxed text-ink-tertiary">
+          上传 MockHub 导出的项目 JSON（version 1 / 2），或从「AGENTS 对接指南」由 AI
+          生成的项目包。导入后可立即调试全部接口。
+        </div>
+
+        <div
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            void onFile(e.dataTransfer.files?.[0] ?? null);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          className={[
+            'rounded-lg border-2 border-dashed px-6 py-9 text-center transition-colors',
+            isDragging
+              ? 'border-ink bg-canvas-subtle'
+              : 'border-line bg-canvas-subtle/30 hover:border-ink-tertiary',
+          ].join(' ')}
         >
+          <UploadCloud className="mx-auto mb-3 h-8 w-8 text-ink-tertiary" />
+          {fileName ? (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-1.5 text-[12.5px] text-ink">
+                <FileText className="h-3.5 w-3.5 shrink-0 text-ink-secondary" />
+                <span className="max-w-[240px] truncate">{fileName}</span>
+                <button
+                  type="button"
+                  onClick={clearFile}
+                  className="ml-1 text-ink-subtle hover:text-danger"
+                  title="清除"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              <p className="text-[11.5px] text-ink-subtle">
+                {(fileSize / 1024).toFixed(1)} KB ·{' '}
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="text-ink-secondary underline hover:text-ink"
+                >
+                  重新选择
+                </button>
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-[13px] text-ink-secondary">拖拽项目 JSON 到此处，或</p>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="mt-2 text-[13px] font-medium text-ink underline-offset-2 hover:underline"
+              >
+                点击选择文件
+              </button>
+              <p className="mt-2 text-[11.5px] text-ink-subtle">支持 .json 格式，最大 10 MB</p>
+            </>
+          )}
           <input
             ref={fileRef}
             type="file"
             accept="application/json,.json"
-            className="block w-full text-[12.5px] text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-[12px] file:font-medium file:text-ink"
-            onChange={(e) => onFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
+            className="hidden"
           />
-        </FormField>
+        </div>
+
+        {parseErr && (
+          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12.5px] text-red-700">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{parseErr}</span>
+          </div>
+        )}
+
         {bundle && (
-          <div className="rounded-md border border-line bg-canvas-subtle/50 px-3 py-2 text-[12px] text-ink-secondary">
-            <div>
-              原项目：<b className="text-ink">{bundle.project.name}</b>
+          <div className="overflow-hidden rounded-lg border border-line bg-white">
+            <div className="flex items-start gap-3 border-b border-line-subtle px-4 py-3">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-canvas-subtle text-ink">
+                <FolderTree className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[13.5px] font-semibold text-ink">
+                  {bundle.project.name}
+                </div>
+                <p className="mt-0.5 line-clamp-2 text-[12px] text-ink-tertiary">
+                  {bundle.project.description || '暂无描述'}
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full border border-line bg-canvas-subtle px-2 py-0.5 text-[11px] font-medium text-ink-secondary">
+                v{bundle.version}
+              </span>
             </div>
-            <div>
-              功能组 {groupCount} · 导出时间{' '}
-              {bundle.exportedAt ? new Date(bundle.exportedAt).toLocaleString() : '—'}
+            <div className="grid grid-cols-3 divide-x divide-line-subtle">
+              <div className="px-4 py-2.5 text-center">
+                <div className="text-[15px] font-semibold tabular-nums text-ink">{groupCount}</div>
+                <div className="text-[11px] text-ink-subtle">功能组</div>
+              </div>
+              <div className="px-4 py-2.5 text-center">
+                <div className="text-[15px] font-semibold tabular-nums text-ink">{apiCount}</div>
+                <div className="text-[11px] text-ink-subtle">接口</div>
+              </div>
+              <div className="px-4 py-2.5 text-center">
+                <div className="text-[12px] font-medium text-ink">
+                  {bundle.exportedAt
+                    ? new Date(bundle.exportedAt).toLocaleDateString()
+                    : '—'}
+                </div>
+                <div className="text-[11px] text-ink-subtle">导出日期</div>
+              </div>
             </div>
           </div>
         )}
-        <FormField label="导入后项目名">
+
+        <FormField label="导入后项目名" hint="可改名后导入，避免与现有项目冲突">
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="可改名后导入"
             maxLength={100}
+            disabled={!bundle}
           />
         </FormField>
-        <FormField label="同名冲突策略" hint="create=报错 · skip=跳过 · overwrite=覆盖重建">
-          <Select value={mode} onChange={(e) => setMode(e.target.value as ProjectImportMode)}>
-            <option value="create">创建（名称冲突则失败）</option>
-            <option value="skip">跳过（已存在则不动）</option>
-            <option value="overwrite">覆盖（删除同名后重建）</option>
-          </Select>
-        </FormField>
+
+        <div>
+          <div className="form-label mb-2">同名冲突策略</div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {IMPORT_MODES.map((m) => {
+              const Icon = m.icon;
+              const active = mode === m.value;
+              return (
+                <button
+                  key={m.value}
+                  type="button"
+                  disabled={!bundle}
+                  onClick={() => setMode(m.value)}
+                  className={[
+                    'flex flex-col items-start gap-1 rounded-lg border px-3 py-2.5 text-left transition-all',
+                    'disabled:cursor-not-allowed disabled:opacity-50',
+                    active
+                      ? m.danger
+                        ? 'border-danger bg-danger-soft/40 ring-1 ring-danger/30'
+                        : 'border-ink bg-canvas-subtle ring-1 ring-ink/20'
+                      : 'border-line bg-white hover:border-ink-tertiary hover:bg-canvas-subtle/40',
+                  ].join(' ')}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Icon
+                      className={[
+                        'h-3.5 w-3.5',
+                        active
+                          ? m.danger
+                            ? 'text-danger'
+                            : 'text-ink'
+                          : 'text-ink-tertiary',
+                      ].join(' ')}
+                    />
+                    <span
+                      className={[
+                        'text-[12.5px] font-medium',
+                        active
+                          ? m.danger
+                            ? 'text-danger'
+                            : 'text-ink'
+                          : 'text-ink-secondary',
+                      ].join(' ')}
+                    >
+                      {m.label}
+                    </span>
+                  </div>
+                  <span className="text-[11px] leading-snug text-ink-subtle">{m.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </Modal>
   );
