@@ -53,6 +53,7 @@ export function useCreateMockApi() {
       unwrap(await api.post<MockApi>(`/feature-groups/${vars.featureGroupId}/mock-apis`, vars.body)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mock-apis'] });
+      qc.invalidateQueries({ queryKey: ['feature-groups'] });
       qc.invalidateQueries({ queryKey: ['projects', 'list'] });
     },
   });
@@ -78,6 +79,7 @@ export function useDeleteMockApi() {
       unwrap(await api.delete<{ id: ID; deleted: true }>(`/mock-apis/${id}`)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mock-apis'] });
+      qc.invalidateQueries({ queryKey: ['feature-groups'] });
       qc.invalidateQueries({ queryKey: ['projects', 'list'] });
     },
   });

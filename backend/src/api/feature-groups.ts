@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, sql } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { featureGroups, mockApis, projects } from '../db/schema.js';
 import { ApiError, asyncHandler } from '../middleware/error-handler.js';
@@ -31,14 +31,23 @@ const reorderSchema = z.object({
 
 // ---------- Routes ----------
 
-// 列出指定项目下的功能组
+// 列出指定项目下的功能组（含接口数）
 router.get(
   '/projects/:projectId/feature-groups',
   asyncHandler(async (req: Request, res: Response) => {
     const { projectId } = projectIdParamSchema.parse(req.params);
     const db = getDb();
     const rows = db
-      .select()
+      .select({
+        id: featureGroups.id,
+        projectId: featureGroups.projectId,
+        name: featureGroups.name,
+        description: featureGroups.description,
+        sortOrder: featureGroups.sortOrder,
+        createdAt: featureGroups.createdAt,
+        updatedAt: featureGroups.updatedAt,
+        apiCount: sql<number>`(SELECT COUNT(*) FROM ${mockApis} WHERE ${mockApis.featureGroupId} = ${sql.raw('feature_groups.id')})`,
+      })
       .from(featureGroups)
       .where(eq(featureGroups.projectId, projectId))
       .orderBy(asc(featureGroups.sortOrder), asc(featureGroups.id))

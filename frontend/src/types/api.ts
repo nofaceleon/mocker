@@ -22,6 +22,7 @@ export type FeatureGroup = {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  apiCount?: number;
 };
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
