@@ -32,6 +32,7 @@ import {
   MethodBadge,
   Modal,
   PageHeader,
+  Select,
   Switch,
   Textarea,
   confirm,
@@ -652,10 +653,11 @@ function ApiListPanel({
             className="form-input h-8 w-[240px] pl-8"
           />
         </div>
-        <select
+        <Select
+          compact
           value={methodFilter}
           onChange={(e) => setMethodFilter(e.target.value)}
-          className="form-select w-auto min-w-[110px] text-[12px]"
+          className="w-auto min-w-[110px]"
         >
           <option value="all">全部方法</option>
           <option value="GET">GET</option>
@@ -663,16 +665,17 @@ function ApiListPanel({
           <option value="PUT">PUT</option>
           <option value="DELETE">DELETE</option>
           <option value="PATCH">PATCH</option>
-        </select>
-        <select
+        </Select>
+        <Select
+          compact
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="form-select w-auto min-w-[110px] text-[12px]"
+          className="w-auto min-w-[110px]"
         >
           <option value="all">全部状态</option>
           <option value="enabled">已启用</option>
           <option value="disabled">已停用</option>
-        </select>
+        </Select>
       </div>
 
       <div className="card overflow-hidden">

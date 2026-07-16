@@ -33,6 +33,7 @@ import {
   MethodBadge,
   Modal,
   PageHeader,
+  Select,
   StatCard,
   Tabs,
   Textarea,
@@ -170,15 +171,16 @@ export function ProjectsPage() {
           ]}
         />
         <div className="flex items-center gap-2">
-          <select
-            className="form-select w-auto min-w-[120px] text-[12px]"
+          <Select
+            compact
+            className="w-auto min-w-[120px]"
             value={sort}
             onChange={(e) => setSort(e.target.value as typeof sort)}
           >
             <option value="updated">按修改时间</option>
             <option value="created">按创建时间</option>
             <option value="name">按名称</option>
-          </select>
+          </Select>
         </div>
       </div>
 

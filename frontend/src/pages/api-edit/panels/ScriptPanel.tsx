@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Code2, AlertCircle } from 'lucide-react';
-import { Card, Switch } from '@/components/ui';
+import { Card, Select, Switch } from '@/components/ui';
 import { CodeEditor } from '@/components/CodeEditor';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
 import { PanelHeader } from '../PanelHeader';
@@ -115,7 +115,7 @@ export function ScriptPanel({ formData, onChange, onSave, saving }: ScriptPanelP
     setScript(formData.script ?? DEFAULT_TEMPLATE);
   }, [formData.script]);
 
-  const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleTemplateChange = (e: { target: { value: string } }) => {
     const idx = Number(e.target.value);
     setTemplateIdx(idx);
     const newScript = TEMPLATES[idx].code;
@@ -159,10 +159,11 @@ export function ScriptPanel({ formData, onChange, onSave, saving }: ScriptPanelP
         title={
           <div className="flex flex-1 items-center justify-end gap-2">
             <span className="text-[11.5px] text-ink-tertiary">选择模板</span>
-            <select
+            <Select
+              compact
               value={templateIdx}
               onChange={handleTemplateChange}
-              className="h-6 min-w-[180px] rounded border border-line bg-white px-2 text-[11px] text-ink-secondary"
+              className="min-w-[180px]"
               disabled={!enabled}
             >
               {TEMPLATES.map((t, i) => (
@@ -170,7 +171,7 @@ export function ScriptPanel({ formData, onChange, onSave, saving }: ScriptPanelP
                   {t.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         }
       >

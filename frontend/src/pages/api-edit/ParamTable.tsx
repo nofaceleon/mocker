@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Check, Plus, X } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Select } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { JsonImportModal } from './JsonImportModal';
 
@@ -198,17 +198,18 @@ type SelectCellProps<T extends string> = {
 
 export function SelectCell<T extends string>({ value, onChange, options, className }: SelectCellProps<T>) {
   return (
-    <select
+    <Select
+      compact
       value={value}
       onChange={(e) => onChange(e.target.value as T)}
-      className={cn('table-input', className)}
+      className={cn('min-w-0', className)}
     >
       {options.map((opt) => (
         <option key={opt} value={opt}>
           {opt}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }
 

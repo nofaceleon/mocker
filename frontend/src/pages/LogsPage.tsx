@@ -23,6 +23,7 @@ import {
   MethodBadge,
   Modal,
   PageHeader,
+  Select,
   StatCard,
   Tabs,
 } from '@/components/ui';
@@ -273,10 +274,11 @@ export function LogsPage() {
               className="form-input h-8 pl-8"
             />
           </div>
-          <select
+          <Select
+            compact
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
-            className="form-select w-auto min-w-[120px] text-[12px]"
+            className="w-auto min-w-[120px]"
           >
             <option value="all">全部项目</option>
             {projectOptions.map((p) => (
@@ -284,11 +286,12 @@ export function LogsPage() {
                 {p.name}
               </option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
+            compact
             value={apiFilter}
             onChange={(e) => setApiFilter(e.target.value)}
-            className="form-select w-auto min-w-[140px] text-[12px]"
+            className="w-auto min-w-[140px]"
           >
             <option value="all">全部接口</option>
             {apiOptions.map((a) => (
@@ -296,29 +299,31 @@ export function LogsPage() {
                 {a.name} · {a.method} {a.path}
               </option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
+            compact
             value={methodFilter}
             onChange={(e) => setMethodFilter(e.target.value as RequestLogHttpMethod | 'all')}
-            className="form-select w-auto min-w-[110px] text-[12px]"
+            className="w-auto min-w-[110px]"
           >
             {METHOD_OPTIONS.map((m) => (
               <option key={m} value={m}>
                 {m === 'all' ? '全部方法' : m}
               </option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
+            compact
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as RequestLogStatusClass | 'all')}
-            className="form-select w-auto min-w-[110px] text-[12px]"
+            className="w-auto min-w-[110px]"
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
                 {s === 'all' ? '全部状态' : s}
               </option>
             ))}
-          </select>
+          </Select>
           <Button variant="ghost" size="sm" onClick={handleReset}>
             <RotateCcw className="h-3.5 w-3.5" />
             重置
