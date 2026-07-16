@@ -43,6 +43,11 @@ export function createApp(): Express {
   // 管理 API：/api/*
   app.use('/api', apiRouter);
 
+  // agents-guide 静态资源（.md / .json）必须在 SPA 兜底和 mock 引擎之前注册，
+  // 否则生产环境浏览器导航（Accept: text/html）会先被 index.html 截获，
+  // React Router 对 /agents-guide.md 无路由 → Unexpected Application Error 404
+  app.use('/', agentsGuideRouter);
+
   // 生产环境：托管前端静态文件 + SPA 兜底
   //   - express.static 只服务实际存在的文件（JS/CSS/图片等），不存在的路径调用 next()
   //   - 对于浏览器导航（Accept 含 text/html）且非 API 路径，返回 index.html 给 SPA
@@ -63,8 +68,6 @@ export function createApp(): Express {
   }
 
   // Mock 引擎入口（根路径，用户自定义路由原样生效）
-  // 注意：agents-guide 的静态资源路径必须先注册，否则会被 mock 引擎的 404 兜底
-  app.use('/', agentsGuideRouter);
   app.use('/', handleMockRequest as unknown as express.RequestHandler);
 
   // 404
