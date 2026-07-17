@@ -12,6 +12,7 @@ export { renderTemplate, applyDelay } from './response.js';
 export { execute, validateIdentifier } from './db-ops.js';
 export {
   ensureBusinessTable,
+  createBusinessTable,
   listBusinessTables,
   listColumns,
   tableExists,

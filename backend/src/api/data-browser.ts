@@ -8,6 +8,7 @@ import {
   listColumns,
   tableExists,
   validateIdentifier,
+  createBusinessTable,
   addBusinessColumn,
   renameBusinessColumn,
   dropBusinessColumn,
@@ -186,6 +187,84 @@ router.get(
       rowCount: tableRowCount(t.name),
     }));
     res.success(tables);
+  }),
+);
+
+const createTableSchema = z.object({
+  name: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, '表名仅允许字母/数字/下划线，且不能以数字开头'),
+  columns: z
+    .array(
+      z.object({
+        name: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/),
+        type: z.enum(['TEXT', 'REAL', 'INTEGER', 'BLOB']).optional().default('TEXT'),
+      }),
+    )
+    .optional()
+    .default([]),
+});
+
+// 创建业务表
+router.post(
+  '/data-browser/tables',
+  asyncHandler(async (req: Request, res: Response) => {
+    const body = createTableSchema.parse(req.body ?? {});
+    if (RESERVED_TABLES.has(body.name)) {
+      throw new ApiError('FORBIDDEN', `表名 ${body.name} 为系统保留，不可使用`, 403);
+    }
+    try {
+      const columns = createBusinessTable(body.name, body.columns);
+      res.success(
+        { name: body.name, columns, rowCount: 0 },
+        { status: 201 },
+      );
+    } catch (err) {
+      throw new ApiError('CREATE_FAILED', err instanceof Error ? err.message : '创建表失败', 400);
+    }
+  }),
+);
+
+// 插入单行
+router.post(
+  '/data-browser/tables/:tableName/rows',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { tableName } = tableNameParamSchema.parse(req.params);
+    assertBusinessTable(tableName);
+    const payload = updateRowSchema.parse(req.body ?? {});
+    const sqlite = getRawSqlite();
+    const columns = listColumns(sqlite, tableName);
+    const colNames = new Set(columns.map((c) => c.name));
+
+    const entries = Object.entries(payload).filter(([, v]) => v !== undefined);
+    for (const [key] of entries) {
+      if (isReservedColumn(key) || key === 'id') {
+        throw new ApiError('FORBIDDEN', `列 ${key} 为系统保留字段，不可写入`, 403);
+      }
+      if (!colNames.has(key)) {
+        throw new ApiError('BAD_REQUEST', `列 ${key} 不存在`, 400);
+      }
+      validateIdentifier(key);
+    }
+
+    const now = Date.now();
+    const colList = [...entries.map(([k]) => `"${k}"`), '"created_at"', '"updated_at"'];
+    const placeholders = colList.map(() => '?').join(', ');
+    const values = [
+      ...entries.map(([, v]) => {
+        if (v === null) return null;
+        if (typeof v === 'object') return JSON.stringify(v);
+        return v;
+      }),
+      now,
+      now,
+    ];
+    const info = sqlite
+      .prepare(`INSERT INTO "${tableName}" (${colList.join(', ')}) VALUES (${placeholders})`)
+      .run(...values);
+    const rowId = Number(info.lastInsertRowid);
+    const row = sqlite
+      .prepare(`SELECT * FROM "${tableName}" WHERE id = ?`)
+      .get(rowId) as Record<string, unknown> | undefined;
+    res.success({ table: tableName, id: rowId, row }, { status: 201 });
   }),
 );
 

@@ -122,6 +122,43 @@ export function useDropBusinessTable() {
 
 export type ColumnType = 'TEXT' | 'REAL' | 'INTEGER' | 'BLOB';
 
+export type CreateTableColumn = { name: string; type?: ColumnType };
+
+export function useCreateBusinessTable() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { name: string; columns?: CreateTableColumn[] }) =>
+      unwrap(
+        await api.post<BusinessTableMeta>('/data-browser/tables', {
+          name: vars.name,
+          columns: vars.columns ?? [],
+        }),
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['data-browser'] });
+    },
+  });
+}
+
+export function useInsertBusinessRow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      table: string;
+      row: Record<string, string | number | boolean | null>;
+    }) =>
+      unwrap(
+        await api.post<{ table: string; id: number; row: Record<string, unknown> }>(
+          `/data-browser/tables/${vars.table}/rows`,
+          vars.row,
+        ),
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['data-browser'] });
+    },
+  });
+}
+
 export function useAddBusinessColumn() {
   const qc = useQueryClient();
   return useMutation({

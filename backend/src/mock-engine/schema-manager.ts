@@ -12,6 +12,17 @@ export type ColumnInfo = {
 
 const RESERVED_COLUMNS = new Set(['id', 'created_at', 'updated_at']);
 
+const RESERVED_TABLE_NAMES = new Set([
+  'projects',
+  'feature_groups',
+  'mock_apis',
+  'mock_data',
+  'request_logs',
+  'callback_configs',
+  'callback_tasks',
+  'sqlite_sequence',
+]);
+
 /**
  * 若表不存在，按 sampleRow 的字段自动建表（id / created_at / updated_at 为内置列）。
  * 已存在的表：返回当前 schema 信息，不做 ALTER。
@@ -28,15 +39,59 @@ export function ensureBusinessTable(table: string, sampleRow: Record<string, unk
   if (tableExists(sqlite, table)) return;
 
   const cols = inferColumns(sampleRow);
+  createTableWithColumns(sqlite, table, cols);
+  logger.info({ table, columns: cols.map((c) => c.name) }, 'business table auto-created');
+}
+
+/**
+ * 显式创建业务表（管理端 / AI 调用）。
+ * 自动附加 id / created_at / updated_at 系统列；用户列不可与系统列重名。
+ */
+export function createBusinessTable(
+  table: string,
+  columns: Array<{ name: string; type?: string }> = [],
+): ColumnInfo[] {
+  validateIdentifier(table);
+  if (RESERVED_TABLE_NAMES.has(table)) {
+    throw new Error(`表名 ${table} 为系统保留，不可使用`);
+  }
+  const sqlite = getRawSqlite();
+  if (tableExists(sqlite, table)) {
+    throw new Error(`表 ${table} 已存在`);
+  }
+
+  const seen = new Set<string>();
+  const cols: Array<{ name: string; type: string }> = [];
+  for (const c of columns) {
+    validateIdentifier(c.name);
+    if (RESERVED_COLUMNS.has(c.name)) {
+      throw new Error(`列 ${c.name} 为系统保留字段，会自动创建，无需指定`);
+    }
+    if (seen.has(c.name)) {
+      throw new Error(`列 ${c.name} 重复`);
+    }
+    seen.add(c.name);
+    cols.push({ name: c.name, type: normalizeColumnType(c.type ?? 'TEXT') });
+  }
+
+  createTableWithColumns(sqlite, table, cols);
+  logger.info({ table, columns: cols.map((c) => c.name) }, 'business table created');
+  return listColumns(sqlite, table);
+}
+
+function createTableWithColumns(
+  sqlite: Database.Database,
+  table: string,
+  cols: Array<{ name: string; type: string }>,
+): void {
   const colsSql = cols.map((c) => `"${c.name}" ${c.type}`).join(', ');
+  const middle = colsSql ? `,\n    ${colsSql}` : '';
   const sql = `CREATE TABLE "${table}" (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ${colsSql},
+    id INTEGER PRIMARY KEY AUTOINCREMENT${middle},
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   )`;
   sqlite.exec(sql);
-  logger.info({ table, columns: cols.map((c) => c.name) }, 'business table auto-created');
 }
 
 export function tableExists(sqlite: Database.Database, table: string): boolean {

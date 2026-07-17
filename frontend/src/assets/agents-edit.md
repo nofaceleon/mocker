@@ -85,6 +85,58 @@ Mock 联调请求形如：`{BASE_URL}{path}`（无 `/api` 前缀）
 **危险**：`PUT .../callbacks` 是整组 diff——请求体里**没带 id 的已有回调会被删除**。  
 改一条时：先 GET 全量 → 改目标项 → PUT 时带上所有条目的 `id`。
 
+### 3.5 业务表 / 数据管理（SQLite）
+
+业务表供 Mock 接口的 `dataOp`（insert/select/update/delete）与脚本 `db.*` 读写。  
+系统表（projects / mock_apis 等）**不可**通过下列接口操作。  
+每个业务表自动含系统列：`id`（自增 PK）、`created_at`、`updated_at`（毫秒时间戳，不可手写）。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/data-browser/tables` | 列出全部业务表（含 columns、rowCount） |
+| GET | `/api/projects/{PROJECT_ID}/data-browser` | 项目视角：被接口引用的表 + 关联 apis |
+| POST | `/api/data-browser/tables` | **创建表** `{ name, columns? }` |
+| GET | `/api/data-browser/tables/{table}` | 查行（分页）`?page=1&pageSize=50&q=` |
+| POST | `/api/data-browser/tables/{table}/rows` | **插入行** body 为字段对象 |
+| PATCH | `/api/data-browser/tables/{table}/rows/{rowId}` | 更新行（partial 字段） |
+| DELETE | `/api/data-browser/tables/{table}/rows/{rowId}` | 删除单行 |
+| POST | `/api/data-browser/tables/{table}/clear` | 清空全部行（保留结构） |
+| DELETE | `/api/data-browser/tables/{table}` | 删除整表（并清理接口上的 dataTable 引用） |
+| POST | `/api/data-browser/tables/{table}/columns` | 新增列 `{ name, type? }` |
+| PATCH | `/api/data-browser/tables/{table}/columns/{col}` | 重命名 `{ newName }` |
+| DELETE | `/api/data-browser/tables/{table}/columns/{col}` | 删除列 |
+
+**创建表 body：**
+
+```json
+{
+  "name": "orders",
+  "columns": [
+    { "name": "order_no", "type": "TEXT" },
+    { "name": "amount", "type": "REAL" },
+    { "name": "status", "type": "INTEGER" }
+  ]
+}
+```
+
+- `name` / 列名：`^[A-Za-z_][A-Za-z0-9_]*$`
+- `type`：`TEXT` | `REAL` | `INTEGER` | `BLOB`（默认 TEXT）
+- `columns` 可省略或空数组（只建系统列，之后再加列）
+- 禁止使用系统保留表名 / 列名 `id` `created_at` `updated_at`
+
+**插入 / 更新行 body：** 仅业务字段，值可为 string | number | boolean | null
+
+```json
+POST /api/data-browser/tables/orders/rows
+{ "order_no": "O-1001", "amount": 99.5, "status": 1 }
+
+PATCH /api/data-browser/tables/orders/rows/1
+{ "status": 2 }
+```
+
+**与 Mock 接口联动：** 接口字段 `dataOp` + `dataTable` + `dataWhere` / `dataPayload`；  
+响应模板可用 `{{dbResult}}`。需要演示数据时：先建表 → 插入样例行 → 配置接口 select。
+
 ## 4. MockApi 可写字段
 
 创建必填：`name` `method` `path`（path 必须以 `/` 开头）
@@ -212,6 +264,27 @@ Content-Type: application/json
 2. items 追加新对象（无 id）  
 3. `PUT /api/mock-apis/{apiId}/callbacks` `{ "items": [ ...全部含原 id... ] }`  
 
+### 例 E：新建业务表 + 样例数据 + 接口 select
+
+1. `POST /api/data-browser/tables`  
+   `{ "name":"products","columns":[{"name":"title","type":"TEXT"},{"name":"price","type":"REAL"}] }`  
+2. `POST /api/data-browser/tables/products/rows` `{ "title":"Demo","price":9.9 }`（可多次）  
+3. 在功能组下创建 GET 接口，配置  
+   `{ "dataOp":"select","dataTable":"products","responseBody":{"code":0,"data":"{{dbResult}}"} }`  
+4. `POST /api/mock-apis/{apiId}/test` 验证返回含样例行  
+
+### 例 F：改表结构
+
+```http
+POST /api/data-browser/tables/products/columns
+{ "name": "stock", "type": "INTEGER" }
+
+PATCH /api/data-browser/tables/products/columns/title
+{ "newName": "name" }
+
+DELETE /api/data-browser/tables/products/columns/stock
+```
+
 ## 9. 硬性约束
 
 - **只操作 PROJECT_ID**；不要扫其他项目  
@@ -219,6 +292,7 @@ Content-Type: application/json
 - **validationRules / responses / callbacks 整对象替换时**：先 GET 再合并，禁止空数组误删  
 - 不要 invent 未实现字段；枚举严格按本文  
 - 用户说「加几个接口」时落到具体 featureGroup；没有合适组就先建组  
+- **业务表**：可主动创建/改结构/插删行；禁止碰系统表；删表前确认无关键数据  
 - 外部 Agent 必须能访问本机 `BASE_URL`（Cursor / 本地 CLI）；云端 ChatGPT 默认打不到 localhost  
 - 完成任务后用 1～3 句话总结 + 关键 id；需要时再贴调用命令  
 - **Windows PowerShell 环境必须遵守 §10**，禁止用裸 `curl` 或手拼带 `\"` 的 JSON 字符串  

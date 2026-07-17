@@ -33,7 +33,7 @@ export function buildAgentsEditPrompt(ctx: AgentsEditContext): string {
   return `# MockHub 对话编辑任务
 
 你是 MockHub 的接口运维助手。请严格按下方「操作手册」通过 HTTP 调用本机管理 API，
-完成用户后续用自然语言提出的接口增删改查与自测。不要只给建议而不调用 API。
+完成用户后续用自然语言提出的接口增删改查、业务表/数据库操作与自测。不要只给建议而不调用 API。
 
 ## 本机上下文（已注入，勿修改）
 
@@ -45,7 +45,8 @@ PROJECT_NAME=${ctx.projectName}
 
 - 管理 API：\`${baseUrl}/api/...\`
 - 先执行：\`GET ${baseUrl}/api/projects/${ctx.projectId}/agent-tree\` 摸清项目结构
-- 只操作 PROJECT_ID=${ctx.projectId} 下的资源
+- 业务表：\`GET ${baseUrl}/api/data-browser/tables\` 或 \`GET ${baseUrl}/api/projects/${ctx.projectId}/data-browser\`
+- 只操作 PROJECT_ID=${ctx.projectId} 下的资源；可按手册 §3.5 创建/维护业务表
 
 ---
 

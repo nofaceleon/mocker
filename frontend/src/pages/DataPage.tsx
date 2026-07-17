@@ -4,6 +4,7 @@ import {
   Database as DatabaseIcon,
   Link2,
   Pencil,
+  Plus,
   Search,
   Table as TableIcon,
   Trash2,
@@ -26,14 +27,17 @@ import {
   useBusinessTableRows,
   useBusinessTables,
   useClearBusinessTable,
+  useCreateBusinessTable,
   useDataBrowser,
   useDeleteBusinessRow,
   useDropBusinessColumn,
   useDropBusinessTable,
+  useInsertBusinessRow,
   useRenameBusinessColumn,
   useUpdateBusinessRow,
   type BusinessTableMeta,
   type ColumnType,
+  type CreateTableColumn,
 } from '@/hooks/queries/use-data-browser';
 import { useProjects } from '@/hooks/queries/use-projects';
 import type { DataBrowserColumn, ID } from '@/types/api';
@@ -42,11 +46,14 @@ const RESERVED_COLS = new Set(['id', 'created_at', 'updated_at']);
 
 const PAGE_SIZE = 50;
 
+const IDENT_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
 export function DataPage() {
   const { data: projects } = useProjects();
   const [projectId, setProjectId] = useState<ID | 'all'>('all');
   const [search, setSearch] = useState('');
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   // 默认选中第一个项目（若有）
   useEffect(() => {
@@ -124,6 +131,10 @@ export function DataPage() {
                 </option>
               ))}
             </Select>
+            <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              新建表
+            </Button>
           </div>
         }
       />
@@ -168,7 +179,7 @@ export function DataPage() {
                   {search
                     ? '没有匹配的表'
                     : projectId === 'all'
-                      ? '还没有业务表（调用 insert 接口后自动创建）'
+                      ? '还没有业务表，点击右上角「新建表」创建'
                       : '该项目下接口未引用业务表'}
                 </li>
               ) : (
@@ -216,14 +227,170 @@ export function DataPage() {
             <Card>
               <Empty
                 title="未选择数据表"
-                description="在左侧选择一个业务表查看其行数据与列结构"
+                description="在左侧选择一个业务表查看其行数据与列结构，或点击右上角新建表"
                 icon={<DatabaseIcon className="h-10 w-10 text-ink-subtle" />}
               />
             </Card>
           )}
         </section>
       </div>
+
+      {createOpen && (
+        <CreateTableModal
+          onClose={() => setCreateOpen(false)}
+          onCreated={(name) => {
+            setProjectId('all');
+            setSelectedTable(name);
+            setCreateOpen(false);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function CreateTableModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (name: string) => void;
+}) {
+  const createMut = useCreateBusinessTable();
+  const [name, setName] = useState('');
+  const [columns, setColumns] = useState<Array<{ name: string; type: ColumnType }>>([
+    { name: '', type: 'TEXT' },
+  ]);
+
+  const addColumnRow = () => {
+    setColumns((cols) => [...cols, { name: '', type: 'TEXT' }]);
+  };
+
+  const updateColumn = (index: number, patch: Partial<{ name: string; type: ColumnType }>) => {
+    setColumns((cols) => cols.map((c, i) => (i === index ? { ...c, ...patch } : c)));
+  };
+
+  const removeColumn = (index: number) => {
+    setColumns((cols) => (cols.length <= 1 ? cols : cols.filter((_, i) => i !== index)));
+  };
+
+  const handleSubmit = async () => {
+    const tableName = name.trim();
+    if (!IDENT_RE.test(tableName)) {
+      toast.error('表名仅允许字母/数字/下划线，且不能以数字开头');
+      return;
+    }
+
+    const prepared: CreateTableColumn[] = [];
+    const seen = new Set<string>();
+    for (const c of columns) {
+      const colName = c.name.trim();
+      if (!colName) continue;
+      if (!IDENT_RE.test(colName)) {
+        toast.error(`列名「${colName}」格式不正确`);
+        return;
+      }
+      if (RESERVED_COLS.has(colName)) {
+        toast.error(`列名「${colName}」为系统保留字段，会自动创建`);
+        return;
+      }
+      if (seen.has(colName)) {
+        toast.error(`列名「${colName}」重复`);
+        return;
+      }
+      seen.add(colName);
+      prepared.push({ name: colName, type: c.type });
+    }
+
+    try {
+      const result = await createMut.mutateAsync({ name: tableName, columns: prepared });
+      toast.success(`表 ${result.name} 已创建`);
+      onCreated(result.name);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '创建表失败');
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="新建业务表"
+      width="lg"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            取消
+          </Button>
+          <Button variant="primary" loading={createMut.isPending} onClick={handleSubmit}>
+            创建
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <p className="text-[12px] text-ink-tertiary">
+          系统会自动附加 <code className="param-code">id</code> /{' '}
+          <code className="param-code">created_at</code> /{' '}
+          <code className="param-code">updated_at</code> 列。业务列可稍后在「修改字段」中继续调整。
+        </p>
+
+        <FormField label="表名" required>
+          <Input
+            className="mono"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="例如 users / face_records"
+            autoFocus
+          />
+        </FormField>
+
+        <div className="rounded-md border border-line">
+          <div className="flex items-center justify-between border-b border-line-subtle bg-canvas-subtle/40 px-3 py-2">
+            <span className="text-[12.5px] font-medium text-ink">业务列（可选）</span>
+            <Button variant="ghost" size="sm" onClick={addColumnRow}>
+              <Plus className="h-3 w-3" />
+              添加列
+            </Button>
+          </div>
+          <div className="space-y-2 p-3">
+            {columns.map((col, index) => (
+              <div key={index} className="flex flex-wrap items-end gap-2">
+                <FormField label={index === 0 ? '列名' : undefined} className="min-w-[160px] flex-1">
+                  <Input
+                    className="mono"
+                    value={col.name}
+                    onChange={(e) => updateColumn(index, { name: e.target.value })}
+                    placeholder="例如 name"
+                  />
+                </FormField>
+                <FormField label={index === 0 ? '类型' : undefined} className="w-[140px]">
+                  <Select
+                    value={col.type}
+                    onChange={(e) => updateColumn(index, { type: e.target.value as ColumnType })}
+                  >
+                    <option value="TEXT">TEXT</option>
+                    <option value="REAL">REAL</option>
+                    <option value="INTEGER">INTEGER</option>
+                    <option value="BLOB">BLOB</option>
+                  </Select>
+                </FormField>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="!text-danger"
+                  disabled={columns.length <= 1}
+                  onClick={() => removeColumn(index)}
+                  title="移除"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -242,12 +409,14 @@ function TableDetail({
   const [qApplied, setQApplied] = useState('');
   const [page, setPage] = useState(1);
   const [schemaOpen, setSchemaOpen] = useState(false);
+  const [insertOpen, setInsertOpen] = useState(false);
 
   useEffect(() => {
     setQ('');
     setQApplied('');
     setPage(1);
     setSchemaOpen(false);
+    setInsertOpen(false);
   }, [tableName]);
 
   const { data, isLoading, isFetching } = useBusinessTableRows(tableName, {
@@ -425,6 +594,10 @@ function TableDetail({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button variant="primary" size="sm" onClick={() => setInsertOpen(true)}>
+            <Plus className="h-3 w-3" />
+            插入行
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => setSchemaOpen(true)}>
             <Columns3 className="h-3 w-3" />
             修改字段
@@ -479,6 +652,18 @@ function TableDetail({
         />
       )}
 
+      {insertOpen && (
+        <InsertRowModal
+          tableName={tableName}
+          columns={columns}
+          onClose={() => setInsertOpen(false)}
+          onInserted={() => {
+            setInsertOpen(false);
+            setPage(1);
+          }}
+        />
+      )}
+
       {isLoading ? (
         <div className="py-12 text-center text-[13px] text-ink-tertiary">加载中…</div>
       ) : rows.length === 0 ? (
@@ -487,7 +672,7 @@ function TableDetail({
           description={
             qApplied
               ? '试试其他关键字'
-              : '调用配置了 insert 的 Mock 接口或脚本 db.insert 后，数据会写入此表'
+              : '点击「插入行」手动添加，或通过配置了 insert 的 Mock 接口写入'
           }
         />
       ) : (
@@ -576,6 +761,83 @@ function TableDetail({
         </div>
       </div>
     </Card>
+  );
+}
+
+function InsertRowModal({
+  tableName,
+  columns,
+  onClose,
+  onInserted,
+}: {
+  tableName: string;
+  columns: DataBrowserColumn[];
+  onClose: () => void;
+  onInserted: () => void;
+}) {
+  const insertMut = useInsertBusinessRow();
+  const editableCols = columns.filter((c) => !RESERVED_COLS.has(c.name) && !c.pk);
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(editableCols.map((c) => [c.name, ''])),
+  );
+
+  const handleSubmit = async () => {
+    const row: Record<string, string | number | boolean | null> = {};
+    try {
+      for (const c of editableCols) {
+        const raw = values[c.name] ?? '';
+        if (raw.trim() === '') continue;
+        row[c.name] = parseCellInput(raw, c.type || 'TEXT');
+      }
+      await insertMut.mutateAsync({ table: tableName, row });
+      toast.success('已插入一行');
+      onInserted();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '插入失败');
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`插入行 · ${tableName}`}
+      width="md"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            取消
+          </Button>
+          <Button variant="primary" loading={insertMut.isPending} onClick={handleSubmit}>
+            插入
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-[12px] text-ink-tertiary">
+          系统列 <code className="param-code">id</code> /{' '}
+          <code className="param-code">created_at</code> /{' '}
+          <code className="param-code">updated_at</code> 自动生成。留空表示 NULL。
+        </p>
+        {editableCols.length === 0 ? (
+          <div className="rounded-md border border-line bg-canvas-subtle/40 px-3 py-6 text-center text-[12.5px] text-ink-tertiary">
+            当前仅有系统列，将插入空行。可先在「修改字段」中新增业务列。
+          </div>
+        ) : (
+          editableCols.map((c) => (
+            <FormField key={c.name} label={`${c.name} (${c.type || 'TEXT'})`}>
+              <Input
+                className="mono"
+                value={values[c.name] ?? ''}
+                onChange={(e) => setValues((v) => ({ ...v, [c.name]: e.target.value }))}
+                placeholder="留空为 NULL"
+              />
+            </FormField>
+          ))
+        )}
+      </div>
+    </Modal>
   );
 }
 
