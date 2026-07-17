@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
-import type { HttpMethod, Protocol, ID, MockApi, MockApiResponse, ValidationRules } from '@/types/api';
+import type {
+  HttpMethod,
+  Protocol,
+  ID,
+  MockApi,
+  MockApiResponse,
+  ValidationRules,
+} from '@/types/api';
 
 const KEYS = {
   byGroup: (gid: ID) => ['mock-apis', 'group', gid] as const,
@@ -33,7 +40,8 @@ export type MockApiPayload = {
 export function useMockApis(featureGroupId: ID | undefined) {
   return useQuery({
     queryKey: featureGroupId ? KEYS.byGroup(featureGroupId) : ['mock-apis', 'group', 'none'],
-    queryFn: async () => unwrap(await api.get<MockApi[]>(`/feature-groups/${featureGroupId}/mock-apis`)),
+    queryFn: async () =>
+      unwrap(await api.get<MockApi[]>(`/feature-groups/${featureGroupId}/mock-apis`)),
     enabled: !!featureGroupId,
   });
 }
@@ -50,7 +58,9 @@ export function useCreateMockApi() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { featureGroupId: ID; body: MockApiPayload }) =>
-      unwrap(await api.post<MockApi>(`/feature-groups/${vars.featureGroupId}/mock-apis`, vars.body)),
+      unwrap(
+        await api.post<MockApi>(`/feature-groups/${vars.featureGroupId}/mock-apis`, vars.body),
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mock-apis'] });
       qc.invalidateQueries({ queryKey: ['feature-groups'] });

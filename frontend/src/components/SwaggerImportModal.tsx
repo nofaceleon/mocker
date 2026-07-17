@@ -180,8 +180,7 @@ export function SwaggerImportModal({ open, featureGroupId, onClose, onCompleted 
       }
       return decision;
     });
-    const hasAny =
-      decisionList.some((d) => d.action !== 'skip') || parseResult.items.length === 0;
+    const hasAny = decisionList.some((d) => d.action !== 'skip') || parseResult.items.length === 0;
     if (!hasAny) {
       toast.error('没有需要导入的接口');
       return;
@@ -296,9 +295,7 @@ export function SwaggerImportModal({ open, featureGroupId, onClose, onCompleted 
           editingNameFor={editingNameFor}
           setNameOverride={setNameOverride}
           setAllVisible={setAllVisible}
-          setDecision={(idx, action) =>
-            setDecisions((prev) => ({ ...prev, [idx]: action }))
-          }
+          setDecision={(idx, action) => setDecisions((prev) => ({ ...prev, [idx]: action }))}
           stats={stats}
         />
       )}
@@ -481,9 +478,7 @@ function PreviewPhase({
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
             <span className="font-medium text-ink">{specTitle}</span>
-            {specVersion && (
-              <span className="text-ink-subtle">v{specVersion}</span>
-            )}
+            {specVersion && <span className="text-ink-subtle">v{specVersion}</span>}
           </div>
           <span className="tag tag-blue text-[10.5px]">{openApiVersion}</span>
           <span className="text-ink-subtle">
@@ -647,13 +642,9 @@ function PreviewRow({
             </button>
           )}
           {item.description && (
-            <span className="line-clamp-1 text-[10.5px] text-ink-subtle">
-              {item.description}
-            </span>
+            <span className="line-clamp-1 text-[10.5px] text-ink-subtle">{item.description}</span>
           )}
-          {item.conflict && (
-            <ConflictHint item={item} />
-          )}
+          {item.conflict && <ConflictHint item={item} />}
           {disabled && item.unsupportedReason && (
             <span className="text-[10.5px] text-ink-subtle">{item.unsupportedReason}</span>
           )}
@@ -688,7 +679,11 @@ function ConflictHint({ item }: { item: SwaggerImportItem }) {
         }}
         className="flex items-center gap-0.5 text-left text-[10.5px] text-orange-600 hover:underline"
       >
-        {expanded ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
+        {expanded ? (
+          <ChevronDown className="h-2.5 w-2.5" />
+        ) : (
+          <ChevronRight className="h-2.5 w-2.5" />
+        )}
         <span>路由冲突 #{c.existingId}</span>
         {expanded && (
           <span className="ml-1 text-ink-subtle">
@@ -699,7 +694,9 @@ function ConflictHint({ item }: { item: SwaggerImportItem }) {
     );
   }
   return (
-    <span className="text-[10.5px] text-blue-600">同名 #{c.existingId} {c.existingName}</span>
+    <span className="text-[10.5px] text-blue-600">
+      同名 #{c.existingId} {c.existingName}
+    </span>
   );
 }
 
@@ -737,9 +734,7 @@ function ActionPicker({
             disabled={disabledOpt}
             className={[
               'rounded px-2 py-0.5 transition-colors',
-              selected
-                ? 'bg-ink text-white'
-                : `${opt.color} hover:bg-canvas-subtle`,
+              selected ? 'bg-ink text-white' : `${opt.color} hover:bg-canvas-subtle`,
               disabledOpt ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
             ].join(' ')}
             title={disabledOpt ? '没有可覆盖的目标' : undefined}

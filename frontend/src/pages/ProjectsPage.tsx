@@ -536,7 +536,8 @@ function findInternalPathConflicts(bundle: ProjectExportBundle): PathConflict[] 
 function internalConflictsToAlert(conflicts: PathConflict[]): ImportAlert {
   return {
     title: `包内路由冲突 · ${conflicts.length} 处`,
-    description: '同一导出包里，启用接口的 method + path 不能完全相同，否则 Mock 引擎无法区分请求。',
+    description:
+      '同一导出包里，启用接口的 method + path 不能完全相同，否则 Mock 引擎无法区分请求。',
     tips: [
       '修改 JSON 中重复接口的 path，或关闭多余接口的 isEnabled',
       '确认无重复后再重新选择文件导入',
@@ -544,9 +545,7 @@ function internalConflictsToAlert(conflicts: PathConflict[]): ImportAlert {
     routes: conflicts.map((c) => ({
       method: c.method,
       path: c.path,
-      detail: c.apis
-        .map((a) => (a.group ? `${a.group} / ${a.name}` : a.name))
-        .join('  ·  '),
+      detail: c.apis.map((a) => (a.group ? `${a.group} / ${a.name}` : a.name)).join('  ·  '),
     })),
   };
 }
@@ -576,8 +575,7 @@ function errorToImportAlert(err: unknown): ImportAlert {
         });
         return {
           title: `包内路由冲突 · ${routes.length} 处`,
-          description:
-            '导出包内存在 method + path 完全相同的启用接口，无法导入。',
+          description: '导出包内存在 method + path 完全相同的启用接口，无法导入。',
           tips: ['修改 JSON 中重复接口的 path，或将多余接口设为 isEnabled: false'],
           routes,
         };
@@ -591,8 +589,7 @@ function errorToImportAlert(err: unknown): ImportAlert {
         }));
         return {
           title: `与现有路由冲突 · ${routes.length} 处`,
-          description:
-            '导入接口的 method + path 与系统中已启用的接口完全相同，会互相抢流量。',
+          description: '导入接口的 method + path 与系统中已启用的接口完全相同，会互相抢流量。',
           tips: [
             '修改导入包中的 path，或先禁用/删除已有冲突接口',
             '若是覆盖同名项目，请选择「覆盖重建」策略',
@@ -612,10 +609,7 @@ function errorToImportAlert(err: unknown): ImportAlert {
       return {
         title: '项目名已存在',
         description: err.message,
-        tips: [
-          '修改上方「导入后项目名」',
-          '或改用「跳过 / 覆盖重建」策略',
-        ],
+        tips: ['修改上方「导入后项目名」', '或改用「跳过 / 覆盖重建」策略'],
       };
     }
 
@@ -710,10 +704,7 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
   const [alert, setAlert] = useState<ImportAlert | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const pathConflicts = useMemo(
-    () => (bundle ? findInternalPathConflicts(bundle) : []),
-    [bundle],
-  );
+  const pathConflicts = useMemo(() => (bundle ? findInternalPathConflicts(bundle) : []), [bundle]);
 
   const displayAlert = useMemo(() => {
     if (pathConflicts.length > 0) return internalConflictsToAlert(pathConflicts);
@@ -933,9 +924,7 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
               </div>
               <div className="px-4 py-2.5 text-center">
                 <div className="text-[12px] font-medium text-ink">
-                  {bundle.exportedAt
-                    ? new Date(bundle.exportedAt).toLocaleDateString()
-                    : '—'}
+                  {bundle.exportedAt ? new Date(bundle.exportedAt).toLocaleDateString() : '—'}
                 </div>
                 <div className="text-[11px] text-ink-subtle">导出日期</div>
               </div>
@@ -979,21 +968,13 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
                     <Icon
                       className={[
                         'h-3.5 w-3.5',
-                        active
-                          ? m.danger
-                            ? 'text-danger'
-                            : 'text-ink'
-                          : 'text-ink-tertiary',
+                        active ? (m.danger ? 'text-danger' : 'text-ink') : 'text-ink-tertiary',
                       ].join(' ')}
                     />
                     <span
                       className={[
                         'text-[12.5px] font-medium',
-                        active
-                          ? m.danger
-                            ? 'text-danger'
-                            : 'text-ink'
-                          : 'text-ink-secondary',
+                        active ? (m.danger ? 'text-danger' : 'text-ink') : 'text-ink-secondary',
                       ].join(' ')}
                     >
                       {m.label}

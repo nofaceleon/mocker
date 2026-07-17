@@ -30,8 +30,11 @@ export function useCreateMockData() {
 export function useUpdateMockData() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { id: ID; apiId: ID; data: { dataKey?: string | null; dataValue?: unknown } }) =>
-      unwrap(await api.put<MockDataRow>(`/mock-data/${vars.id}`, vars.data)),
+    mutationFn: async (vars: {
+      id: ID;
+      apiId: ID;
+      data: { dataKey?: string | null; dataValue?: unknown };
+    }) => unwrap(await api.put<MockDataRow>(`/mock-data/${vars.id}`, vars.data)),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: KEYS.byApi(vars.apiId) });
     },

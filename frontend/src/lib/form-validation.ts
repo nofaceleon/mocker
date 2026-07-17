@@ -13,10 +13,7 @@ export function focusField(el: HTMLElement | null | undefined): void {
 }
 
 /** toast 报错并聚焦到对应字段 */
-export function reportFieldError(
-  message: string,
-  el?: HTMLElement | null | undefined,
-): void {
+export function reportFieldError(message: string, el?: HTMLElement | null | undefined): void {
   toast.error(message);
   focusField(el);
 }

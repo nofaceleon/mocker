@@ -191,7 +191,9 @@ router.get(
 );
 
 const createTableSchema = z.object({
-  name: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, '表名仅允许字母/数字/下划线，且不能以数字开头'),
+  name: z
+    .string()
+    .regex(/^[A-Za-z_][A-Za-z0-9_]*$/, '表名仅允许字母/数字/下划线，且不能以数字开头'),
   columns: z
     .array(
       z.object({
@@ -213,10 +215,7 @@ router.post(
     }
     try {
       const columns = createBusinessTable(body.name, body.columns);
-      res.success(
-        { name: body.name, columns, rowCount: 0 },
-        { status: 201 },
-      );
+      res.success({ name: body.name, columns, rowCount: 0 }, { status: 201 });
     } catch (err) {
       throw new ApiError('CREATE_FAILED', err instanceof Error ? err.message : '创建表失败', 400);
     }
@@ -261,9 +260,8 @@ router.post(
       .prepare(`INSERT INTO "${tableName}" (${colList.join(', ')}) VALUES (${placeholders})`)
       .run(...values);
     const rowId = Number(info.lastInsertRowid);
-    const row = sqlite
-      .prepare(`SELECT * FROM "${tableName}" WHERE id = ?`)
-      .get(rowId) as Record<string, unknown> | undefined;
+    const row = sqlite.prepare(`SELECT * FROM "${tableName}" WHERE id = ?`).get(rowId) as
+      Record<string, unknown> | undefined;
     res.success({ table: tableName, id: rowId, row }, { status: 201 });
   }),
 );
@@ -306,9 +304,8 @@ router.patch(
     if (info.changes === 0) {
       throw new ApiError('NOT_FOUND', `行 id=${rowId} 不存在`, 404);
     }
-    const row = sqlite
-      .prepare(`SELECT * FROM "${tableName}" WHERE id = ?`)
-      .get(rowId) as Record<string, unknown> | undefined;
+    const row = sqlite.prepare(`SELECT * FROM "${tableName}" WHERE id = ?`).get(rowId) as
+      Record<string, unknown> | undefined;
     res.success({ table: tableName, id: rowId, row });
   }),
 );

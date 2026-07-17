@@ -86,7 +86,9 @@ export function ParamTable<R extends { id: string }>({
   };
   const handleImport = (raw: string) => {
     try {
-      const appended = onImportJson ? onImportJson(raw) : (defaultParamImport(raw) as unknown as R[]);
+      const appended = onImportJson
+        ? onImportJson(raw)
+        : (defaultParamImport(raw) as unknown as R[]);
       onChange([...rows, ...appended]);
     } catch (err) {
       toast.error('解析失败：' + (err instanceof Error ? err.message : '未知错误'));
@@ -109,7 +111,11 @@ export function ParamTable<R extends { id: string }>({
             添加
           </Button>
         </div>
-        <JsonImportModal open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
+        <JsonImportModal
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onImport={handleImport}
+        />
       </div>
     );
   }
@@ -166,7 +172,11 @@ export function ParamTable<R extends { id: string }>({
           </Button>
         </div>
       </div>
-      <JsonImportModal open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
+      <JsonImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImport={handleImport}
+      />
     </>
   );
 }
@@ -198,7 +208,12 @@ type SelectCellProps<T extends string> = {
   className?: string;
 };
 
-export function SelectCell<T extends string>({ value, onChange, options, className }: SelectCellProps<T>) {
+export function SelectCell<T extends string>({
+  value,
+  onChange,
+  options,
+  className,
+}: SelectCellProps<T>) {
   return (
     <Select
       compact
@@ -314,7 +329,9 @@ type CurlPreviewProps = {
 };
 
 export function buildCurl({ method, baseUrl, path, headers, body }: CurlPreviewProps): string {
-  const parts: string[] = [`curl -X ${method.toUpperCase()} '${baseUrl.replace(/\/$/, '')}${path}'`];
+  const parts: string[] = [
+    `curl -X ${method.toUpperCase()} '${baseUrl.replace(/\/$/, '')}${path}'`,
+  ];
   if (headers) {
     Object.entries(headers).forEach(([k, v]) => {
       parts.push(`  -H '${escapeShell(k)}: ${escapeShell(v)}'`);

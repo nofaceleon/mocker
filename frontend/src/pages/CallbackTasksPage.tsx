@@ -90,16 +90,17 @@ export function CallbackTasksPage() {
     setPage(1);
   }, [range, customStart, customEnd]);
 
-  const { data: page1, isLoading, refetch } = useCallbackTasks({
+  const {
+    data: page1,
+    isLoading,
+    refetch,
+  } = useCallbackTasks({
     apiId,
     status: status === 'all' ? undefined : status,
     keyword: keyword || undefined,
     range,
     start: range === 'custom' && customStart ? new Date(customStart).getTime() : undefined,
-    end:
-      range === 'custom' && customEnd
-        ? new Date(customEnd + 'T23:59:59').getTime()
-        : undefined,
+    end: range === 'custom' && customEnd ? new Date(customEnd + 'T23:59:59').getTime() : undefined,
     page,
     pageSize,
   });
@@ -166,10 +167,7 @@ export function CallbackTasksPage() {
 
   return (
     <div className="page-container">
-      <PageHeader
-        title="回调任务管理"
-        description="查看、管理所有 Mock 接口产生的异步回调任务"
-      />
+      <PageHeader title="回调任务管理" description="查看、管理所有 Mock 接口产生的异步回调任务" />
 
       <div className="mb-4 grid grid-cols-5 gap-3">
         <StatCard label="待发送" value={stats?.pending ?? 0} icon={<Clock />} />
@@ -223,7 +221,7 @@ export function CallbackTasksPage() {
                 />
               </div>
               <span className="w-8 text-right font-mono text-[11px] text-ink-tertiary">
-                {Math.ceil((100 - progress) * 50 / 1000)}s
+                {Math.ceil(((100 - progress) * 50) / 1000)}s
               </span>
             </div>
           </div>
@@ -289,11 +287,7 @@ export function CallbackTasksPage() {
               <Button variant="ghost" size="sm" onClick={() => setCheckedIds([])}>
                 取消选择
               </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => setConfirmBatchDelete(true)}
-              >
+              <Button variant="danger" size="sm" onClick={() => setConfirmBatchDelete(true)}>
                 <Trash2 className="h-3.5 w-3.5" />
                 批量删除 ({checkedIds.length})
               </Button>
@@ -403,7 +397,9 @@ export function CallbackTasksPage() {
                         <span className="text-ink-subtle">—</span>
                       )}
                       {t.sentAt && (
-                        <div className="text-[10.5px] text-ink-subtle">→ {formatTime(t.sentAt)}</div>
+                        <div className="text-[10.5px] text-ink-subtle">
+                          → {formatTime(t.sentAt)}
+                        </div>
                       )}
                     </td>
                     <td className="text-[12px] text-ink-secondary">
@@ -484,10 +480,7 @@ export function CallbackTasksPage() {
         )}
       </Card>
 
-      <TaskDetailDrawer
-        taskId={selected}
-        onClose={() => setSelected(null)}
-      />
+      <TaskDetailDrawer taskId={selected} onClose={() => setSelected(null)} />
 
       <Modal
         open={confirmBatchDelete}
@@ -527,7 +520,12 @@ function TaskDetailDrawer({ taskId, onClose }: { taskId: number | null; onClose:
       : [];
 
   return (
-    <Drawer open={open} onClose={onClose} title={task ? `任务 #${task.id} 详情` : '任务详情'} width="lg">
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title={task ? `任务 #${task.id} 详情` : '任务详情'}
+      width="lg"
+    >
       {isLoading || !task ? (
         <div className="py-8 text-center text-[13px] text-ink-tertiary">加载中…</div>
       ) : (
@@ -596,10 +594,14 @@ function AttemptCard({ attempt }: { attempt: import('@/types/api').CallbackAttem
     <div className="rounded-lg border border-line bg-white p-3">
       <div className="mb-2.5 flex flex-wrap items-center gap-2">
         <span className="text-[13px] font-semibold text-ink">第 {attempt.attempt} 次</span>
-        <span className={`rounded-full border px-1.5 py-px text-[10.5px] font-medium ${outcomeClass}`}>
+        <span
+          className={`rounded-full border px-1.5 py-px text-[10.5px] font-medium ${outcomeClass}`}
+        >
           {outcomeLabel}
         </span>
-        <span className="ml-auto font-mono text-[11px] text-ink-subtle">{formatTime(attempt.at)}</span>
+        <span className="ml-auto font-mono text-[11px] text-ink-subtle">
+          {formatTime(attempt.at)}
+        </span>
       </div>
 
       <div className="mb-2 space-y-1 text-[12px]">
@@ -626,7 +628,9 @@ function AttemptCard({ attempt }: { attempt: import('@/types/api').CallbackAttem
       </div>
 
       <div className="mb-2">
-        <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">请求头</div>
+        <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">
+          请求头
+        </div>
         <HeadersBlock headers={attempt.request.headers} emptyHint="无请求头" />
       </div>
 
@@ -675,7 +679,10 @@ function buildFallbackAttempts(task: {
   }
   const success =
     task.status === 'sent' ||
-    (task.responseStatus != null && task.responseStatus >= 200 && task.responseStatus < 300 && !task.errorMessage);
+    (task.responseStatus != null &&
+      task.responseStatus >= 200 &&
+      task.responseStatus < 300 &&
+      !task.errorMessage);
   return [
     {
       attempt: 1,
@@ -697,7 +704,9 @@ function buildFallbackAttempts(task: {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">{label}</div>
+      <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">
+        {label}
+      </div>
       <div className="text-[12.5px] text-ink">{children}</div>
     </div>
   );

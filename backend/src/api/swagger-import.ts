@@ -59,11 +59,7 @@ router.post(
 
     // 校验功能组存在
     const db = getDb();
-    const fg = db
-      .select()
-      .from(featureGroups)
-      .where(eq(featureGroups.id, featureGroupId))
-      .get();
+    const fg = db.select().from(featureGroups).where(eq(featureGroups.id, featureGroupId)).get();
     if (!fg) {
       throw new ApiError('NOT_FOUND', `功能组 ${featureGroupId} 不存在`, 404);
     }
@@ -138,11 +134,7 @@ router.post(
     const { decisions } = commitBodySchema.parse(req.body);
 
     const db = getDb();
-    const fg = db
-      .select()
-      .from(featureGroups)
-      .where(eq(featureGroups.id, featureGroupId))
-      .get();
+    const fg = db.select().from(featureGroups).where(eq(featureGroups.id, featureGroupId)).get();
     if (!fg) {
       throw new ApiError('NOT_FOUND', `功能组 ${featureGroupId} 不存在`, 404);
     }
@@ -200,9 +192,7 @@ router.post(
       try {
         if (decision.action === 'overwrite') {
           // 找现有冲突接口（method+path 匹配）
-          const target = existing.find(
-            (e) => e.method === item.method && e.path === finalPath,
-          );
+          const target = existing.find((e) => e.method === item.method && e.path === finalPath);
           if (target) {
             // 更新现有接口（保留 id 和 createdAt）
             db.update(mockApis)
@@ -305,11 +295,7 @@ function createOne(
   registry.upsert(row);
 }
 
-function assertNoConflict(
-  db: ReturnType<typeof getDb>,
-  method: HttpMethod,
-  path: string,
-): void {
+function assertNoConflict(db: ReturnType<typeof getDb>, method: HttpMethod, path: string): void {
   const candidates = db
     .select()
     .from(mockApis)
@@ -334,10 +320,7 @@ type ConflictInfo = {
   existingPath: string;
 };
 
-function detectConflict(
-  existing: MockApi[],
-  item: NormalizedImportItem,
-): ConflictInfo | null {
+function detectConflict(existing: MockApi[], item: NormalizedImportItem): ConflictInfo | null {
   // 仅 (method, path) 冲突会阻止创建，name 重复不阻塞（仅标记提醒）
   const routeMatch = existing.find(
     (e) => e.method === item.method && e.path === item.path && e.isEnabled,

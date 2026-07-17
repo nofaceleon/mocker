@@ -9,7 +9,14 @@ type IconBtnProps = {
   danger?: boolean;
 };
 
-export function IconBtn({ children, title, onClick, type = 'button', className, danger }: IconBtnProps) {
+export function IconBtn({
+  children,
+  title,
+  onClick,
+  type = 'button',
+  className,
+  danger,
+}: IconBtnProps) {
   return (
     <button
       type={type}

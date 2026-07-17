@@ -124,10 +124,7 @@ router.put(
         };
         if (item.id && existingById.has(item.id)) {
           keepIds.add(item.id);
-          tx.update(callbackConfigs)
-            .set(baseValues)
-            .where(eq(callbackConfigs.id, item.id))
-            .run();
+          tx.update(callbackConfigs).set(baseValues).where(eq(callbackConfigs.id, item.id)).run();
         } else {
           tx.insert(callbackConfigs).values(baseValues).run();
         }
@@ -219,7 +216,8 @@ function buildTimeRangeFilter(q: z.infer<typeof taskQuerySchema>) {
   if (q.range === 'custom') {
     const start = parseTimeBound(q.start);
     const end = parseTimeBound(q.end);
-    if (start && end) return and(gte(callbackTasks.createdAt, start), lte(callbackTasks.createdAt, end));
+    if (start && end)
+      return and(gte(callbackTasks.createdAt, start), lte(callbackTasks.createdAt, end));
     if (start) return gte(callbackTasks.createdAt, start);
     if (end) return lte(callbackTasks.createdAt, end);
     return undefined;
@@ -227,7 +225,13 @@ function buildTimeRangeFilter(q: z.infer<typeof taskQuerySchema>) {
   if (q.range === 'all' || !q.range) return undefined;
   const now = Date.now();
   const span =
-    q.range === '1h' ? 3_600_000 : q.range === '24h' ? 86_400_000 : q.range === '7d' ? 7 * 86_400_000 : 0;
+    q.range === '1h'
+      ? 3_600_000
+      : q.range === '24h'
+        ? 86_400_000
+        : q.range === '7d'
+          ? 7 * 86_400_000
+          : 0;
   if (!span) return undefined;
   return gte(callbackTasks.createdAt, new Date(now - span));
 }
@@ -373,7 +377,11 @@ router.post(
     const task = db.select().from(callbackTasks).where(eq(callbackTasks.id, taskId)).get();
     if (!task) throw new ApiError('NOT_FOUND', `回调任务 ${taskId} 不存在`, 404);
     if (task.status !== 'pending') {
-      throw new ApiError('BAD_REQUEST', `只有 pending 状态的任务可以取消（当前 ${task.status}）`, 400);
+      throw new ApiError(
+        'BAD_REQUEST',
+        `只有 pending 状态的任务可以取消（当前 ${task.status}）`,
+        400,
+      );
     }
     const ok = cancelTask(taskId);
     callbackScheduler.cancel(taskId);

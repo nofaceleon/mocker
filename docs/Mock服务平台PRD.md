@@ -29,7 +29,9 @@
 ## 1. 问题陈述
 
 ### 1.1 背景
+
 在开发过程中，项目需要对接大量第三方接口（如人脸识别、支付、短信、地图等）。由于以下原因，本地测试环境经常无法正常访问这些三方接口：
+
 - 第三方服务需要外网访问权限，本地网络受限
 - 第三方服务需要API Key/证书，个人开发环境配置复杂
 - 第三方服务有调用频率限制，影响测试效率
@@ -37,12 +39,14 @@
 - 需要模拟异常场景（超时、错误码），但第三方服务无法提供
 
 ### 1.2 影响
+
 - **开发效率降低**：等待接口可用或手动构造测试数据耗时
 - **测试覆盖不足**：无法模拟异常场景，导致线上问题
 - **联调成本高**：前后端联调时，依赖第三方服务可用性
 - **演示困难**：给产品/客户演示时，第三方服务可能不可用
 
 ### 1.3 解决方案
+
 搭建一个**通用接口Mock服务平台**，支持模拟各种类型的接口（HTTP、WebSocket、SSE等），提供可视化界面管理Mock数据，支持数据联动和参数校验，提升开发测试效率。
 
 ---
@@ -50,16 +54,19 @@
 ## 2. 目标
 
 ### 2.1 用户目标
+
 - **快速创建Mock接口**：无需写代码，通过界面配置即可创建Mock接口
 - **真实模拟场景**：支持数据联动、参数校验、动态响应，模拟真实接口行为
 - **提升开发效率**：本地即可完成依赖第三方接口的功能开发和测试
 
 ### 2.2 业务目标
+
 - **减少外部依赖**：开发测试不依赖第三方服务可用性
 - **提升测试覆盖率**：轻松模拟异常场景，提升代码质量
 - **降低联调成本**：前后端可基于Mock接口并行开发
 
 ### 2.3 成功标准
+
 - 开发者能在**5分钟内**通过界面创建一个Mock接口
 - 支持**95%以上**的常见接口类型（HTTP/RESTful、WebSocket、SSE等）
 - 数据联动响应时间 **<100ms**
@@ -72,35 +79,38 @@
 以下功能**不在v1版本**中实现：
 
 1. **多用户权限管理**：v1主要面向个人使用，不支持多用户、角色权限管理
-   - *原因*：个人使用场景，复杂度高，可后续扩展
+   - _原因_：个人使用场景，复杂度高，可后续扩展
 
 2. **分布式部署支持**：v1支持单机部署，不支持多节点集群
-   - *原因*：个人使用无需高可用，简化部署复杂度
+   - _原因_：个人使用无需高可用，简化部署复杂度
 
 3. **性能压测功能**：不支持高并发压测、性能基准测试
-   - *原因*：Mock平台主要面向功能测试，非性能测试
+   - _原因_：Mock平台主要面向功能测试，非性能测试
 
 4. **接口录制与回放**：不支持自动录制真实接口请求并生成Mock数据
-   - *原因*：可实现，但v1聚焦手动创建，降低复杂度
+   - _原因_：可实现，但v1聚焦手动创建，降低复杂度
 
 5. **SaaS化部署**：v1为本地部署工具，不提供云端SaaS服务
-   - *原因*：个人使用场景，本地部署更灵活、数据更安全
+   - _原因_：个人使用场景，本地部署更灵活、数据更安全
 
 ---
 
 ## 4. 用户故事
 
 ### 4.1 项目管理
+
 - **US1**: 作为开发者，我希望能创建多个项目，以便隔离不同系统的Mock接口
 - **US2**: 作为开发者，我希望能编辑和删除项目，以便管理不再使用的项目
 - **US3**: 作为开发者，我希望能搜索和过滤项目，以便快速找到目标项目
 
 ### 4.2 功能组管理
+
 - **US4**: 作为开发者，我希望能在项目下创建功能组（如"人脸识别模块"），以便按模块组织Mock接口
 - **US5**: 作为开发者，我希望能拖拽排序功能组，以便按使用频率排列
 - **US6**: 作为开发者，我希望能复制功能组到另一个项目，以便复用配置
 
 ### 4.3 Mock接口创建与配置
+
 - **US7**: 作为开发者，我希望能通过界面配置HTTP接口的路由、方法、请求参数、响应数据，以便快速创建RESTful Mock接口
 - **US8**: 作为开发者，我希望能创建WebSocket Mock接口，以便测试实时通信功能
 - **US9**: 作为开发者，我希望能创建SSE（Server-Sent Events）Mock接口，以便测试服务端推送功能
@@ -108,25 +118,30 @@
 - **US11**: 作为开发者，我希望能配置接口延迟（如固定延迟500ms或随机延迟），以便模拟真实网络环境
 
 ### 4.4 数据联动
+
 - **US12**: 作为开发者，我希望能让"查询接口"返回"新增接口"刚创建的数据，以便模拟真实的数据流转
 - **US13**: 作为开发者，我希望能配置数据联动规则（如"新增人脸"→"存储到数据库"→"查询人脸时返回"), 以便实现接口间数据一致性
 - **US14**: 作为开发者，我希望能查看当前Mock数据库中的所有数据，以便调试数据联动逻辑
 
 ### 4.5 参数校验
+
 - **US15**: 作为开发者，我希望能为接口配置参数校验规则（如必填、类型、范围、正则），以便在请求参数错误时返回约定的错误响应
 - **US16**: 作为开发者，我希望能自定义参数校验失败时的响应内容和状态码，以便模拟真实的接口错误返回
 
 ### 4.6 数据管理
+
 - **US17**: 作为开发者，我希望能手动创建、编辑、删除Mock数据，以便在界面上直接管理测试数据
 - **US18**: 作为开发者，我希望能导入/导出Mock数据（JSON格式），以便备份或在团队间共享
 - **US19**: 作为开发者，我希望能批量启用/禁用某个功能组下的所有Mock接口，以便快速切换测试场景
 
 ### 4.7 调试与测试
+
 - **US20**: 作为开发者，我希望能在界面上直接测试Mock接口（发送请求并查看响应），以便快速验证配置是否正确
 - **US21**: 作为开发者，我希望能查看接口的调用日志（请求时间、请求参数、响应内容），以便调试问题
 - **US22**: 作为开发者，我希望能清除某个接口的调用日志，以便重新测试
 
 ### 4.8 延迟回调（异步通知）
+
 - **US25**: 作为开发者，我希望能配置接口在响应后延迟N秒自动向回调URL发送通知，以便模拟异步接口的回调行为（如支付结果通知、人脸识别结果通知）
 - **US26**: 作为开发者，我希望能动态配置回调URL（从请求参数中提取，如 `req.body.callbackUrl`），以便灵活支持不同调用方的回调地址
 - **US27**: 作为开发者，我希望能配置回调请求的方法、请求头、请求体，以便完整模拟真实回调请求
@@ -134,6 +149,7 @@
 - **US29**: 作为开发者，我希望能查看回调任务的执行日志（发送时间、请求内容、响应结果、重试次数），以便调试回调逻辑
 
 ### 4.9 扩展性
+
 - **US23**: 作为开发者，我希望能编写自定义脚本（JavaScript/Python）来处理复杂业务逻辑，以便实现灵活的Mock场景
 - **US24**: 作为开发者，我希望能配置接口的响应头、状态码、Cookie等，以便完整模拟真实接口
 
@@ -144,20 +160,22 @@
 ### 5.1 P0（必须有，否则无法发布）
 
 #### 5.1.1 项目管理
+
 - **R1**: 支持创建、编辑、删除项目
   - 项目属性：项目名称（必填）、项目描述、创建时间、最后修改时间
   - 项目名称不能重复
-  
+
 - **R2**: 支持创建、编辑、删除功能组
   - 功能组属性：功能组名称（必填）、所属项目、描述、排序权重
   - 功能组名称在项目内不能重复
 
 #### 5.1.2 HTTP接口Mock
+
 - **R3**: 支持创建HTTP/HTTPS Mock接口
   - 配置项：HTTP方法（GET/POST/PUT/DELETE/PATCH）、路由路径、请求参数（Query/Body/Path）、响应数据
   - 路由路径支持参数（如 `/api/user/:id`）
   - 支持路由优先级（精确匹配 > 参数匹配 > 通配符匹配）
-  
+
 - **R4**: 支持配置响应内容
   - 响应状态码（如200、400、500）
   - 响应头（可自定义）
@@ -165,6 +183,7 @@
   - 响应延迟（固定延迟或随机延迟范围）
 
 #### 5.1.3 数据联动（基于SQLite）
+
 - **R5**: 支持接口间数据联动
   - 提供SQLite数据库存储Mock数据
   - 支持在接口配置中指定"数据操作"（增删改查）
@@ -172,18 +191,21 @@
   - 示例：`POST /face/add` 写入数据 → `GET /face/list` 返回刚写入的数据
 
 #### 5.1.4 参数校验
+
 - **R6**: 支持请求参数校验
   - 支持校验Query参数、Body参数、Path参数、Header参数
   - 校验规则：必填、类型（string/number/boolean/array/object）、取值范围、正则匹配、自定义校验函数
   - 校验失败时返回自定义错误响应（状态码、错误信息）
 
 #### 5.1.5 可视化界面
+
 - **R7**: 提供Web界面管理Mock数据
   - 技术栈建议：React + Tailwind CSS（易用性强，生态丰富）
   - 界面布局：左侧项目/功能组树形导航，右侧接口列表/编辑区
   - 支持响应式布局（桌面端优先）
 
 #### 5.1.6 数据持久化
+
 - **R8**: 使用SQLite数据库持久化存储
   - 存储内容：项目配置、功能组配置、接口配置、Mock数据、调用日志
   - 数据库文件存储在用户指定目录（默认 `./data/mock.db`）
@@ -192,38 +214,43 @@
 ### 5.2 P1（应该有，显著提升体验）
 
 #### 5.2.1 WebSocket接口Mock
+
 - **R9**: 支持创建WebSocket Mock接口
   - 配置项：路由路径、连接时的欢迎消息、消息处理逻辑（脚本）
   - 支持主动向客户端推送消息
   - 支持模拟连接断开、错误等异常场景
 
 #### 5.2.2 SSE接口Mock
+
 - **R10**: 支持创建SSE（Server-Sent Events）Mock接口
   - 配置项：路由路径、事件类型、推送频率、推送数据结构
   - 支持模拟实时数据推送（如股票行情、通知消息）
 
 #### 5.2.3 自定义响应逻辑
+
 - **R11**: 支持编写JavaScript脚本自定义响应
   - 脚本能访问请求对象（req）、响应对象（res）、数据库对象（db）
   - 支持异步操作（如setTimeout、数据库查询）
   - 提供脚本编辑器（代码高亮、自动补全）
 
 #### 5.2.4 导入导出
+
 - **R12**: 支持导入/导出Mock配置
   - 导出格式：JSON
   - 导出内容：项目配置、功能组、接口配置、Mock数据
   - 支持选择性导出（如只导出某个功能组）
 
 #### 5.2.5 延迟回调（异步通知）
+
 - **R14**: 支持配置延迟回调
   - 配置项：是否启用回调、回调URL（支持固定URL或从请求参数动态提取）、回调延迟时间（固定值或范围）、回调请求方法（POST/GET/PUT等）、回调请求头、回调请求体
   - 支持动态变量：回调请求体中支持使用 `{{request.xxx}}` 引用请求参数，使用 `{{response.xxx}}` 引用响应数据
   - 示例：人脸增加接口立即返回"受理成功"，延迟5秒后向 `req.body.callbackUrl` 发送人脸识别结果
-  
+
 - **R15**: 支持回调重试策略
   - 配置项：是否启用重试、最大重试次数、重试间隔（固定值或指数退避）、重试条件（如HTTP状态码非200时重试）
   - 重试日志：记录每次重试的时间、请求内容、响应结果、错误信息
-  
+
 - **R16**: 支持查看回调任务日志
   - 记录内容：任务ID、接口ID、回调URL、回调请求内容、回调响应内容、回调状态（待发送/已发送/失败）、发送时间、重试次数、创建时间
   - 支持在界面上查看日志
@@ -231,6 +258,7 @@
   - 支持手动重新发送失败的回调任务
 
 #### 5.2.6 调用日志
+
 - **R13**: 记录接口调用日志
   - 记录内容：调用时间、请求方法、请求路径、请求参数、响应状态码、响应时间
   - 支持在界面上查看日志
@@ -240,23 +268,27 @@
 ### 5.3 P2（可以有，未来版本考虑）
 
 #### 5.3.1 高级数据联动
+
 - **R17**: 支持复杂的数据联动规则
   - 支持数据变换（如加密、格式化）
   - 支持条件判断（如根据请求参数返回不同数据）
   - 支持数据关联（如外键关联查询）
 
 #### 5.3.2 场景管理
+
 - **R18**: 支持测试场景管理
   - 场景：一组接口配置的快照（如"正常场景"、"异常场景"）
   - 支持快速切换场景
   - 支持场景导入/导出
 
 #### 5.3.3 性能监控
+
 - **R19**: 提供接口性能监控
   - 统计指标：调用次数、平均响应时间、错误率
   - 提供可视化图表
 
 #### 5.3.4 多协议支持
+
 - **R20**: 支持更多协议
   - 如gRPC、GraphQL、TCP Socket等
 
@@ -265,38 +297,42 @@
 ## 6. 成功指标
 
 ### 6.1 易用性指标
-| 指标 | 目标值 | 测量方法 |
-|------|--------|----------|
-| 创建第一个Mock接口的时间 | <5分钟 | 用户测试观察 |
-| 界面操作成功率 | >95% | 用户测试，记录操作错误次数 |
-| 用户满意度（NPS） | >8分 | 使用后问卷 |
+
+| 指标                     | 目标值 | 测量方法                   |
+| ------------------------ | ------ | -------------------------- |
+| 创建第一个Mock接口的时间 | <5分钟 | 用户测试观察               |
+| 界面操作成功率           | >95%   | 用户测试，记录操作错误次数 |
+| 用户满意度（NPS）        | >8分   | 使用后问卷                 |
 
 ### 6.2 功能完整性指标
-| 指标 | 目标值 | 测量方法 |
-|------|--------|----------|
-| HTTP接口支持度 | 100% | 测试用例覆盖 |
-| WebSocket接口支持度 | 100% | 测试用例覆盖 |
-| SSE接口支持度 | 100% | 测试用例覆盖 |
-| 数据联动准确率 | 100% | 自动化测试 |
-| 参数校验准确率 | 100% | 自动化测试 |
-| 延迟回调准确率 | 100% | 自动化测试 |
-| 回调重试成功率 | >95% | 自动化测试 |
+
+| 指标                | 目标值 | 测量方法     |
+| ------------------- | ------ | ------------ |
+| HTTP接口支持度      | 100%   | 测试用例覆盖 |
+| WebSocket接口支持度 | 100%   | 测试用例覆盖 |
+| SSE接口支持度       | 100%   | 测试用例覆盖 |
+| 数据联动准确率      | 100%   | 自动化测试   |
+| 参数校验准确率      | 100%   | 自动化测试   |
+| 延迟回调准确率      | 100%   | 自动化测试   |
+| 回调重试成功率      | >95%   | 自动化测试   |
 
 ### 6.3 性能指标
-| 指标 | 目标值 | 测量方法 |
-|------|--------|----------|
-| 接口响应延迟（无自定义逻辑） | <50ms | 基准测试 |
-| 数据联动查询延迟 | <100ms | 基准测试 |
-| 自定义脚本执行延迟 | <200ms | 基准测试 |
-| 回调任务调度延迟 | <100ms | 基准测试（从计划时间到实际执行时间的误差） |
-| 并发支持（个人使用） | 100 QPS | 压力测试 |
+
+| 指标                         | 目标值  | 测量方法                                   |
+| ---------------------------- | ------- | ------------------------------------------ |
+| 接口响应延迟（无自定义逻辑） | <50ms   | 基准测试                                   |
+| 数据联动查询延迟             | <100ms  | 基准测试                                   |
+| 自定义脚本执行延迟           | <200ms  | 基准测试                                   |
+| 回调任务调度延迟             | <100ms  | 基准测试（从计划时间到实际执行时间的误差） |
+| 并发支持（个人使用）         | 100 QPS | 压力测试                                   |
 
 ### 6.4 稳定性指标
-| 指标 | 目标值 | 测量方法 |
-|------|--------|----------|
-| 平台可用性 | >99.9% | 运行日志监控 |
-| 数据丢失率 | 0% | 异常测试 |
-| 接口配置保存成功率 | 100% | 自动化测试 |
+
+| 指标               | 目标值 | 测量方法     |
+| ------------------ | ------ | ------------ |
+| 平台可用性         | >99.9% | 运行日志监控 |
+| 数据丢失率         | 0%     | 异常测试     |
+| 接口配置保存成功率 | 100%   | 自动化测试   |
 
 ---
 
@@ -304,25 +340,27 @@
 
 ### 7.1 需要明确的问题
 
-| 问题 | 描述 | 需要谁回答 | 优先级 |
-|------|------|------------|--------|
-| Q1: 是否需要支持HTTPS？ | Mock服务是否需要支持HTTPS协议，还是只需要HTTP？ | 用户 | 高 |
-| Q2: 数据库表结构细节 | SQLite数据库具体需要哪些表，字段如何设计？ | 技术负责人 | 高 |
-| Q3: 自定义脚本安全沙箱 | 执行用户自定义JavaScript脚本时，如何防止恶意代码？ | 技术负责人 | 中 |
-| Q4: 接口路由冲突处理 | 当两个接口的路由和方法都相同时，如何处理？报错还是覆盖？ | 用户 | 中 |
-| Q5: Mock数据大小限制 | 单个接口的Mock数据是否有大小限制（如1MB）？ | 技术负责人 | 低 |
-| Q6: 回调任务持久化 | 当Mock服务重启时，未执行的回调任务如何处理？是否需要持久化？ | 技术负责人 | 中 |
-| Q7: 回调URL可达性 | 当回调URL不可达时（如本地服务未启动），如何处理？是否需要提供"离线模式"？ | 用户 | 低 |
+| 问题                    | 描述                                                                      | 需要谁回答 | 优先级 |
+| ----------------------- | ------------------------------------------------------------------------- | ---------- | ------ |
+| Q1: 是否需要支持HTTPS？ | Mock服务是否需要支持HTTPS协议，还是只需要HTTP？                           | 用户       | 高     |
+| Q2: 数据库表结构细节    | SQLite数据库具体需要哪些表，字段如何设计？                                | 技术负责人 | 高     |
+| Q3: 自定义脚本安全沙箱  | 执行用户自定义JavaScript脚本时，如何防止恶意代码？                        | 技术负责人 | 中     |
+| Q4: 接口路由冲突处理    | 当两个接口的路由和方法都相同时，如何处理？报错还是覆盖？                  | 用户       | 中     |
+| Q5: Mock数据大小限制    | 单个接口的Mock数据是否有大小限制（如1MB）？                               | 技术负责人 | 低     |
+| Q6: 回调任务持久化      | 当Mock服务重启时，未执行的回调任务如何处理？是否需要持久化？              | 技术负责人 | 中     |
+| Q7: 回调URL可达性       | 当回调URL不可达时（如本地服务未启动），如何处理？是否需要提供"离线模式"？ | 用户       | 低     |
 
 ### 7.2 技术决策建议
 
 **关于Q1（HTTPS支持）**：
-- *建议*：v1支持HTTP即可，如需HTTPS可通过Nginx反向代理实现
-- *理由*：简化开发，Mock服务主要在内网使用
+
+- _建议_：v1支持HTTP即可，如需HTTPS可通过Nginx反向代理实现
+- _理由_：简化开发，Mock服务主要在内网使用
 
 **关于Q3（脚本安全）**：
-- *建议*：使用沙箱环境执行脚本（如Node.js的vm模块或隔离的Worker Thread）
-- *理由*：防止脚本访问文件系统、网络等敏感资源
+
+- _建议_：使用沙箱环境执行脚本（如Node.js的vm模块或隔离的Worker Thread）
+- _理由_：防止脚本访问文件系统、网络等敏感资源
 
 ---
 
@@ -361,20 +399,21 @@
 
 ### 8.2 技术栈建议
 
-| 层级 | 技术选择 | 理由 |
-|------|----------|------|
-| 前端 | React 18 + Tailwind CSS + Axios | 生态丰富，易用性强，组件化开发 |
-| 后端 | Node.js + Express + TypeScript | 适合I/O密集型，与前端技术栈统一 |
-| 数据库 | SQLite 3 | 轻量级，无需独立服务，适合个人使用 |
-| WebSocket | ws (Node.js库) | 成熟稳定，API简洁 |
-| SSE | 原生Express response | SSE基于HTTP，无需额外库 |
-| 脚本执行 | Node.js vm模块 | 提供沙箱环境，安全可靠 |
+| 层级      | 技术选择                        | 理由                               |
+| --------- | ------------------------------- | ---------------------------------- |
+| 前端      | React 18 + Tailwind CSS + Axios | 生态丰富，易用性强，组件化开发     |
+| 后端      | Node.js + Express + TypeScript  | 适合I/O密集型，与前端技术栈统一    |
+| 数据库    | SQLite 3                        | 轻量级，无需独立服务，适合个人使用 |
+| WebSocket | ws (Node.js库)                  | 成熟稳定，API简洁                  |
+| SSE       | 原生Express response            | SSE基于HTTP，无需额外库            |
+| 脚本执行  | Node.js vm模块                  | 提供沙箱环境，安全可靠             |
 
 ### 8.3 延迟回调实现方案
 
 **方案选择**：使用任务队列 + 定时器实现
 
 **实现步骤**：
+
 1. **接收请求**：接口被调用，立即返回响应（如202 Accepted）
 2. **创建回调任务**：根据回调配置，创建回调任务记录到 `callback_tasks` 表
 3. **任务调度**：回调任务调度器定期检查 `callback_tasks` 表，查找 `status='pending'` 且 `scheduled_at <= NOW()` 的任务
@@ -383,6 +422,7 @@
 6. **重试处理**：如果任务失败且未超过最大重试次数，按重试策略更新 `scheduled_at` 和 `retry_count`
 
 **技术选型**：
+
 - **任务调度**：使用 `setTimeout`（小规模）或任务队列库（如 Bull）
 - **HTTP客户端**：使用 `axios` 或 `node-fetch`
 - **并发控制**：限制同时执行的回调任务数量，防止资源耗尽
@@ -419,112 +459,119 @@ mock-platform/
 ### 9.1 数据库表结构
 
 #### 9.1.1 项目表 (projects)
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| id | INTEGER | PRIMARY KEY, AUTO_INCREMENT | 项目ID |
-| name | VARCHAR(100) | NOT NULL, UNIQUE | 项目名称 |
-| description | TEXT | | 项目描述 |
-| created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| updated_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间 |
+
+| 字段名      | 类型         | 约束                                | 说明         |
+| ----------- | ------------ | ----------------------------------- | ------------ |
+| id          | INTEGER      | PRIMARY KEY, AUTO_INCREMENT         | 项目ID       |
+| name        | VARCHAR(100) | NOT NULL, UNIQUE                    | 项目名称     |
+| description | TEXT         |                                     | 项目描述     |
+| created_at  | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间     |
+| updated_at  | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间 |
 
 #### 9.1.2 功能组表 (feature_groups)
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| id | INTEGER | PRIMARY KEY, AUTO_INCREMENT | 功能组ID |
-| project_id | INTEGER | NOT NULL, FOREIGN KEY | 所属项目ID |
-| name | VARCHAR(100) | NOT NULL | 功能组名称 |
-| description | TEXT | | 功能组描述 |
-| sort_order | INTEGER | DEFAULT 0 | 排序权重 |
-| created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| updated_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间 |
-| UNIQUE(project_id, name) | | | 项目内功能组名称不能重复 |
+
+| 字段名                   | 类型         | 约束                                | 说明                     |
+| ------------------------ | ------------ | ----------------------------------- | ------------------------ |
+| id                       | INTEGER      | PRIMARY KEY, AUTO_INCREMENT         | 功能组ID                 |
+| project_id               | INTEGER      | NOT NULL, FOREIGN KEY               | 所属项目ID               |
+| name                     | VARCHAR(100) | NOT NULL                            | 功能组名称               |
+| description              | TEXT         |                                     | 功能组描述               |
+| sort_order               | INTEGER      | DEFAULT 0                           | 排序权重                 |
+| created_at               | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间                 |
+| updated_at               | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间             |
+| UNIQUE(project_id, name) |              |                                     | 项目内功能组名称不能重复 |
 
 #### 9.1.3 接口配置表 (mock_apis)
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| id | INTEGER | PRIMARY KEY, AUTO_INCREMENT | 接口ID |
-| feature_group_id | INTEGER | NOT NULL, FOREIGN KEY | 所属功能组ID |
-| name | VARCHAR(100) | NOT NULL | 接口名称 |
-| description | TEXT | | 接口描述 |
-| method | VARCHAR(10) | NOT NULL | HTTP方法（GET/POST/PUT/DELETE/PATCH/WS/SSE） |
-| path | VARCHAR(500) | NOT NULL | 路由路径 |
-| is_enabled | BOOLEAN | DEFAULT TRUE | 是否启用 |
-| response_status | INTEGER | DEFAULT 200 | 响应状态码 |
-| response_delay | INTEGER | DEFAULT 0 | 响应延迟（毫秒） |
-| response_headers | JSON | | 响应头（JSON格式） |
-| response_body | JSON | | 响应体（JSON格式） |
-| validation_rules | JSON | | 参数校验规则（JSON格式） |
-| script | TEXT | | 自定义脚本 |
-| sort_order | INTEGER | DEFAULT 0 | 排序权重 |
-| created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| updated_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间 |
+
+| 字段名           | 类型         | 约束                                | 说明                                         |
+| ---------------- | ------------ | ----------------------------------- | -------------------------------------------- |
+| id               | INTEGER      | PRIMARY KEY, AUTO_INCREMENT         | 接口ID                                       |
+| feature_group_id | INTEGER      | NOT NULL, FOREIGN KEY               | 所属功能组ID                                 |
+| name             | VARCHAR(100) | NOT NULL                            | 接口名称                                     |
+| description      | TEXT         |                                     | 接口描述                                     |
+| method           | VARCHAR(10)  | NOT NULL                            | HTTP方法（GET/POST/PUT/DELETE/PATCH/WS/SSE） |
+| path             | VARCHAR(500) | NOT NULL                            | 路由路径                                     |
+| is_enabled       | BOOLEAN      | DEFAULT TRUE                        | 是否启用                                     |
+| response_status  | INTEGER      | DEFAULT 200                         | 响应状态码                                   |
+| response_delay   | INTEGER      | DEFAULT 0                           | 响应延迟（毫秒）                             |
+| response_headers | JSON         |                                     | 响应头（JSON格式）                           |
+| response_body    | JSON         |                                     | 响应体（JSON格式）                           |
+| validation_rules | JSON         |                                     | 参数校验规则（JSON格式）                     |
+| script           | TEXT         |                                     | 自定义脚本                                   |
+| sort_order       | INTEGER      | DEFAULT 0                           | 排序权重                                     |
+| created_at       | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间                                     |
+| updated_at       | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间                                 |
 
 #### 9.1.4 Mock数据表 (mock_data)
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| id | INTEGER | PRIMARY KEY, AUTO_INCREMENT | 数据ID |
-| api_id | INTEGER | NOT NULL, FOREIGN KEY | 所属接口ID |
-| data_key | VARCHAR(100) | | 数据键（用于数据联动） |
-| data_value | JSON | | 数据值（JSON格式） |
-| created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| updated_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间 |
+
+| 字段名     | 类型         | 约束                                | 说明                   |
+| ---------- | ------------ | ----------------------------------- | ---------------------- |
+| id         | INTEGER      | PRIMARY KEY, AUTO_INCREMENT         | 数据ID                 |
+| api_id     | INTEGER      | NOT NULL, FOREIGN KEY               | 所属接口ID             |
+| data_key   | VARCHAR(100) |                                     | 数据键（用于数据联动） |
+| data_value | JSON         |                                     | 数据值（JSON格式）     |
+| created_at | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间               |
+| updated_at | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间           |
 
 #### 9.1.5 调用日志表 (request_logs)
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| id | INTEGER | PRIMARY KEY, AUTO_INCREMENT | 日志ID |
-| api_id | INTEGER | NOT NULL, FOREIGN KEY | 所属接口ID |
-| request_method | VARCHAR(10) | | 请求方法 |
-| request_path | VARCHAR(500) | | 请求路径 |
-| request_params | JSON | | 请求参数 |
-| request_body | JSON | | 请求体 |
-| response_status | INTEGER | | 响应状态码 |
-| response_body | TEXT | | 响应体 |
-| response_time | INTEGER | | 响应时间（毫秒） |
-| created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 调用时间 |
+
+| 字段名          | 类型         | 约束                                | 说明             |
+| --------------- | ------------ | ----------------------------------- | ---------------- |
+| id              | INTEGER      | PRIMARY KEY, AUTO_INCREMENT         | 日志ID           |
+| api_id          | INTEGER      | NOT NULL, FOREIGN KEY               | 所属接口ID       |
+| request_method  | VARCHAR(10)  |                                     | 请求方法         |
+| request_path    | VARCHAR(500) |                                     | 请求路径         |
+| request_params  | JSON         |                                     | 请求参数         |
+| request_body    | JSON         |                                     | 请求体           |
+| response_status | INTEGER      |                                     | 响应状态码       |
+| response_body   | TEXT         |                                     | 响应体           |
+| response_time   | INTEGER      |                                     | 响应时间（毫秒） |
+| created_at      | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 调用时间         |
 
 #### 9.1.6 回调配置表 (callback_configs)
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| id | INTEGER | PRIMARY KEY, AUTO_INCREMENT | 配置ID |
-| api_id | INTEGER | NOT NULL, FOREIGN KEY | 所属接口ID |
-| is_enabled | BOOLEAN | DEFAULT FALSE | 是否启用回调 |
-| callback_url | VARCHAR(500) | | 回调URL（支持变量，如 `{{req.body.callbackUrl}}`） |
-| callback_method | VARCHAR(10) | DEFAULT 'POST' | 回调请求方法 |
-| callback_headers | JSON | | 回调请求头 |
-| callback_body | TEXT | | 回调请求体（支持变量） |
-| delay_type | VARCHAR(20) | DEFAULT 'fixed' | 延迟类型（fixed:固定值, random:随机范围） |
-| delay_value | VARCHAR(100) | DEFAULT '0' | 延迟值（如 "5000" 或 "3000-8000"） |
-| retry_enabled | BOOLEAN | DEFAULT FALSE | 是否启用重试 |
-| max_retries | INTEGER | DEFAULT 3 | 最大重试次数 |
-| retry_interval | INTEGER | DEFAULT 5000 | 重试间隔（毫秒） |
-| retry_strategy | VARCHAR(20) | DEFAULT 'fixed' | 重试策略（fixed:固定间隔, exponential:指数退避） |
-| retry_condition | VARCHAR(200) | | 重试条件（如 "statusCode != 200"） |
-| created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| updated_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间 |
+
+| 字段名           | 类型         | 约束                                | 说明                                               |
+| ---------------- | ------------ | ----------------------------------- | -------------------------------------------------- |
+| id               | INTEGER      | PRIMARY KEY, AUTO_INCREMENT         | 配置ID                                             |
+| api_id           | INTEGER      | NOT NULL, FOREIGN KEY               | 所属接口ID                                         |
+| is_enabled       | BOOLEAN      | DEFAULT FALSE                       | 是否启用回调                                       |
+| callback_url     | VARCHAR(500) |                                     | 回调URL（支持变量，如 `{{req.body.callbackUrl}}`） |
+| callback_method  | VARCHAR(10)  | DEFAULT 'POST'                      | 回调请求方法                                       |
+| callback_headers | JSON         |                                     | 回调请求头                                         |
+| callback_body    | TEXT         |                                     | 回调请求体（支持变量）                             |
+| delay_type       | VARCHAR(20)  | DEFAULT 'fixed'                     | 延迟类型（fixed:固定值, random:随机范围）          |
+| delay_value      | VARCHAR(100) | DEFAULT '0'                         | 延迟值（如 "5000" 或 "3000-8000"）                 |
+| retry_enabled    | BOOLEAN      | DEFAULT FALSE                       | 是否启用重试                                       |
+| max_retries      | INTEGER      | DEFAULT 3                           | 最大重试次数                                       |
+| retry_interval   | INTEGER      | DEFAULT 5000                        | 重试间隔（毫秒）                                   |
+| retry_strategy   | VARCHAR(20)  | DEFAULT 'fixed'                     | 重试策略（fixed:固定间隔, exponential:指数退避）   |
+| retry_condition  | VARCHAR(200) |                                     | 重试条件（如 "statusCode != 200"）                 |
+| created_at       | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间                                           |
+| updated_at       | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间                                       |
 
 #### 9.1.7 回调任务表 (callback_tasks)
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| id | INTEGER | PRIMARY KEY, AUTO_INCREMENT | 任务ID |
-| callback_config_id | INTEGER | NOT NULL, FOREIGN KEY | 所属回调配置ID |
-| api_id | INTEGER | NOT NULL, FOREIGN KEY | 所属接口ID |
-| request_id | VARCHAR(100) | | 关联的原始请求ID |
-| callback_url | VARCHAR(500) | NOT NULL | 实际回调URL（变量替换后） |
-| callback_method | VARCHAR(10) | NOT NULL | 回调请求方法 |
-| callback_headers | JSON | | 回调请求头 |
-| callback_body | TEXT | | 回调请求体 |
-| status | VARCHAR(20) | NOT NULL, DEFAULT 'pending' | 状态（pending/sent/failed） |
-| retry_count | INTEGER | DEFAULT 0 | 已重试次数 |
-| max_retries | INTEGER | DEFAULT 3 | 最大重试次数 |
-| next_retry_at | DATETIME | | 下次重试时间 |
-| response_status | INTEGER | | 回调响应状态码 |
-| response_body | TEXT | | 回调响应体 |
-| error_message | TEXT | | 错误信息 |
-| scheduled_at | DATETIME | NOT NULL | 计划发送时间 |
-| sent_at | DATETIME | | 实际发送时间 |
-| created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| updated_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间 |
+
+| 字段名             | 类型         | 约束                                | 说明                        |
+| ------------------ | ------------ | ----------------------------------- | --------------------------- |
+| id                 | INTEGER      | PRIMARY KEY, AUTO_INCREMENT         | 任务ID                      |
+| callback_config_id | INTEGER      | NOT NULL, FOREIGN KEY               | 所属回调配置ID              |
+| api_id             | INTEGER      | NOT NULL, FOREIGN KEY               | 所属接口ID                  |
+| request_id         | VARCHAR(100) |                                     | 关联的原始请求ID            |
+| callback_url       | VARCHAR(500) | NOT NULL                            | 实际回调URL（变量替换后）   |
+| callback_method    | VARCHAR(10)  | NOT NULL                            | 回调请求方法                |
+| callback_headers   | JSON         |                                     | 回调请求头                  |
+| callback_body      | TEXT         |                                     | 回调请求体                  |
+| status             | VARCHAR(20)  | NOT NULL, DEFAULT 'pending'         | 状态（pending/sent/failed） |
+| retry_count        | INTEGER      | DEFAULT 0                           | 已重试次数                  |
+| max_retries        | INTEGER      | DEFAULT 3                           | 最大重试次数                |
+| next_retry_at      | DATETIME     |                                     | 下次重试时间                |
+| response_status    | INTEGER      |                                     | 回调响应状态码              |
+| response_body      | TEXT         |                                     | 回调响应体                  |
+| error_message      | TEXT         |                                     | 错误信息                    |
+| scheduled_at       | DATETIME     | NOT NULL                            | 计划发送时间                |
+| sent_at            | DATETIME     |                                     | 实际发送时间                |
+| created_at         | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间                    |
+| updated_at         | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 最后修改时间                |
 
 ### 9.2 数据联动设计
 
@@ -539,7 +586,7 @@ mock-platform/
        id: Date.now(),
        name: req.body.name,
        imageUrl: req.body.imageUrl,
-       createdAt: new Date().toISOString()
+       createdAt: new Date().toISOString(),
      };
      db.insert('face_data', faceData);
      return { code: 0, message: 'success', data: faceData };
@@ -555,6 +602,7 @@ mock-platform/
      ```
 
 **实现方式**：
+
 - 在SQLite中创建业务数据表（如 `face_data`）
 - 提供 `db` 对象给自定义脚本，包含 `insert`、`select`、`update`、`delete` 方法
 - 脚本执行结果作为接口响应返回
@@ -568,7 +616,7 @@ mock-platform/
    - 回调配置：
      - 回调URL: `{{req.body.callbackUrl}}`
      - 延迟时间: 5秒
-     - 回调请求体: 
+     - 回调请求体:
        ```json
        {
          "requestId": "{{req.body.requestId}}",
@@ -587,7 +635,7 @@ mock-platform/
        requestId: req.body.requestId,
        faceId: faceId,
        similarity: 98.5,
-       status: 'completed'
+       status: 'completed',
      });
      // 将faceId存储到全局变量，供回调请求体使用
      global.generated_face_id = faceId;
@@ -605,6 +653,7 @@ mock-platform/
      const result = db.select('face_recognition', { requestId: req.query.requestId });
      return { code: 0, message: 'success', data: result };
      ```
+
 ```
 
 **注意**：全局变量 `global.xxx` 的方式在多并发场景下会有问题，更好的方式是使用数据库存储临时变量，或使用 `callback_tasks` 表的 `callback_body` 字段存储渲染后的请求体。
@@ -616,93 +665,97 @@ mock-platform/
 ### 10.1 整体布局
 
 ```
+
 ┌─────────────────────────────────────────────────────────────────┐
-│  Logo & 系统名称              [搜索框]         [用户/设置]       │
+│ Logo & 系统名称 [搜索框] [用户/设置] │
 ├──────────┬──────────────────────────────────────────────────────┤
-│          │                                                     │
-│ 项目列表  │  接口列表/编辑区                                      │
-│          │                                                     │
-│ ▼ 项目A  │  ┌──────────────────────────────────────────────┐   │
-│   ├ 功能组1│  │ 接口名称: 人脸增加                              │   │
-│   └ 功能组2│  │ 接口描述: 模拟人脸增加接口                        │   │
-│          │  ├──────────────────────────────────────────────┤   │
-│ ▼ 项目B  │  │ HTTP方法: [POST ▼]  路由: /api/face/add        │   │
-│   ├ 功能组1│  │                                              │   │
-│   └ 功能组2│  │ 请求参数配置                                   │   │
-│          │  │ ┌─────────┬────────┬────────┬────────┐        │   │
-│ + 新建项目 │  │ │参数名   │类型    │必填    │默认值   │        │   │
-│          │  │ ├─────────┼────────┼────────┼────────┤        │   │
-│          │  │ │name     │string  │✓       │        │        │   │
-│          │  │ │imageUrl │string  │✓       │        │        │   │
-│          │  │ └─────────┴────────┴────────┴────────┘        │   │
-│          │  │                                    [+ 添加参数] │   │
-│          │  ├──────────────────────────────────────────────┤   │
-│          │  │ 响应配置                                       │   │
-│          │  │ 状态码: [200]  延迟: [0] ms                   │   │
-│          │  │ 响应体:                                       │   │
-│          │  │ ┌──────────────────────────────────────────┐  │   │
-│          │  │ │ {                                        │  │   │
-│          │  │ │   "code": 0,                             │  │   │
-│          │  │ │   "message": "success",                  │  │   │
-│          │  │ │   "data": {{request.body}}               │  │   │
-│          │  │ │ }                                        │  │   │
-│          │  │ └──────────────────────────────────────────┘  │   │
-│          │  │                                    [格式化]     │   │
-│          │  ├──────────────────────────────────────────────┤   │
-│          │  │ 延迟回调配置                                   │   │
-│          │  │  ☑ 启用延迟回调                               │   │
-│          │  │  回调URL: [{{req.body.callbackUrl}}   ]       │   │
-│          │  │  回调方法: [POST ▼]  延迟: [5] 秒              │   │
-│          │  │  回调请求头:                                  │   │
-│          │  │  ┌─────────┬────────────────────────────┐     │   │
-│          │  │  │Key      │Value                       │     │   │
-│          │  │  ├─────────┼────────────────────────────┤     │   │
-│          │  │  │Content- │application/json            │     │   │
-│          │  │  └─────────┴────────────────────────────┘     │   │
-│          │  │  回调请求体:                                  │   │
-│          │  │  ┌──────────────────────────────────────────┐ │   │
-│          │  │  │ {                                        │ │   │
-│          │  │  │   "code": 0,                             │ │   │
-│          │  │  │   "message": "success",                  │ │   │
-│          │  │  │   "data": {{response.data}}              │ │   │
-│          │  │  │ }                                        │ │   │
-│          │  │  └──────────────────────────────────────────┘ │   │
-│          │  │  重试策略:                                   │   │
-│          │  │  ☑ 启用重试  最大重试: [3] 次                │   │
-│          │  │  重试间隔: [5000] ms  策略: [固定 ▼]         │   │
-│          │  ├──────────────────────────────────────────────┤   │
-│          │  │ 数据联动配置                                   │   │
-│          │  │  ☑ 启用数据联动                               │   │
-│          │  │  操作类型: [INSERT ▼]  目标表: [face_data ▼]  │   │
-│          │  ├──────────────────────────────────────────────┤   │
-│          │  │ 自定义脚本                                     │   │
-│          │  │  ☑ 启用自定义脚本                             │   │
-│          │  │ ┌──────────────────────────────────────────┐  │   │
-│          │  │ │ // 在这里编写JavaScript代码                │  │   │
-│          │  │ │ function handle(req, res, db) {          │  │   │
-│          │  │ │   // 你的逻辑                             │  │   │
-│          │  │ │ }                                        │  │   │
-│          │  │ └──────────────────────────────────────────┘  │   │
-│          │  │                                  [运行测试]     │   │
-│          │  └──────────────────────────────────────────────┘   │
-│          │                                                     │
+│ │ │
+│ 项目列表 │ 接口列表/编辑区 │
+│ │ │
+│ ▼ 项目A │ ┌──────────────────────────────────────────────┐ │
+│ ├ 功能组1│ │ 接口名称: 人脸增加 │ │
+│ └ 功能组2│ │ 接口描述: 模拟人脸增加接口 │ │
+│ │ ├──────────────────────────────────────────────┤ │
+│ ▼ 项目B │ │ HTTP方法: [POST ▼] 路由: /api/face/add │ │
+│ ├ 功能组1│ │ │ │
+│ └ 功能组2│ │ 请求参数配置 │ │
+│ │ │ ┌─────────┬────────┬────────┬────────┐ │ │
+│ + 新建项目 │ │ │参数名 │类型 │必填 │默认值 │ │ │
+│ │ │ ├─────────┼────────┼────────┼────────┤ │ │
+│ │ │ │name │string │✓ │ │ │ │
+│ │ │ │imageUrl │string │✓ │ │ │ │
+│ │ │ └─────────┴────────┴────────┴────────┘ │ │
+│ │ │ [+ 添加参数] │ │
+│ │ ├──────────────────────────────────────────────┤ │
+│ │ │ 响应配置 │ │
+│ │ │ 状态码: [200] 延迟: [0] ms │ │
+│ │ │ 响应体: │ │
+│ │ │ ┌──────────────────────────────────────────┐ │ │
+│ │ │ │ { │ │ │
+│ │ │ │ "code": 0, │ │ │
+│ │ │ │ "message": "success", │ │ │
+│ │ │ │ "data": {{request.body}} │ │ │
+│ │ │ │ } │ │ │
+│ │ │ └──────────────────────────────────────────┘ │ │
+│ │ │ [格式化] │ │
+│ │ ├──────────────────────────────────────────────┤ │
+│ │ │ 延迟回调配置 │ │
+│ │ │ ☑ 启用延迟回调 │ │
+│ │ │ 回调URL: [{{req.body.callbackUrl}} ] │ │
+│ │ │ 回调方法: [POST ▼] 延迟: [5] 秒 │ │
+│ │ │ 回调请求头: │ │
+│ │ │ ┌─────────┬────────────────────────────┐ │ │
+│ │ │ │Key │Value │ │ │
+│ │ │ ├─────────┼────────────────────────────┤ │ │
+│ │ │ │Content- │application/json │ │ │
+│ │ │ └─────────┴────────────────────────────┘ │ │
+│ │ │ 回调请求体: │ │
+│ │ │ ┌──────────────────────────────────────────┐ │ │
+│ │ │ │ { │ │ │
+│ │ │ │ "code": 0, │ │ │
+│ │ │ │ "message": "success", │ │ │
+│ │ │ │ "data": {{response.data}} │ │ │
+│ │ │ │ } │ │ │
+│ │ │ └──────────────────────────────────────────┘ │ │
+│ │ │ 重试策略: │ │
+│ │ │ ☑ 启用重试 最大重试: [3] 次 │ │
+│ │ │ 重试间隔: [5000] ms 策略: [固定 ▼] │ │
+│ │ ├──────────────────────────────────────────────┤ │
+│ │ │ 数据联动配置 │ │
+│ │ │ ☑ 启用数据联动 │ │
+│ │ │ 操作类型: [INSERT ▼] 目标表: [face_data ▼] │ │
+│ │ ├──────────────────────────────────────────────┤ │
+│ │ │ 自定义脚本 │ │
+│ │ │ ☑ 启用自定义脚本 │ │
+│ │ │ ┌──────────────────────────────────────────┐ │ │
+│ │ │ │ // 在这里编写JavaScript代码 │ │ │
+│ │ │ │ function handle(req, res, db) { │ │ │
+│ │ │ │ // 你的逻辑 │ │ │
+│ │ │ │ } │ │ │
+│ │ │ └──────────────────────────────────────────┘ │ │
+│ │ │ [运行测试] │ │
+│ │ └──────────────────────────────────────────────┘ │
+│ │ │
 └──────────┴──────────────────────────────────────────────────────┘
+
 ```
 
 **回调任务管理界面示例**：
 
 ```
+
 ┌─────────────────────────────────────────────────────────────────┐
-│ 回调任务管理                                   [手动重新发送]     │
+│ 回调任务管理 [手动重新发送] │
 ├─────────────────────────────────────────────────────────────────┤
 │ 过滤: [全部 ▼] [接口: 人脸增加 ▼] [状态: 全部 ▼] [时间: 最近7天]│
 ├─────────────────────────────────────────────────────────────────┤
 │ ☑ | 任务ID | 接口名称 | 回调URL | 状态 | 计划发送时间 | 重试次数 │
 │---+--------+----------+---------+------+--------------+---------│
-│ ☐ | 1001  | 人脸增加  | http://.../callback | 已发送 | 2026-07-06 13:35 | 0 │
-│ ☐ | 1002  | 人脸增加  | http://.../callback | 失败  | 2026-07-06 13:40 | 3 │
-│ ☐ | 1003  | 支付接口  | http://.../notify  | 待发送 | 2026-07-06 14:00 | 0 │
+│ ☐ | 1001 | 人脸增加 | http://.../callback | 已发送 | 2026-07-06 13:35 | 0 │
+│ ☐ | 1002 | 人脸增加 | http://.../callback | 失败 | 2026-07-06 13:40 | 3 │
+│ ☐ | 1003 | 支付接口 | http://.../notify | 待发送 | 2026-07-06 14:00 | 0 │
 └─────────────────────────────────────────────────────────────────┘
+
 ```
 
 ### 10.2 主要页面
@@ -871,3 +924,4 @@ mock-platform/
 **文档结束**
 
 *本文档是通用接口Mock服务平台的完整需求文档，涵盖了功能需求、非功能需求、技术架构、数据模型、界面设计、验收标准等内容。如有疑问或需要补充，请及时反馈。*
+```

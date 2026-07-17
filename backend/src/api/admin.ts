@@ -153,4 +153,4 @@ router.post(
   }),
 );
 
-export { router as adminRouter };
+export { router as adminRouter };

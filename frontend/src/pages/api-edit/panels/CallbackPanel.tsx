@@ -314,8 +314,8 @@ function CallbackPanelForm({
       <div className="info-tip">
         <AlertCircle />
         <div>
-          <strong>说明</strong>：每条回调支持独立 URL / Headers / Body 与重试策略。
-          链路语义为<strong>链式</strong>：第 1 条相对 API 响应延时，后续每条相对上一条
+          <strong>说明</strong>：每条回调支持独立 URL / Headers / Body 与重试策略。 链路语义为
+          <strong>链式</strong>：第 1 条相对 API 响应延时，后续每条相对上一条
           <strong>终态后</strong>（含重试）等待设定毫秒触发。上一条失败不会中断链路。
         </div>
       </div>
@@ -382,11 +382,7 @@ function CallbackPanelForm({
           <span className="text-[12px] text-ink-subtle">
             {dirty ? '有未保存的修改' : isLoading ? '加载中…' : '已保存'}
           </span>
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            loading={saving || saveMut.isPending}
-          >
+          <Button variant="primary" onClick={handleSave} loading={saving || saveMut.isPending}>
             <Save className="h-3.5 w-3.5" />
             保存
           </Button>

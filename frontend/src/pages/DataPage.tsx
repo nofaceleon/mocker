@@ -144,7 +144,9 @@ export function DataPage() {
         <StatCard label="总行数" value={totalRows} hint="当前范围内累计" icon={<DatabaseIcon />} />
         <StatCard
           label="关联接口"
-          value={projectId === 'all' ? '—' : (projectData?.apis.filter((a) => a.dataTable).length ?? 0)}
+          value={
+            projectId === 'all' ? '—' : (projectData?.apis.filter((a) => a.dataTable).length ?? 0)
+          }
           hint={projectId === 'all' ? '选择项目后显示' : '配置了 dataTable 的接口'}
           icon={<Link2 />}
         />
@@ -356,7 +358,10 @@ function CreateTableModal({
           <div className="space-y-2 p-3">
             {columns.map((col, index) => (
               <div key={index} className="flex flex-wrap items-end gap-2">
-                <FormField label={index === 0 ? '列名' : undefined} className="min-w-[160px] flex-1">
+                <FormField
+                  label={index === 0 ? '列名' : undefined}
+                  className="min-w-[160px] flex-1"
+                >
                   <Input
                     className="mono"
                     value={col.name}
@@ -446,7 +451,8 @@ function TableDetail({
       title: '清空表',
       message: (
         <span>
-          确定清空业务表 <b className="font-mono">{tableName}</b> 的全部 {total} 行数据吗？表结构将保留。
+          确定清空业务表 <b className="font-mono">{tableName}</b> 的全部 {total}{' '}
+          行数据吗？表结构将保留。
         </span>
       ),
       confirmText: '清空',
@@ -483,12 +489,7 @@ function TableDetail({
     }
   };
 
-  const handleUpdateCell = async (
-    rowId: number,
-    column: string,
-    raw: string,
-    colType: string,
-  ) => {
+  const handleUpdateCell = async (rowId: number, column: string, raw: string, colType: string) => {
     try {
       const value = parseCellInput(raw, colType);
       await updateMut.mutateAsync({
@@ -706,7 +707,9 @@ function TableDetail({
                               value={row[c.name]}
                               isPk={!!c.pk}
                               disabled={updateMut.isPending}
-                              onSave={(raw) => handleUpdateCell(rowId, c.name, raw, c.type || 'TEXT')}
+                              onSave={(raw) =>
+                                handleUpdateCell(rowId, c.name, raw, c.type || 'TEXT')
+                              }
                             />
                           ) : (
                             renderCell(row[c.name], c.pk)
@@ -735,8 +738,7 @@ function TableDetail({
 
       <div className="flex items-center justify-between border-t border-line bg-canvas px-4 py-2.5 text-[12px] text-ink-tertiary">
         <span>
-          显示 {from} - {to} 条 / 共 {total} 条
-          {qApplied ? ` · 筛选 “${qApplied}”` : ''}
+          显示 {from} - {to} 条 / 共 {total} 条{qApplied ? ` · 筛选 “${qApplied}”` : ''}
         </span>
         <div className="flex items-center gap-1">
           <button
@@ -930,7 +932,8 @@ function SchemaEditorModal({
     >
       <div className="space-y-4">
         <p className="text-[12px] text-ink-tertiary">
-          系统列 <code className="param-code">id</code> / <code className="param-code">created_at</code> /{' '}
+          系统列 <code className="param-code">id</code> /{' '}
+          <code className="param-code">created_at</code> /{' '}
           <code className="param-code">updated_at</code> 不可修改或删除。
         </p>
 
@@ -1158,7 +1161,9 @@ function renderCell(v: unknown, isPk: boolean = false) {
     const json = JSON.stringify(v);
     return (
       <span className="truncate font-mono text-[11.5px] text-ink-secondary" title={json}>
-        {`{ ${Object.keys(v as object).slice(0, 3).join(', ')}${Object.keys(v as object).length > 3 ? ', ...' : ''} }`}
+        {`{ ${Object.keys(v as object)
+          .slice(0, 3)
+          .join(', ')}${Object.keys(v as object).length > 3 ? ', ...' : ''} }`}
       </span>
     );
   }

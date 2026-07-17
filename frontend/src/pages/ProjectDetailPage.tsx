@@ -196,15 +196,11 @@ function Sidebar({
     if (!q) return groups;
     return groups.filter(
       (g) =>
-        g.name.toLowerCase().includes(q) ||
-        (g.description?.toLowerCase().includes(q) ?? false),
+        g.name.toLowerCase().includes(q) || (g.description?.toLowerCase().includes(q) ?? false),
     );
   }, [groups, search]);
 
-  const totalApis = useMemo(
-    () => groups.reduce((sum, g) => sum + (g.apiCount ?? 0), 0),
-    [groups],
-  );
+  const totalApis = useMemo(() => groups.reduce((sum, g) => sum + (g.apiCount ?? 0), 0), [groups]);
 
   return (
     <aside
@@ -424,7 +420,8 @@ function ApiListPanel({
     }
 
     if (api.method !== 'GET' && api.method !== 'DELETE' && api.responseBody) {
-      const body = typeof api.responseBody === 'string' ? api.responseBody : JSON.stringify(api.responseBody);
+      const body =
+        typeof api.responseBody === 'string' ? api.responseBody : JSON.stringify(api.responseBody);
       parts.push(`-d '${body}'`);
     }
 
@@ -566,7 +563,8 @@ function ApiListPanel({
       const passed = results.filter(
         (r) => r.responseStatus >= 200 && r.responseStatus < 300,
       ).length;
-      const skippedNote = skippedApis.length > 0 ? `，跳过 ${skippedApis.length} 个非 HTTP 接口` : '';
+      const skippedNote =
+        skippedApis.length > 0 ? `，跳过 ${skippedApis.length} 个非 HTTP 接口` : '';
       toast.success(`测试完成：${passed}/${results.length} 通过${skippedNote}`);
       if (skippedApis.length > 0) {
         const names = skippedApis.map((a) => a.name).join('、');
@@ -585,10 +583,14 @@ function ApiListPanel({
         title={
           <>
             {group.name}
-            <span className="text-[14px] font-normal text-ink-subtle">· {apis?.length ?? 0} 接口</span>
+            <span className="text-[14px] font-normal text-ink-subtle">
+              · {apis?.length ?? 0} 接口
+            </span>
           </>
         }
-        description={group.description ?? `管理「${projectName} / ${group.name}」下的所有 Mock 接口`}
+        description={
+          group.description ?? `管理「${projectName} / ${group.name}」下的所有 Mock 接口`
+        }
         actions={
           <>
             <Button variant="secondary" onClick={handleRunAllTests} disabled={testing}>
@@ -723,7 +725,9 @@ function ApiListPanel({
                   <th style={{ width: 32 }}>
                     <input
                       type="checkbox"
-                      checked={batchMode && filtered.length > 0 && selectedIds.size === filtered.length}
+                      checked={
+                        batchMode && filtered.length > 0 && selectedIds.size === filtered.length
+                      }
                       onChange={() => batchMode && toggleSelectAll()}
                       disabled={!batchMode}
                       className={cn(
@@ -746,7 +750,7 @@ function ApiListPanel({
                 {filtered.map((api) => (
                   <tr
                     key={api.id}
-                    onClick={() => batchMode ? toggleSelect(api.id) : onEditApi(api)}
+                    onClick={() => (batchMode ? toggleSelect(api.id) : onEditApi(api))}
                     className={cn(
                       'cursor-pointer transition-colors hover:bg-canvas',
                       batchMode && selectedIds.has(api.id) && 'bg-blue-50',
@@ -782,34 +786,25 @@ function ApiListPanel({
                     </td>
                     <td>
                       <div className="flex flex-wrap gap-1">
-                        {api.hasCallback && (
-                          <span className="tag tag-orange">延迟回调</span>
-                        )}
+                        {api.hasCallback && <span className="tag tag-orange">延迟回调</span>}
                         {api.dataOp !== 'none' && api.dataTable && (
                           <span className="tag tag-pink">数据联动</span>
                         )}
                         {api.validationRules && Object.keys(api.validationRules).length > 0 && (
                           <span className="tag tag-blue">参数校验</span>
                         )}
-                        {!api.isEnabled && (
-                          <span className="tag tag-red">已禁用</span>
-                        )}
+                        {!api.isEnabled && <span className="tag tag-red">已禁用</span>}
                       </div>
                     </td>
                     <td>
                       <TagPill>{api.responseStatus}</TagPill>
                     </td>
-                    <td className="text-[12px] text-ink-tertiary">
-                      {api.responseDelay || 0} ms
-                    </td>
+                    <td className="text-[12px] text-ink-tertiary">{api.responseDelay || 0} ms</td>
                     <td>
                       <strong className="text-[13px] text-ink">0</strong>
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      <Switch
-                        checked={api.isEnabled}
-                        onChange={() => handleToggle(api)}
-                      />
+                      <Switch checked={api.isEnabled} onChange={() => handleToggle(api)} />
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-0.5">
@@ -1044,9 +1039,7 @@ function TestResultsModal({
               失败: {failed}
             </span>
           )}
-          <span className="text-ink-tertiary">
-            总计: {results.length}
-          </span>
+          <span className="text-ink-tertiary">总计: {results.length}</span>
         </div>
 
         <div className="max-h-[500px] overflow-auto rounded border border-line">
@@ -1069,8 +1062,7 @@ function TestResultsModal({
                   typeof result.responseBody === 'string'
                     ? result.responseBody
                     : JSON.stringify(result.responseBody);
-                const bodySummary =
-                  bodyText.length > 80 ? bodyText.slice(0, 80) + '…' : bodyText;
+                const bodySummary = bodyText.length > 80 ? bodyText.slice(0, 80) + '…' : bodyText;
                 return (
                   <Fragment key={idx}>
                     <tr>
@@ -1089,9 +1081,7 @@ function TestResultsModal({
                       </td>
                       <td>
                         <TagPill
-                          className={
-                            ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                          }
+                          className={ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}
                         >
                           {result.responseStatus}
                         </TagPill>
@@ -1176,15 +1166,10 @@ function TestResultsModal({
 /**
  * 针对常见失败原因给出可读的提示（不做实际修复，仅给用户方向）。
  */
-function FailureHints({
-  responseBody,
-  status,
-}: {
-  responseBody: unknown;
-  status: number;
-}) {
+function FailureHints({ responseBody, status }: { responseBody: unknown; status: number }) {
   const hints: string[] = [];
-  const fieldErrors: Array<{ location: string; field: string; message: string; rule?: string }> = [];
+  const fieldErrors: Array<{ location: string; field: string; message: string; rule?: string }> =
+    [];
 
   if (status === 404) {
     hints.push('404：mock-engine matcher 未匹配到路由。');
@@ -1229,9 +1214,7 @@ function FailureHints({
       )}
       {fieldErrors.length > 0 && (
         <div className="rounded-md border border-danger-border bg-danger-soft px-3 py-2 text-[12px] text-danger">
-          <div className="mb-1 font-semibold">
-            字段级错误（共 {fieldErrors.length} 项）：
-          </div>
+          <div className="mb-1 font-semibold">字段级错误（共 {fieldErrors.length} 项）：</div>
           <ul className="list-disc space-y-0.5 pl-4">
             {fieldErrors.map((e, i) => (
               <li key={i}>

@@ -72,10 +72,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = idParamSchema.parse(req.params);
     const db = getDb();
-    const project = notFoundOr(
-      db.select().from(projects).where(eq(projects.id, id)).get(),
-      id,
-    );
+    const project = notFoundOr(db.select().from(projects).where(eq(projects.id, id)).get(), id);
     const groups = db
       .select()
       .from(featureGroups)
@@ -95,10 +92,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = idParamSchema.parse(req.params);
     const db = getDb();
-    const project = notFoundOr(
-      db.select().from(projects).where(eq(projects.id, id)).get(),
-      id,
-    );
+    const project = notFoundOr(db.select().from(projects).where(eq(projects.id, id)).get(), id);
 
     const groups = db
       .select()
@@ -137,9 +131,7 @@ router.get(
         : db
             .select({ apiId: callbackConfigs.apiId })
             .from(callbackConfigs)
-            .where(
-              and(inArray(callbackConfigs.apiId, apiIds), eq(callbackConfigs.isEnabled, true)),
-            )
+            .where(and(inArray(callbackConfigs.apiId, apiIds), eq(callbackConfigs.isEnabled, true)))
             .all();
     const callbackSet = new Set(enabledCallbacks.map((c) => c.apiId));
 
@@ -280,10 +272,7 @@ router.put(
       if (exists) throw new ApiError('CONFLICT', `项目名 "${body.name}" 已被其他项目使用`, 409);
     }
 
-    const existing = notFoundOr(
-      db.select().from(projects).where(eq(projects.id, id)).get(),
-      id,
-    );
+    const existing = notFoundOr(db.select().from(projects).where(eq(projects.id, id)).get(), id);
     db.update(projects)
       .set({
         ...(body.name !== undefined ? { name: body.name } : {}),
@@ -301,10 +290,7 @@ router.delete(
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = idParamSchema.parse(req.params);
     const db = getDb();
-    const existing = notFoundOr(
-      db.select().from(projects).where(eq(projects.id, id)).get(),
-      id,
-    );
+    const existing = notFoundOr(db.select().from(projects).where(eq(projects.id, id)).get(), id);
     // 外键 ON DELETE CASCADE 已配置 feature_groups → projects
     // 但 mock_apis → feature_groups 需要 feature_groups 先被删（也 cascade）
     // 由于 SQLite 外键开启，删除 projects 时所有依赖行会自动级联

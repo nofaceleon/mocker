@@ -18,8 +18,7 @@ export const useUiStore = create<UiState>()(
       selectedFeatureGroupId: null,
       sidebarCollapsed: false,
 
-      setSelectedProject: (id) =>
-        set({ selectedProjectId: id, selectedFeatureGroupId: null }),
+      setSelectedProject: (id) => set({ selectedProjectId: id, selectedFeatureGroupId: null }),
       setSelectedFeatureGroup: (id) => set({ selectedFeatureGroupId: id }),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
     }),

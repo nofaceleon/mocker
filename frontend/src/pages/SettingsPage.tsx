@@ -122,10 +122,7 @@ export function SettingsPage() {
 
   return (
     <div className="page-container">
-      <PageHeader
-        title="设置"
-        description="数据库、备份与运行时配置"
-      />
+      <PageHeader title="设置" description="数据库、备份与运行时配置" />
 
       <div className="mb-4 flex items-center gap-2">
         <Button
@@ -163,12 +160,26 @@ export function SettingsPage() {
           <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <StatCard
               label="数据库文件"
-              value={<span className="break-all font-mono text-[14px] leading-[1.4]" title={config.dbPath}>{config.dbPath}</span>}
+              value={
+                <span
+                  className="break-all font-mono text-[14px] leading-[1.4]"
+                  title={config.dbPath}
+                >
+                  {config.dbPath}
+                </span>
+              }
               icon={<Database />}
             />
             <StatCard
               label="备份目录"
-              value={<span className="break-all font-mono text-[14px] leading-[1.4]" title={config.backupDir}>{config.backupDir}</span>}
+              value={
+                <span
+                  className="break-all font-mono text-[14px] leading-[1.4]"
+                  title={config.backupDir}
+                >
+                  {config.backupDir}
+                </span>
+              }
               icon={<HardDrive />}
             />
             <StatCard
@@ -190,8 +201,10 @@ export function SettingsPage() {
           >
             <p className="text-[12.5px] leading-[1.7] text-ink-secondary">
               备份会复制整个 SQLite 数据库（含项目/接口/数据/调用日志），存于{' '}
-              <code className="rounded bg-canvas-subtle px-1 py-0.5 font-mono text-[11.5px] text-ink">data/backups</code>。
-              备份使用 SQLite 在线热备 API，过程中 Mock 服务无需停机。
+              <code className="rounded bg-canvas-subtle px-1 py-0.5 font-mono text-[11.5px] text-ink">
+                data/backups
+              </code>
+              。 备份使用 SQLite 在线热备 API，过程中 Mock 服务无需停机。
             </p>
           </Card>
 
@@ -224,7 +237,9 @@ export function SettingsPage() {
                       </td>
                       <td className="text-ink-secondary">{new Date(b.mtime).toLocaleString()}</td>
                       <td>
-                        <span className="truncate font-mono text-[11.5px] text-ink-tertiary">{b.path}</span>
+                        <span className="truncate font-mono text-[11.5px] text-ink-tertiary">
+                          {b.path}
+                        </span>
                       </td>
                       <td>
                         <div className="flex items-center gap-1">
@@ -268,7 +283,8 @@ export function SettingsPage() {
           <div className="info-tip mt-4">
             <Info />
             <div>
-              运行时配置由启动参数 / 环境变量 / 配置文件决定。修改后需重启服务生效，详情参见项目文档。
+              运行时配置由启动参数 / 环境变量 /
+              配置文件决定。修改后需重启服务生效，详情参见项目文档。
             </div>
           </div>
         </Card>
@@ -357,7 +373,8 @@ export function SettingsPage() {
               </div>
             </div>
             <p>
-              <b className="text-ink">本地优先</b>的通用接口 Mock 平台：项目隔离、可视化配置、回调任务、调用日志、数据联动一应俱全。
+              <b className="text-ink">本地优先</b>的通用接口 Mock
+              平台：项目隔离、可视化配置、回调任务、调用日志、数据联动一应俱全。
             </p>
             <ul className="ml-4 list-disc space-y-1 text-[12.5px]">
               <li>支持 HTTP / WebSocket / SSE / 自定义脚本</li>

@@ -18,7 +18,11 @@ const DATA_OPS: ReadonlyArray<{ value: DataOp; label: string; hint: string }> = 
     label: 'INSERT（写入）',
     hint: '按「写入字段模板」映射后插入；模板为空则用整包请求 body',
   },
-  { value: 'select', label: 'SELECT（查询）', hint: '以 path 参数 + where 条件查询，结果回填到响应' },
+  {
+    value: 'select',
+    label: 'SELECT（查询）',
+    hint: '以 path 参数 + where 条件查询，结果回填到响应',
+  },
   {
     value: 'update',
     label: 'UPDATE',
@@ -81,7 +85,8 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
   const tableErr = useMemo(() => {
     if (!enabled) return null;
     if (!tableName.trim()) return '启用数据联动时必须填写业务表名';
-    if (!TABLE_NAME_RE.test(tableName.trim())) return '表名仅允许字母/数字/下划线，且不能以数字开头';
+    if (!TABLE_NAME_RE.test(tableName.trim()))
+      return '表名仅允许字母/数字/下划线，且不能以数字开头';
     return null;
   }, [enabled, tableName]);
 
@@ -181,7 +186,7 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
     const patch: Partial<MockApiPayload> = {
       dataOp: op,
       dataTable: tableName.trim() || null,
-      dataWhere: needsWhere ? whereResult.value ?? {} : {},
+      dataWhere: needsWhere ? (whereResult.value ?? {}) : {},
       dataPayload,
     };
     onChange({ ...formData, ...patch });
@@ -361,7 +366,8 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
         <b className="text-ink-secondary">提示：</b>
         <ul className="ml-4 mt-1 list-disc space-y-0.5">
           <li>
-            <code className="param-code">insert</code>：配置写入字段模板映射列；表不存在时按模板字段自动建表
+            <code className="param-code">insert</code>
+            ：配置写入字段模板映射列；表不存在时按模板字段自动建表
           </li>
           <li>
             模板示例：
@@ -418,10 +424,7 @@ function TablePreview({ tableName }: { tableName: string }) {
   const total = data?.total ?? 0;
   const notFound = error && !isLoading;
 
-  const userColumns = useMemo(
-    () => columns.filter((c) => !RESERVED_COLS.has(c.name)),
-    [columns],
-  );
+  const userColumns = useMemo(() => columns.filter((c) => !RESERVED_COLS.has(c.name)), [columns]);
 
   const handleCopyFieldName = (name: string) => {
     copyToClipboard(name).then(() => {
@@ -461,8 +464,7 @@ function TablePreview({ tableName }: { tableName: string }) {
         className="mt-3 flex items-center gap-2 rounded-md border px-4 py-3 text-[12px]"
         style={{ borderColor: '#FEF3C7', backgroundColor: '#FEFCE8', color: '#A16207' }}
       >
-        <Database className="h-3.5 w-3.5" />
-        表 <b className="font-mono">{tableName}</b> 不存在
+        <Database className="h-3.5 w-3.5" />表 <b className="font-mono">{tableName}</b> 不存在
       </div>
     );
   }
@@ -470,8 +472,8 @@ function TablePreview({ tableName }: { tableName: string }) {
   if (columns.length === 0) {
     return (
       <div className="mt-3 flex items-center gap-2 rounded-md border border-line bg-canvas-subtle/40 px-4 py-3 text-[12px] text-ink-tertiary">
-        <Database className="h-3.5 w-3.5" />
-        表 <b className="font-mono text-ink-secondary">{tableName}</b> 暂无字段信息
+        <Database className="h-3.5 w-3.5" />表{' '}
+        <b className="font-mono text-ink-secondary">{tableName}</b> 暂无字段信息
       </div>
     );
   }
@@ -511,9 +513,7 @@ function TablePreview({ tableName }: { tableName: string }) {
             {c.name}
             <span className="text-ink-subtle">{c.type || '?'}</span>
             {c.pk && <span className="tag tag-orange !text-[9px]">PK</span>}
-            {RESERVED_COLS.has(c.name) && (
-              <span className="text-[9px] text-ink-subtle">系统</span>
-            )}
+            {RESERVED_COLS.has(c.name) && <span className="text-[9px] text-ink-subtle">系统</span>}
             <Copy className="h-2.5 w-2.5 text-ink-subtle" />
           </button>
         ))}
@@ -521,9 +521,7 @@ function TablePreview({ tableName }: { tableName: string }) {
 
       {rows.length > 0 && (
         <div className="px-4 py-2.5">
-          <div className="mb-2 text-[11px] text-ink-tertiary">
-            样本数据 (前 {rows.length} 行)
-          </div>
+          <div className="mb-2 text-[11px] text-ink-tertiary">样本数据 (前 {rows.length} 行)</div>
           <div className="overflow-x-auto rounded border border-line bg-white scrollbar-modern">
             <table className="params-table !text-[11px]">
               <thead>

@@ -191,7 +191,9 @@ export function BasicPanel({
           <FormField label="路由优先级">
             <Select
               value={priority}
-              onChange={(e) => onExtraChange?.({ ...(extra ?? {}), priority: e.target.value as Extra['priority'] })}
+              onChange={(e) =>
+                onExtraChange?.({ ...(extra ?? {}), priority: e.target.value as Extra['priority'] })
+              }
             >
               {PRIORITIES.map((p) => (
                 <option key={p.value} value={p.value}>
@@ -227,7 +229,8 @@ export function BasicPanel({
           </div>
           {!errors.path && !isSSE && (
             <div className="form-helper">
-              支持 <code>:id</code> 占位符、<code>*</code> 通配符；匹配优先级：精确 &gt; 参数 &gt; 通配符
+              支持 <code>:id</code> 占位符、<code>*</code> 通配符；匹配优先级：精确 &gt; 参数 &gt;
+              通配符
             </div>
           )}
         </FormField>

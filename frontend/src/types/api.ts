@@ -37,14 +37,7 @@ export type ParamLocation = 'query' | 'body' | 'path' | 'header';
 export type ResponseConditionSource = 'query' | 'body' | 'header' | 'path';
 
 export type ResponseOperator =
-  | 'equals'
-  | 'not_equals'
-  | 'contains'
-  | 'gt'
-  | 'lt'
-  | 'gte'
-  | 'lte'
-  | 'regex';
+  'equals' | 'not_equals' | 'contains' | 'gt' | 'lt' | 'gte' | 'lte' | 'regex';
 
 export type ResponseCondition = {
   source: ResponseConditionSource;

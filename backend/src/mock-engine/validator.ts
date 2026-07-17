@@ -1,9 +1,7 @@
 import { z, type ZodTypeAny } from 'zod';
 import type { ParamRule, ValidationRules } from '../db/schema.js';
 
-export type ValidationResult =
-  | { ok: true }
-  | { ok: false; errors: ValidationError[] };
+export type ValidationResult = { ok: true } | { ok: false; errors: ValidationError[] };
 
 export type ValidationError = {
   location: 'query' | 'body' | 'path' | 'header';

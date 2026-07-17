@@ -11,8 +11,7 @@ const KEYS = {
 export function useCallbackConfig(apiId: ID | undefined) {
   return useQuery({
     queryKey: apiId ? KEYS.byApi(apiId) : (['callback-config', 'api', 'none'] as const),
-    queryFn: async () =>
-      unwrap(await api.get<CallbackConfig[]>(`/mock-apis/${apiId}/callbacks`)),
+    queryFn: async () => unwrap(await api.get<CallbackConfig[]>(`/mock-apis/${apiId}/callbacks`)),
     enabled: !!apiId,
   });
 }
@@ -22,9 +21,7 @@ export function useSaveCallbackConfig(apiId: ID) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (items: CallbackConfig[]) =>
-      unwrap(
-        await api.put<CallbackConfig[]>(`/mock-apis/${apiId}/callbacks`, { items }),
-      ),
+      unwrap(await api.put<CallbackConfig[]>(`/mock-apis/${apiId}/callbacks`, { items })),
     onSuccess: (data) => {
       qc.setQueryData(KEYS.byApi(apiId), data);
       qc.invalidateQueries({ queryKey: KEYS.root });
@@ -57,9 +54,7 @@ export function useDeleteCallbackConfig(apiId: ID) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () =>
-      unwrap(
-        await api.put<CallbackConfig[]>(`/mock-apis/${apiId}/callbacks`, { items: [] }),
-      ),
+      unwrap(await api.put<CallbackConfig[]>(`/mock-apis/${apiId}/callbacks`, { items: [] })),
     onSuccess: () => {
       qc.setQueryData(KEYS.byApi(apiId), []);
       qc.invalidateQueries({ queryKey: KEYS.root });

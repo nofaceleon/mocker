@@ -159,7 +159,9 @@ export function ParamsPanel({ formData, onChange, onSave, saving }: ParamsPanelP
               render: (r, idx) => (
                 <TextCell
                   value={r.name}
-                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, name: v } : x)))}
+                  onChange={(v) =>
+                    updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, name: v } : x)))
+                  }
                   placeholder="name"
                   mono
                 />
@@ -173,7 +175,9 @@ export function ParamsPanel({ formData, onChange, onSave, saving }: ParamsPanelP
                 <SelectCell
                   value={r.type}
                   options={TYPES}
-                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, type: v } : x)))}
+                  onChange={(v) =>
+                    updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, type: v } : x)))
+                  }
                 />
               ),
             },
@@ -185,7 +189,9 @@ export function ParamsPanel({ formData, onChange, onSave, saving }: ParamsPanelP
                 <SelectCell
                   value={r.location}
                   options={LOCATIONS}
-                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, location: v } : x)))}
+                  onChange={(v) =>
+                    updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, location: v } : x)))
+                  }
                 />
               ),
             },
@@ -196,7 +202,9 @@ export function ParamsPanel({ formData, onChange, onSave, saving }: ParamsPanelP
               render: (r, idx) => (
                 <CheckCell
                   checked={r.required}
-                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, required: v } : x)))}
+                  onChange={(v) =>
+                    updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, required: v } : x)))
+                  }
                 />
               ),
             },
@@ -207,7 +215,9 @@ export function ParamsPanel({ formData, onChange, onSave, saving }: ParamsPanelP
               render: (r, idx) => (
                 <TextCell
                   value={r.defaultValue}
-                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, defaultValue: v } : x)))}
+                  onChange={(v) =>
+                    updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, defaultValue: v } : x)))
+                  }
                   placeholder="—"
                   mono={r.type === 'object' || r.type === 'array'}
                 />
@@ -219,7 +229,9 @@ export function ParamsPanel({ formData, onChange, onSave, saving }: ParamsPanelP
               render: (r, idx) => (
                 <TextCell
                   value={r.desc}
-                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, desc: v } : x)))}
+                  onChange={(v) =>
+                    updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, desc: v } : x)))
+                  }
                   placeholder="备注"
                 />
               ),

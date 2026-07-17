@@ -1,508 +1,1017 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>数据管理 · Mock Studio</title>
-<link rel="stylesheet" href="theme.css">
-<style>
-  /* ========== 双栏布局 ========== */
-  .two-col {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 14px;
-  }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>数据管理 · Mock Studio</title>
+    <link rel="stylesheet" href="theme.css" />
+    <style>
+      /* ========== 双栏布局 ========== */
+      .two-col {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 14px;
+      }
 
-  /* ========== 左侧表列表 ========== */
-  .tables-card {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    height: fit-content;
-    box-shadow: var(--shadow-xs);
-  }
+      /* ========== 左侧表列表 ========== */
+      .tables-card {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        height: fit-content;
+        box-shadow: var(--shadow-xs);
+      }
 
-  .tables-header {
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--border-default);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .tables-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .tables-title svg { width: 14px; height: 14px; color: var(--text-tertiary); }
+      .tables-header {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border-default);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .tables-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .tables-title svg {
+        width: 14px;
+        height: 14px;
+        color: var(--text-tertiary);
+      }
 
-  .table-list { list-style: none; }
+      .table-list {
+        list-style: none;
+      }
 
-  .table-list li {
-    padding: 11px 14px;
-    border-bottom: 1px solid var(--border-subtle);
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: all 0.12s;
-    font-size: 13px;
-  }
-  .table-list li:last-child { border-bottom: none; }
-  .table-list li:hover { background: var(--bg-base); }
-  .table-list li.active {
-    background: var(--bg-deep);
-    color: var(--text-inverse);
-  }
+      .table-list li {
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--border-subtle);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.12s;
+        font-size: 13px;
+      }
+      .table-list li:last-child {
+        border-bottom: none;
+      }
+      .table-list li:hover {
+        background: var(--bg-base);
+      }
+      .table-list li.active {
+        background: var(--bg-deep);
+        color: var(--text-inverse);
+      }
 
-  .table-name {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 500;
-    color: var(--text-primary);
-    font-family: "JetBrains Mono", "SF Mono", monospace;
-    font-size: 12.5px;
-  }
-  .table-name svg {
-    color: var(--text-quaternary);
-    width: 13px; height: 13px;
-    flex-shrink: 0;
-  }
-  .table-list li.active .table-name { color: var(--text-inverse); }
-  .table-list li.active .table-name svg { color: var(--text-inverse); opacity: 0.7; }
+      .table-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', 'SF Mono', monospace;
+        font-size: 12.5px;
+      }
+      .table-name svg {
+        color: var(--text-quaternary);
+        width: 13px;
+        height: 13px;
+        flex-shrink: 0;
+      }
+      .table-list li.active .table-name {
+        color: var(--text-inverse);
+      }
+      .table-list li.active .table-name svg {
+        color: var(--text-inverse);
+        opacity: 0.7;
+      }
 
-  .table-count {
-    font-size: 10.5px;
-    font-weight: 500;
-    color: var(--text-tertiary);
-    background: var(--bg-subtle);
-    padding: 2px 7px;
-    border-radius: 8px;
-    border: 1px solid var(--border-default);
-  }
-  .table-list li.active .table-count {
-    background: rgba(255,255,255,0.18);
-    color: var(--text-inverse);
-    border-color: transparent;
-  }
+      .table-count {
+        font-size: 10.5px;
+        font-weight: 500;
+        color: var(--text-tertiary);
+        background: var(--bg-subtle);
+        padding: 2px 7px;
+        border-radius: 8px;
+        border: 1px solid var(--border-default);
+      }
+      .table-list li.active .table-count {
+        background: rgba(255, 255, 255, 0.18);
+        color: var(--text-inverse);
+        border-color: transparent;
+      }
 
-  /* ========== 右侧内容 ========== */
-  .content-card {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    box-shadow: var(--shadow-xs);
-  }
+      /* ========== 右侧内容 ========== */
+      .content-card {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-xs);
+      }
 
-  .content-header {
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--border-default);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .content-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .content-title h3 {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-    font-family: "JetBrains Mono", "SF Mono", monospace;
-    letter-spacing: -0.005em;
-  }
-  .content-title h3 .schema { color: var(--text-quaternary); font-weight: 400; }
-  .content-title .badge {
-    background: var(--info-soft);
-    color: var(--info);
-    font-size: 10.5px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-weight: 500;
-    border: 1px solid var(--info-border);
-  }
-  .content-meta {
-    display: flex;
-    gap: 16px;
-    font-size: 12px;
-    color: var(--text-tertiary);
-  }
-  .content-meta strong {
-    color: var(--text-primary);
-    font-weight: 600;
-    margin-right: 2px;
-  }
+      .content-header {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border-default);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .content-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .content-title h3 {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', 'SF Mono', monospace;
+        letter-spacing: -0.005em;
+      }
+      .content-title h3 .schema {
+        color: var(--text-quaternary);
+        font-weight: 400;
+      }
+      .content-title .badge {
+        background: var(--info-soft);
+        color: var(--info);
+        font-size: 10.5px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 500;
+        border: 1px solid var(--info-border);
+      }
+      .content-meta {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--text-tertiary);
+      }
+      .content-meta strong {
+        color: var(--text-primary);
+        font-weight: 600;
+        margin-right: 2px;
+      }
 
-  /* SQL 查询框 */
-  .sql-box {
-    background: var(--bg-deep);
-    color: #D4D4D8;
-    border-radius: var(--radius-md);
-    padding: 12px 14px;
-    margin: 14px 18px 0;
-    font-family: "JetBrains Mono", "SF Mono", monospace;
-    font-size: 12.5px;
-    border: 1px solid #27272A;
-  }
-  .sql-box .hint {
-    color: #71717A;
-    font-size: 11px;
-    margin-bottom: 6px;
-  }
-  .sql-box .keyword { color: #C4B5FD; }
-  .sql-box .string { color: #86EFAC; }
-  .sql-box .function { color: #93C5FD; }
+      /* SQL 查询框 */
+      .sql-box {
+        background: var(--bg-deep);
+        color: #d4d4d8;
+        border-radius: var(--radius-md);
+        padding: 12px 14px;
+        margin: 14px 18px 0;
+        font-family: 'JetBrains Mono', 'SF Mono', monospace;
+        font-size: 12.5px;
+        border: 1px solid #27272a;
+      }
+      .sql-box .hint {
+        color: #71717a;
+        font-size: 11px;
+        margin-bottom: 6px;
+      }
+      .sql-box .keyword {
+        color: #c4b5fd;
+      }
+      .sql-box .string {
+        color: #86efac;
+      }
+      .sql-box .function {
+        color: #93c5fd;
+      }
 
-  /* 工具栏 */
-  .content-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 18px;
-    background: var(--bg-base);
-    border-top: 1px solid var(--border-default);
-  }
-  .toolbar-left, .toolbar-right { display: flex; gap: 8px; align-items: center; }
+      /* 工具栏 */
+      .content-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 18px;
+        background: var(--bg-base);
+        border-top: 1px solid var(--border-default);
+      }
+      .toolbar-left,
+      .toolbar-right {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
 
-  /* ========== 数据表 ========== */
-  .data-table-wrap { padding: 14px 18px; }
+      /* ========== 数据表 ========== */
+      .data-table-wrap {
+        padding: 14px 18px;
+      }
 
-  .data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-  .data-table thead { background: var(--bg-base); }
-  .data-table th {
-    text-align: left;
-    padding: 10px 14px;
-    color: var(--text-tertiary);
-    font-weight: 600;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--border-default);
-    white-space: nowrap;
-  }
-  .data-table td {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border-subtle);
-    vertical-align: middle;
-  }
-  .data-table tbody tr:last-child td { border-bottom: none; }
-  .data-table tbody tr:hover { background: var(--bg-base); }
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .data-table thead {
+        background: var(--bg-base);
+      }
+      .data-table th {
+        text-align: left;
+        padding: 10px 14px;
+        color: var(--text-tertiary);
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--border-default);
+        white-space: nowrap;
+      }
+      .data-table td {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border-subtle);
+        vertical-align: middle;
+      }
+      .data-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+      .data-table tbody tr:hover {
+        background: var(--bg-base);
+      }
 
-  .cell-mono {
-    font-family: "JetBrains Mono", "SF Mono", monospace;
-    font-size: 12px;
-    color: var(--text-primary);
-    background: var(--bg-subtle);
-    padding: 3px 7px;
-    border-radius: 4px;
-    display: inline-block;
-    border: 1px solid var(--border-default);
-  }
+      .cell-mono {
+        font-family: 'JetBrains Mono', 'SF Mono', monospace;
+        font-size: 12px;
+        color: var(--text-primary);
+        background: var(--bg-subtle);
+        padding: 3px 7px;
+        border-radius: 4px;
+        display: inline-block;
+        border: 1px solid var(--border-default);
+      }
 
-  .json-preview {
-    font-family: "JetBrains Mono", "SF Mono", monospace;
-    font-size: 11px;
-    color: var(--text-secondary);
-    background: var(--bg-subtle);
-    padding: 3px 7px;
-    border-radius: 4px;
-    cursor: pointer;
-    display: inline-block;
-    max-width: 280px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    border: 1px solid var(--border-default);
-    vertical-align: middle;
-  }
+      .json-preview {
+        font-family: 'JetBrains Mono', 'SF Mono', monospace;
+        font-size: 11px;
+        color: var(--text-secondary);
+        background: var(--bg-subtle);
+        padding: 3px 7px;
+        border-radius: 4px;
+        cursor: pointer;
+        display: inline-block;
+        max-width: 280px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        border: 1px solid var(--border-default);
+        vertical-align: middle;
+      }
 
-  .pk-tag {
-    display: inline-block;
-    background: var(--warning-soft);
-    color: var(--warning);
-    font-size: 9.5px;
-    padding: 1px 5px;
-    border-radius: 3px;
-    margin-left: 4px;
-    font-weight: 600;
-    border: 1px solid var(--warning-border);
-  }
+      .pk-tag {
+        display: inline-block;
+        background: var(--warning-soft);
+        color: var(--warning);
+        font-size: 9.5px;
+        padding: 1px 5px;
+        border-radius: 3px;
+        margin-left: 4px;
+        font-weight: 600;
+        border: 1px solid var(--warning-border);
+      }
 
-  /* 分页 */
-  .pagination {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 18px;
-    background: var(--bg-base);
-    border-top: 1px solid var(--border-default);
-    font-size: 12px;
-    color: var(--text-tertiary);
-  }
-  .page-btns { display: flex; gap: 3px; }
-  .page-btn {
-    min-width: 28px;
-    height: 28px;
-    border: 1px solid var(--border-default);
-    background: var(--bg-elevated);
-    border-radius: 5px;
-    font-size: 12px;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    padding: 0 8px;
-  }
-  .page-btn.active { background: var(--bg-deep); color: var(--text-inverse); border-color: var(--bg-deep); }
-  .page-btn:hover:not(.active) { border-color: var(--border-strong); color: var(--text-primary); }
-</style>
-</head>
-<body>
-
-<header class="topbar">
-  <a href="index.html" class="brand">
-    <div class="brand-mark">M</div>
-    <span>Mock Studio</span>
-  </a>
-  <nav class="nav-menu">
-    <a href="index.html">项目</a>
-    <a href="callback-tasks.html">回调任务</a>
-    <a href="data.html" class="active">数据管理</a>
-    <a href="logs.html">调用日志</a>
-  </nav>
-  <div class="topbar-right">
-    <button class="btn btn-secondary">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      导出全部
-    </button>
-    <button class="btn btn-secondary">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      导入
-    </button>
-    <button class="btn btn-primary">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      新建表
-    </button>
-    <div class="user-avatar">JS</div>
-  </div>
-</header>
-
-<main class="page-container">
-  <div class="page-header">
-    <div class="page-title">
-      <h1>数据管理</h1>
-      <p>查看和管理所有数据联动产生的 Mock 数据</p>
-    </div>
-  </div>
-
-  <div class="two-col">
-    <!-- 左侧表列表 -->
-    <div class="tables-card">
-      <div class="tables-header">
-        <span class="tables-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-          数据表 <span style="color:var(--text-quaternary);font-weight:normal;font-size:12px;">· 10</span>
-        </span>
-        <button class="btn btn-ghost btn-sm" title="新建表">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      /* 分页 */
+      .pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 18px;
+        background: var(--bg-base);
+        border-top: 1px solid var(--border-default);
+        font-size: 12px;
+        color: var(--text-tertiary);
+      }
+      .page-btns {
+        display: flex;
+        gap: 3px;
+      }
+      .page-btn {
+        min-width: 28px;
+        height: 28px;
+        border: 1px solid var(--border-default);
+        background: var(--bg-elevated);
+        border-radius: 5px;
+        font-size: 12px;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        padding: 0 8px;
+      }
+      .page-btn.active {
+        background: var(--bg-deep);
+        color: var(--text-inverse);
+        border-color: var(--bg-deep);
+      }
+      .page-btn:hover:not(.active) {
+        border-color: var(--border-strong);
+        color: var(--text-primary);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a href="index.html" class="brand">
+        <div class="brand-mark">M</div>
+        <span>Mock Studio</span>
+      </a>
+      <nav class="nav-menu">
+        <a href="index.html">项目</a>
+        <a href="callback-tasks.html">回调任务</a>
+        <a href="data.html" class="active">数据管理</a>
+        <a href="logs.html">调用日志</a>
+      </nav>
+      <div class="topbar-right">
+        <button class="btn btn-secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          导出全部
         </button>
+        <button class="btn btn-secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          导入
+        </button>
+        <button class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          新建表
+        </button>
+        <div class="user-avatar">JS</div>
       </div>
-      <ul class="table-list">
-        <li><span class="table-name">projects</span><span class="table-count">8</span></li>
-        <li><span class="table-name">feature_groups</span><span class="table-count">23</span></li>
-        <li><span class="table-name">mock_apis</span><span class="table-count">186</span></li>
-        <li class="active"><span class="table-name">face_data</span><span class="table-count">42</span></li>
-        <li><span class="table-name">face_recognition</span><span class="table-count">38</span></li>
-        <li><span class="table-name">order_data</span><span class="table-count">156</span></li>
-        <li><span class="table-name">pay_records</span><span class="table-count">86</span></li>
-        <li><span class="table-name">sms_logs</span><span class="table-count">312</span></li>
-        <li><span class="table-name">request_logs</span><span class="table-count">3,452</span></li>
-        <li><span class="table-name">callback_tasks</span><span class="table-count">487</span></li>
-      </ul>
-    </div>
+    </header>
 
-    <!-- 右侧内容 -->
-    <div class="content-card">
-      <div class="content-header">
-        <div class="content-title">
-          <h3><span class="schema">database /</span> face_data</h3>
-          <span class="badge">业务表</span>
-          <span class="pk-tag">PK</span>
-        </div>
-        <div class="content-meta">
-          <span>总记录数 <strong>42</strong></span>
-          <span>占用 <strong>12.4 KB</strong></span>
-          <span>最后写入 <strong>3 分钟前</strong></span>
+    <main class="page-container">
+      <div class="page-header">
+        <div class="page-title">
+          <h1>数据管理</h1>
+          <p>查看和管理所有数据联动产生的 Mock 数据</p>
         </div>
       </div>
 
-      <!-- SQL 查询 -->
-      <div class="sql-box">
-        <div class="hint">// 在线查询 · 支持标准 SQL · 仅当前表</div>
-<span class="keyword">SELECT</span> * <span class="keyword">FROM</span> face_data <span class="keyword">WHERE</span> requestId <span class="keyword">LIKE</span> <span class="string">'req_%'</span> <span class="keyword">ORDER BY</span> createdAt <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="function">10</span>;
-      </div>
-
-      <!-- 工具栏 -->
-      <div class="content-toolbar">
-        <div class="toolbar-left">
-          <div class="search-wrap" style="width:200px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input type="text" placeholder="按字段值搜索…">
+      <div class="two-col">
+        <!-- 左侧表列表 -->
+        <div class="tables-card">
+          <div class="tables-header">
+            <span class="tables-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <ellipse cx="12" cy="5" rx="9" ry="3" />
+                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+              </svg>
+              数据表
+              <span style="color: var(--text-quaternary); font-weight: normal; font-size: 12px"
+                >· 10</span
+              >
+            </span>
+            <button class="btn btn-ghost btn-sm" title="新建表">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
           </div>
-          <select class="filter-select">
-            <option>全部字段</option>
-            <option>faceId</option><option>name</option><option>requestId</option>
-          </select>
+          <ul class="table-list">
+            <li><span class="table-name">projects</span><span class="table-count">8</span></li>
+            <li>
+              <span class="table-name">feature_groups</span><span class="table-count">23</span>
+            </li>
+            <li><span class="table-name">mock_apis</span><span class="table-count">186</span></li>
+            <li class="active">
+              <span class="table-name">face_data</span><span class="table-count">42</span>
+            </li>
+            <li>
+              <span class="table-name">face_recognition</span><span class="table-count">38</span>
+            </li>
+            <li><span class="table-name">order_data</span><span class="table-count">156</span></li>
+            <li><span class="table-name">pay_records</span><span class="table-count">86</span></li>
+            <li><span class="table-name">sms_logs</span><span class="table-count">312</span></li>
+            <li>
+              <span class="table-name">request_logs</span><span class="table-count">3,452</span>
+            </li>
+            <li>
+              <span class="table-name">callback_tasks</span><span class="table-count">487</span>
+            </li>
+          </ul>
         </div>
-        <div class="toolbar-right">
-          <button class="btn btn-secondary btn-sm">运行</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--danger);">清空表</button>
-          <button class="btn btn-primary btn-sm">新增记录</button>
+
+        <!-- 右侧内容 -->
+        <div class="content-card">
+          <div class="content-header">
+            <div class="content-title">
+              <h3><span class="schema">database /</span> face_data</h3>
+              <span class="badge">业务表</span>
+              <span class="pk-tag">PK</span>
+            </div>
+            <div class="content-meta">
+              <span>总记录数 <strong>42</strong></span>
+              <span>占用 <strong>12.4 KB</strong></span>
+              <span>最后写入 <strong>3 分钟前</strong></span>
+            </div>
+          </div>
+
+          <!-- SQL 查询 -->
+          <div class="sql-box">
+            <div class="hint">// 在线查询 · 支持标准 SQL · 仅当前表</div>
+            <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> face_data
+            <span class="keyword">WHERE</span> requestId <span class="keyword">LIKE</span>
+            <span class="string">'req_%'</span> <span class="keyword">ORDER BY</span> createdAt
+            <span class="keyword">DESC</span> <span class="keyword">LIMIT</span>
+            <span class="function">10</span>;
+          </div>
+
+          <!-- 工具栏 -->
+          <div class="content-toolbar">
+            <div class="toolbar-left">
+              <div class="search-wrap" style="width: 200px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+                <input type="text" placeholder="按字段值搜索…" />
+              </div>
+              <select class="filter-select">
+                <option>全部字段</option>
+                <option>faceId</option>
+                <option>name</option>
+                <option>requestId</option>
+              </select>
+            </div>
+            <div class="toolbar-right">
+              <button class="btn btn-secondary btn-sm">运行</button>
+              <button class="btn btn-ghost btn-sm" style="color: var(--danger)">清空表</button>
+              <button class="btn btn-primary btn-sm">新增记录</button>
+            </div>
+          </div>
+
+          <!-- 数据表 -->
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 30px"><input type="checkbox" /></th>
+                  <th>faceId<span class="pk-tag">PK</span></th>
+                  <th>name</th>
+                  <th>imageUrl</th>
+                  <th>requestId</th>
+                  <th>metadata</th>
+                  <th>createdAt</th>
+                  <th style="width: 70px">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><input type="checkbox" /></td>
+                  <td><span class="cell-mono">face_req_demo_001</span></td>
+                  <td><strong>张三</strong></td>
+                  <td>
+                    <code
+                      style="
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                        color: var(--text-secondary);
+                      "
+                      >https://example.com/face/zhangsan.jpg</code
+                    >
+                  </td>
+                  <td>
+                    <code
+                      style="
+                        color: var(--text-primary);
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                      "
+                      >req_demo_001</code
+                    >
+                  </td>
+                  <td><span class="json-preview">{ "department": "技术部", "level": 5 }</span></td>
+                  <td>2026-07-06 13:35:42</td>
+                  <td>
+                    <div style="display: flex; gap: 2px">
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--text-quaternary);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--danger);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path
+                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" /></td>
+                  <td><span class="cell-mono">face_req_demo_002</span></td>
+                  <td><strong>李四</strong></td>
+                  <td>
+                    <code
+                      style="
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                        color: var(--text-secondary);
+                      "
+                      >https://example.com/face/lisi.png</code
+                    >
+                  </td>
+                  <td>
+                    <code
+                      style="
+                        color: var(--text-primary);
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                      "
+                      >req_demo_002</code
+                    >
+                  </td>
+                  <td><span class="json-preview">{ "department": "产品部", "level": 3 }</span></td>
+                  <td>2026-07-06 13:28:30</td>
+                  <td>
+                    <div style="display: flex; gap: 2px">
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--text-quaternary);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--danger);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path
+                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" /></td>
+                  <td><span class="cell-mono">face_1720234567</span></td>
+                  <td><strong>王五</strong></td>
+                  <td>
+                    <code
+                      style="
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                        color: var(--text-secondary);
+                      "
+                      >https://example.com/face/wangwu.jpg</code
+                    >
+                  </td>
+                  <td>
+                    <code
+                      style="
+                        color: var(--text-primary);
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                      "
+                      >req_9988</code
+                    >
+                  </td>
+                  <td><span class="json-preview">{ "department": "运营部" }</span></td>
+                  <td>2026-07-06 11:42:18</td>
+                  <td>
+                    <div style="display: flex; gap: 2px">
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--text-quaternary);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--danger);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path
+                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" /></td>
+                  <td><span class="cell-mono">face_1720227893</span></td>
+                  <td><strong>赵六</strong></td>
+                  <td>
+                    <code
+                      style="
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                        color: var(--text-secondary);
+                      "
+                      >https://example.com/face/zhaoliu.png</code
+                    >
+                  </td>
+                  <td>
+                    <code
+                      style="
+                        color: var(--text-primary);
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                      "
+                      >req_9986</code
+                    >
+                  </td>
+                  <td><span class="json-preview">{ "department": "财务部", "level": 4 }</span></td>
+                  <td>2026-07-06 10:30:00</td>
+                  <td>
+                    <div style="display: flex; gap: 2px">
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--text-quaternary);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--danger);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path
+                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" /></td>
+                  <td><span class="cell-mono">face_1720201122</span></td>
+                  <td><strong>孙七</strong></td>
+                  <td>
+                    <code
+                      style="
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                        color: var(--text-secondary);
+                      "
+                      >https://example.com/face/sunqi.jpg</code
+                    >
+                  </td>
+                  <td>
+                    <code
+                      style="
+                        color: var(--text-primary);
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                      "
+                      >req_9980</code
+                    >
+                  </td>
+                  <td><span class="json-preview">{ "department": "技术部", "level": 2 }</span></td>
+                  <td>2026-07-06 09:15:22</td>
+                  <td>
+                    <div style="display: flex; gap: 2px">
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--text-quaternary);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--danger);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path
+                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" /></td>
+                  <td><span class="cell-mono">face_1720109876</span></td>
+                  <td><strong>周八</strong></td>
+                  <td>
+                    <code
+                      style="
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                        color: var(--text-secondary);
+                      "
+                      >https://example.com/face/zhouba.png</code
+                    >
+                  </td>
+                  <td>
+                    <code
+                      style="
+                        color: var(--text-primary);
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 12px;
+                      "
+                      >req_9975</code
+                    >
+                  </td>
+                  <td><span class="json-preview">{ "department": "市场部" }</span></td>
+                  <td>2026-07-05 17:42:50</td>
+                  <td>
+                    <div style="display: flex; gap: 2px">
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--text-quaternary);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        class="btn-ghost"
+                        style="
+                          width: 26px;
+                          height: 26px;
+                          border-radius: 5px;
+                          border: none;
+                          background: transparent;
+                          color: var(--danger);
+                          display: inline-grid;
+                          place-items: center;
+                          cursor: pointer;
+                        "
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path
+                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 分页 -->
+          <div class="pagination">
+            <span>显示 1 - 6 条 / 共 42 条</span>
+            <div class="page-btns">
+              <button class="page-btn">‹</button>
+              <button class="page-btn active">1</button>
+              <button class="page-btn">2</button>
+              <button class="page-btn">3</button>
+              <button class="page-btn">4</button>
+              <button class="page-btn">5</button>
+              <button class="page-btn">›</button>
+            </div>
+          </div>
         </div>
       </div>
-
-      <!-- 数据表 -->
-      <div class="data-table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th style="width:30px;"><input type="checkbox"></th>
-              <th>faceId<span class="pk-tag">PK</span></th>
-              <th>name</th>
-              <th>imageUrl</th>
-              <th>requestId</th>
-              <th>metadata</th>
-              <th>createdAt</th>
-              <th style="width:70px;">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><input type="checkbox"></td>
-              <td><span class="cell-mono">face_req_demo_001</span></td>
-              <td><strong>张三</strong></td>
-              <td><code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);">https://example.com/face/zhangsan.jpg</code></td>
-              <td><code style="color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:12px;">req_demo_001</code></td>
-              <td><span class="json-preview">{ "department": "技术部", "level": 5 }</span></td>
-              <td>2026-07-06 13:35:42</td>
-              <td>
-                <div style="display:flex;gap:2px;">
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--text-quaternary);display:inline-grid;place-items:center;cursor:pointer;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  </button>
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--danger);display:inline-grid;place-items:center;cursor:pointer;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><input type="checkbox"></td>
-              <td><span class="cell-mono">face_req_demo_002</span></td>
-              <td><strong>李四</strong></td>
-              <td><code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);">https://example.com/face/lisi.png</code></td>
-              <td><code style="color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:12px;">req_demo_002</code></td>
-              <td><span class="json-preview">{ "department": "产品部", "level": 3 }</span></td>
-              <td>2026-07-06 13:28:30</td>
-              <td>
-                <div style="display:flex;gap:2px;">
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--text-quaternary);display:inline-grid;place-items:center;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--danger);display:inline-grid;place-items:center;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><input type="checkbox"></td>
-              <td><span class="cell-mono">face_1720234567</span></td>
-              <td><strong>王五</strong></td>
-              <td><code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);">https://example.com/face/wangwu.jpg</code></td>
-              <td><code style="color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:12px;">req_9988</code></td>
-              <td><span class="json-preview">{ "department": "运营部" }</span></td>
-              <td>2026-07-06 11:42:18</td>
-              <td>
-                <div style="display:flex;gap:2px;">
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--text-quaternary);display:inline-grid;place-items:center;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--danger);display:inline-grid;place-items:center;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><input type="checkbox"></td>
-              <td><span class="cell-mono">face_1720227893</span></td>
-              <td><strong>赵六</strong></td>
-              <td><code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);">https://example.com/face/zhaoliu.png</code></td>
-              <td><code style="color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:12px;">req_9986</code></td>
-              <td><span class="json-preview">{ "department": "财务部", "level": 4 }</span></td>
-              <td>2026-07-06 10:30:00</td>
-              <td>
-                <div style="display:flex;gap:2px;">
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--text-quaternary);display:inline-grid;place-items:center;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--danger);display:inline-grid;place-items:center;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><input type="checkbox"></td>
-              <td><span class="cell-mono">face_1720201122</span></td>
-              <td><strong>孙七</strong></td>
-              <td><code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);">https://example.com/face/sunqi.jpg</code></td>
-              <td><code style="color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:12px;">req_9980</code></td>
-              <td><span class="json-preview">{ "department": "技术部", "level": 2 }</span></td>
-              <td>2026-07-06 09:15:22</td>
-              <td>
-                <div style="display:flex;gap:2px;">
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--text-quaternary);display:inline-grid;place-items:center;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--danger);display:inline-grid;place-items:center;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><input type="checkbox"></td>
-              <td><span class="cell-mono">face_1720109876</span></td>
-              <td><strong>周八</strong></td>
-              <td><code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);">https://example.com/face/zhouba.png</code></td>
-              <td><code style="color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:12px;">req_9975</code></td>
-              <td><span class="json-preview">{ "department": "市场部" }</span></td>
-              <td>2026-07-05 17:42:50</td>
-              <td>
-                <div style="display:flex;gap:2px;">
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--text-quaternary);display:inline-grid;place-items:center;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                  <button class="btn-ghost" style="width:26px;height:26px;border-radius:5px;border:none;background:transparent;color:var(--danger);display:inline-grid;place-items:center;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- 分页 -->
-      <div class="pagination">
-        <span>显示 1 - 6 条 / 共 42 条</span>
-        <div class="page-btns">
-          <button class="page-btn">‹</button>
-          <button class="page-btn active">1</button>
-          <button class="page-btn">2</button>
-          <button class="page-btn">3</button>
-          <button class="page-btn">4</button>
-          <button class="page-btn">5</button>
-          <button class="page-btn">›</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</main>
-
-</body>
+    </main>
+  </body>
 </html>

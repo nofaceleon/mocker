@@ -1,10 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  ChevronDown,
-  ChevronRight,
-  GripVertical,
-  Trash2,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical, Trash2 } from 'lucide-react';
 import { Button, FormField, Input, Select, Switch } from '@/components/ui';
 import { CodeEditor } from '@/components/CodeEditor';
 import type { CallbackConfig, CallbackConditionPreset, HttpMethod } from '@/types/api';
@@ -72,11 +67,7 @@ export function CallbackItemCard({
     setErrors((prev) => {
       const next = { ...prev };
       if ('callbackUrl' in patch) delete next.callbackUrl;
-      if (
-        'retryConditionExpr' in patch ||
-        'retryCondition' in patch ||
-        'retryEnabled' in patch
-      ) {
+      if ('retryConditionExpr' in patch || 'retryCondition' in patch || 'retryEnabled' in patch) {
         delete next.retryConditionExpr;
       }
       return next;
@@ -179,9 +170,7 @@ export function CallbackItemCard({
           >
             {item.callbackMethod}
           </span>
-          <span className="text-[11px] text-ink-subtle truncate hidden sm:inline">
-            {summary}
-          </span>
+          <span className="text-[11px] text-ink-subtle truncate hidden sm:inline">{summary}</span>
         </button>
 
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -219,12 +208,7 @@ export function CallbackItemCard({
           </div>
 
           <div className="form-row">
-            <FormField
-              label="回调 URL"
-              required
-              className="col-span-2"
-              error={errors.callbackUrl}
-            >
+            <FormField label="回调 URL" required className="col-span-2" error={errors.callbackUrl}>
               <Input
                 ref={urlRef}
                 className="mono"
@@ -281,10 +265,7 @@ export function CallbackItemCard({
                 disabled={!chainEnabled}
               />
             </FormField>
-            <FormField
-              label="链路语义"
-              hint="相对上一条回调结束"
-            >
+            <FormField label="链路语义" hint="相对上一条回调结束">
               <Input value="等待后触发下一条" disabled readOnly className="!bg-canvas-subtle" />
             </FormField>
           </div>
@@ -335,9 +316,7 @@ export function CallbackItemCard({
                   min={0}
                   max={10}
                   value={item.maxRetries}
-                  onChange={(e) =>
-                    update({ maxRetries: Math.max(0, Number(e.target.value) || 0) })
-                  }
+                  onChange={(e) => update({ maxRetries: Math.max(0, Number(e.target.value) || 0) })}
                   disabled={!chainEnabled || !item.retryEnabled}
                 />
               </FormField>
@@ -370,11 +349,7 @@ export function CallbackItemCard({
               </FormField>
             </div>
             <div className="form-row">
-              <FormField
-                label="失败条件"
-                hint="满足此条件才会触发自动重试"
-                className="col-span-2"
-              >
+              <FormField label="失败条件" hint="满足此条件才会触发自动重试" className="col-span-2">
                 <Select
                   value={item.retryCondition}
                   onChange={(e) =>

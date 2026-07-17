@@ -55,7 +55,12 @@ export function SortableList<T extends SortableItem>({
 
   if (items.length === 0) {
     return (
-      <div className={cn('rounded-md border border-dashed border-canvas-muted p-6 text-center text-[12px] text-ink-subtle', className)}>
+      <div
+        className={cn(
+          'rounded-md border border-dashed border-canvas-muted p-6 text-center text-[12px] text-ink-subtle',
+          className,
+        )}
+      >
         {emptyText}
       </div>
     );

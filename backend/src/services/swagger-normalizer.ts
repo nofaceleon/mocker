@@ -1,5 +1,10 @@
 import * as yaml from 'yaml';
-import { HTTP_METHODS, type HttpMethod, type ValidationRules, type ParamRule } from '../db/schema.js';
+import {
+  HTTP_METHODS,
+  type HttpMethod,
+  type ValidationRules,
+  type ParamRule,
+} from '../db/schema.js';
 
 export type OpenApiVersion = '2.0' | '3.0' | 'unknown';
 
@@ -45,7 +50,8 @@ export function parseSpecText(content: string, fileName: string): unknown {
   }
 
   const lowerName = fileName.toLowerCase();
-  const looksJson = lowerName.endsWith('.json') || trimmed.startsWith('{') || trimmed.startsWith('[');
+  const looksJson =
+    lowerName.endsWith('.json') || trimmed.startsWith('{') || trimmed.startsWith('[');
   const looksYaml = lowerName.endsWith('.yaml') || lowerName.endsWith('.yml');
 
   // 优先按扩展名选择解析器，扩展名缺失时尝试 JSON 失败后回退 YAML
@@ -71,9 +77,7 @@ export function parseSpecText(content: string, fileName: string): unknown {
       keepSourceTokens: true,
     });
     // 仅过滤掉 "Map keys must be unique" 警告，其它解析错误仍抛错
-    const fatalErrors = doc.errors.filter(
-      (e) => !/Map keys must be unique/i.test(e.message),
-    );
+    const fatalErrors = doc.errors.filter((e) => !/Map keys must be unique/i.test(e.message));
     if (fatalErrors.length > 0) {
       const first = fatalErrors[0];
       throw new SpecParseError(
@@ -296,9 +300,26 @@ export function normalizeSpec(raw: unknown): ParseResult {
         : [];
       const mergedParams = mergeParameters(pathLevelParams, opParams);
 
-      const item = version === '3.0'
-        ? normalizeOperation3(pathKey, upper, operation as Record<string, unknown>, mergedParams, root, baseUrl, index)
-        : normalizeOperation2(pathKey, upper, operation as Record<string, unknown>, mergedParams, root, baseUrl, index);
+      const item =
+        version === '3.0'
+          ? normalizeOperation3(
+              pathKey,
+              upper,
+              operation as Record<string, unknown>,
+              mergedParams,
+              root,
+              baseUrl,
+              index,
+            )
+          : normalizeOperation2(
+              pathKey,
+              upper,
+              operation as Record<string, unknown>,
+              mergedParams,
+              root,
+              baseUrl,
+              index,
+            );
 
       items.push(item);
       index += 1;
@@ -320,7 +341,11 @@ function extractBaseUrl(root: Record<string, unknown>, version: OpenApiVersion):
   const servers = root.servers;
   if (Array.isArray(servers) && servers.length > 0) {
     const first = servers[0];
-    if (first && typeof first === 'object' && typeof (first as Record<string, unknown>).url === 'string') {
+    if (
+      first &&
+      typeof first === 'object' &&
+      typeof (first as Record<string, unknown>).url === 'string'
+    ) {
       const url = ((first as Record<string, unknown>).url as string).trim();
       // 仅取 path 部分
       try {
@@ -505,7 +530,11 @@ function pickFirstResponse(
   root: Record<string, unknown>,
 ): { status: number; contentType: string; body: unknown } {
   if (!responses || typeof responses !== 'object') {
-    return { status: 200, contentType: 'application/json', body: { code: 0, message: 'success', data: null } };
+    return {
+      status: 200,
+      contentType: 'application/json',
+      body: { code: 0, message: 'success', data: null },
+    };
   }
   const respObj = responses as Record<string, unknown>;
   // 优先取 2xx
@@ -513,7 +542,11 @@ function pickFirstResponse(
   const defaultKey = !successKey && respObj.default ? 'default' : null;
   const key = successKey ?? defaultKey ?? Object.keys(respObj)[0];
   if (!key) {
-    return { status: 200, contentType: 'application/json', body: { code: 0, message: 'success', data: null } };
+    return {
+      status: 200,
+      contentType: 'application/json',
+      body: { code: 0, message: 'success', data: null },
+    };
   }
   const status = /^\d+$/.test(key) ? Number(key) : 200;
 
@@ -528,7 +561,8 @@ function pickFirstResponse(
   if (content && typeof content === 'object') {
     const ct = pickJsonContentType(content as Record<string, unknown>);
     if (ct) {
-      const contentType = Object.keys(content).find((k) => k === 'application/json') ?? Object.keys(content)[0];
+      const contentType =
+        Object.keys(content).find((k) => k === 'application/json') ?? Object.keys(content)[0];
       const schema = ct.schema as Record<string, unknown> | undefined;
       const example = (ct as Record<string, unknown>).example;
       let body: unknown = example;

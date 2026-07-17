@@ -22,8 +22,22 @@
           "validationRules": {
             "isEnabled": true,
             "body": [
-              { "name": "name", "type": "string", "required": true, "min": 1, "max": 50, "default": "demo" },
-              { "name": "age", "type": "number", "required": false, "min": 0, "max": 150, "default": 18 }
+              {
+                "name": "name",
+                "type": "string",
+                "required": true,
+                "min": 1,
+                "max": 50,
+                "default": "demo"
+              },
+              {
+                "name": "age",
+                "type": "number",
+                "required": false,
+                "min": 0,
+                "max": 150,
+                "default": 18
+              }
             ],
             "failStatus": 400,
             "failMessage": "参数校验失败"

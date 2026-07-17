@@ -40,9 +40,9 @@ export type SSEEvent = {
 
 export type SSEConfig = {
   events: SSEEvent[];
-  interval?: number;       // 事件发送间隔(ms)，默认500
-  loop?: boolean;          // 是否循环发送，默认false
-  comment?: string;        // 初始注释行（可选）
+  interval?: number; // 事件发送间隔(ms)，默认500
+  loop?: boolean; // 是否循环发送，默认false
+  comment?: string; // 初始注释行（可选）
 };
 
 /**

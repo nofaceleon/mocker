@@ -15,17 +15,17 @@ pnpm workspace，包含 `backend/`（`@mockhub/backend`）、`frontend/`（`@moc
 
 ## 命令
 
-| 命令 | 说明 |
-|---|---|
-| `pnpm dev` | 同时启动后端 + 前端 |
-| `pnpm build` | 先构建 `backend`，再构建 `frontend`（顺序重要） |
-| `pnpm typecheck` | `pnpm -r run typecheck` |
-| `pnpm lint` | `pnpm -r run lint` |
-| `pnpm format` | Prettier（ts,tsx,js,jsx,json,md,css,html） |
+| 命令               | 说明                                                           |
+| ------------------ | -------------------------------------------------------------- |
+| `pnpm dev`         | 同时启动后端 + 前端                                            |
+| `pnpm build`       | 先构建 `backend`，再构建 `frontend`（顺序重要）                |
+| `pnpm typecheck`   | `pnpm -r run typecheck`                                        |
+| `pnpm lint`        | `pnpm -r run lint`                                             |
+| `pnpm format`      | Prettier（ts,tsx,js,jsx,json,md,css,html）                     |
 | `pnpm db:generate` | `drizzle-kit generate`（schema → `backend/drizzle/` 中的 SQL） |
-| `pnpm db:migrate` | 应用迁移到 SQLite |
-| `pnpm db:seed` | 插入演示项目/功能组/API |
-| `pnpm start` | 生产模式：`node backend/dist/server.js` |
+| `pnpm db:migrate`  | 应用迁移到 SQLite                                              |
+| `pnpm db:seed`     | 插入演示项目/功能组/API                                        |
+| `pnpm start`       | 生产模式：`node backend/dist/server.js`                        |
 
 不存在测试框架。唯一验证手段是 `scripts/callback-smoke.sh`（bash 端到端脚本）。
 

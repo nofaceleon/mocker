@@ -10,11 +10,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <input
         ref={ref}
-        className={cn(
-          'form-input h-8',
-          invalid && 'border-danger',
-          className,
-        )}
+        className={cn('form-input h-8', invalid && 'border-danger', className)}
         {...rest}
       />
     );

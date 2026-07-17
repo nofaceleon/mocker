@@ -17,13 +17,7 @@ import { config as runtimeConfig } from '@/lib/runtime-config';
 import type { HttpMethod } from '@/types/api';
 
 export type ConfigTab =
-  | 'basic'
-  | 'params'
-  | 'response'
-  | 'callback'
-  | 'datalink'
-  | 'script'
-  | 'test';
+  'basic' | 'params' | 'response' | 'callback' | 'datalink' | 'script' | 'test';
 
 export type TabDef = {
   value: ConfigTab;
@@ -61,17 +55,37 @@ type ConfigNavProps = {
   path: string;
   breadcrumb?: BreadcrumbItem[];
   onLogClick?: () => void;
-  summary?: { name?: string; isEnabled?: boolean; groupName?: string; calledCount?: number; lastSavedAt?: string; lastCalledAt?: string };
+  summary?: {
+    name?: string;
+    isEnabled?: boolean;
+    groupName?: string;
+    calledCount?: number;
+    lastSavedAt?: string;
+    lastCalledAt?: string;
+  };
   featureState?: FeatureState;
   showSwitcher?: boolean;
   onToggleSwitcher?: () => void;
 };
 
-export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogClick, summary, featureState, showSwitcher, onToggleSwitcher }: ConfigNavProps) {
+export function ConfigNav({
+  current,
+  onChange,
+  method,
+  path,
+  breadcrumb,
+  onLogClick,
+  summary,
+  featureState,
+  showSwitcher,
+  onToggleSwitcher,
+}: ConfigNavProps) {
   const dynamicTabs = useMemo(() => {
     return TABS.map((tab) => {
-      if (tab.value === 'callback') return { ...tab, badge: featureState?.hasCallback ? 'ON' : 'OFF' };
-      if (tab.value === 'datalink') return { ...tab, badge: featureState?.hasDataLink ? 'ON' : 'OFF' };
+      if (tab.value === 'callback')
+        return { ...tab, badge: featureState?.hasCallback ? 'ON' : 'OFF' };
+      if (tab.value === 'datalink')
+        return { ...tab, badge: featureState?.hasDataLink ? 'ON' : 'OFF' };
       if (tab.value === 'script') return { ...tab, badge: featureState?.hasScript ? 'ON' : 'OFF' };
       return tab;
     });
@@ -146,12 +160,20 @@ export function ConfigNav({ current, onChange, method, path, breadcrumb, onLogCl
 
       <div className="flex-1 overflow-y-auto">
         {sections.map((sec) => (
-          <div key={sec.title} className="border-t border-line-subtle px-3 pb-2 pt-3.5 first:border-t-0">
+          <div
+            key={sec.title}
+            className="border-t border-line-subtle px-3 pb-2 pt-3.5 first:border-t-0"
+          >
             <div className="px-2 pb-2 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-ink-subtle">
               {sec.title}
             </div>
             {sec.tabs.map((t) => (
-              <NavItem key={t.value} tab={t} active={current === t.value} onClick={() => onChange(t.value)} />
+              <NavItem
+                key={t.value}
+                tab={t}
+                active={current === t.value}
+                onClick={() => onChange(t.value)}
+              />
             ))}
           </div>
         ))}
@@ -183,13 +205,17 @@ function NavItem({ tab, active, onClick }: { tab: TabDef; active: boolean; onCli
       onClick={onClick}
       className={cn(
         'group mb-0.5 flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] font-[450] transition-all',
-        active ? 'bg-canvas-deep font-medium text-ink-inverse shadow-sm' : 'text-ink-secondary hover:bg-canvas-subtle hover:text-ink',
+        active
+          ? 'bg-canvas-deep font-medium text-ink-inverse shadow-sm'
+          : 'text-ink-secondary hover:bg-canvas-subtle hover:text-ink',
       )}
     >
       <span
         className={cn(
           'grid h-[22px] w-[22px] flex-shrink-0 place-items-center rounded transition-colors',
-          active ? 'bg-white/15 text-ink-inverse' : 'text-ink-tertiary group-hover:text-ink-secondary',
+          active
+            ? 'bg-white/15 text-ink-inverse'
+            : 'text-ink-tertiary group-hover:text-ink-secondary',
         )}
       >
         <Icon className="h-3.5 w-3.5" />

@@ -39,10 +39,7 @@ export type EnqueueTaskInput = {
 export type BuiltinRetryCondition = 'always' | 'server_error' | 'success_only';
 
 /** delayType='fixed'|'random' + delayValue="5000"|"3000-8000" → 毫秒 */
-export function resolveDelayMs(
-  delayType: 'fixed' | 'random',
-  delayValue: string,
-): number {
+export function resolveDelayMs(delayType: 'fixed' | 'random', delayValue: string): number {
   const raw = (delayValue ?? '').trim();
   if (!raw) return 0;
   if (delayType === 'random') {
@@ -133,7 +130,10 @@ export function renderCallbackEnqueueInput(
   };
 }
 
-function renderStringSafe(input: string, ctx: { req: Record<string, unknown>; response: unknown }): string | null {
+function renderStringSafe(
+  input: string,
+  ctx: { req: Record<string, unknown>; response: unknown },
+): string | null {
   try {
     const out = renderStringAny(input, ctx);
     if (out === null || out === undefined) return null;
@@ -150,7 +150,10 @@ function renderStringSafe(input: string, ctx: { req: Record<string, unknown>; re
 }
 
 /** 调用回调模板的"整段单一模板返回原类型"语义；其余返回字符串 */
-function renderStringAny(input: string, ctx: { req: Record<string, unknown>; response: unknown }): unknown {
+function renderStringAny(
+  input: string,
+  ctx: { req: Record<string, unknown>; response: unknown },
+): unknown {
   const single = /^\{\{\s*([^{}]+?)\s*\}\}$/.exec(input);
   const tctx = { req: ctx.req, response: ctx.response };
   if (single) {
@@ -172,7 +175,8 @@ export function parseRetryCondition(
   if (v.startsWith('{')) {
     try {
       const obj = JSON.parse(v) as { kind?: string; expr?: string };
-      if (obj.kind === 'custom' && typeof obj.expr === 'string') return { kind: 'custom', expr: obj.expr };
+      if (obj.kind === 'custom' && typeof obj.expr === 'string')
+        return { kind: 'custom', expr: obj.expr };
     } catch {
       // ignore
     }
@@ -217,12 +221,12 @@ export async function executeTask(task: CallbackTask, cfg: CallbackConfig | null
     logger.warn({ err, taskId: task.id }, 'callback request failed');
   }
 
-  const retryCfg = cfg
-    ? parseRetryCondition(cfg.retryCondition)
-    : 'server_error';
+  const retryCfg = cfg ? parseRetryCondition(cfg.retryCondition) : 'server_error';
 
   const willRetry =
-    cfg?.retryEnabled && task.retryCount < task.maxRetries && shouldRetry(retryCfg, status, networkError !== null);
+    cfg?.retryEnabled &&
+    task.retryCount < task.maxRetries &&
+    shouldRetry(retryCfg, status, networkError !== null);
 
   const now = new Date();
   const prevLogs = parseAttemptLogs(task.attemptLogs);
@@ -263,7 +267,10 @@ export async function executeTask(task: CallbackTask, cfg: CallbackConfig | null
       })
       .where(eq(callbackTasks.id, task.id))
       .run();
-    logger.info({ taskId: task.id, retryCount: task.retryCount + 1, nextAt }, 'callback scheduled for retry');
+    logger.info(
+      { taskId: task.id, retryCount: task.retryCount + 1, nextAt },
+      'callback scheduled for retry',
+    );
     callbackEvents.emit('retry:scheduled', task.id);
     return;
   }
@@ -313,7 +320,9 @@ async function sendCallback(task: CallbackTask): Promise<AxiosResponse> {
   const headers: Record<string, string> = { ...(task.callbackHeaders ?? {}) };
   const method = (task.callbackMethod || 'POST').toLowerCase();
   const data = task.callbackBody ?? undefined;
-  const isJson = headers['Content-Type']?.toLowerCase().includes('json') || headers['content-type']?.toLowerCase().includes('json');
+  const isJson =
+    headers['Content-Type']?.toLowerCase().includes('json') ||
+    headers['content-type']?.toLowerCase().includes('json');
   if (data && method !== 'get' && method !== 'head' && isJson) {
     try {
       const parsed = JSON.parse(data);
@@ -371,7 +380,8 @@ export async function reExecute(taskId: number): Promise<void> {
   // 取出最新行执行
   const fresh = db.select().from(callbackTasks).where(eq(callbackTasks.id, taskId)).get();
   if (!fresh) return;
-  const cfg = db.select().from(callbackConfigs).where(eq(callbackConfigs.apiId, fresh.apiId)).get() ?? null;
+  const cfg =
+    db.select().from(callbackConfigs).where(eq(callbackConfigs.apiId, fresh.apiId)).get() ?? null;
   await executeTask(fresh, cfg);
 }
 

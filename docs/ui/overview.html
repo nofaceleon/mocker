@@ -1,447 +1,535 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>界面总览 · Mock Studio</title>
-<link rel="stylesheet" href="theme.css">
-<style>
-  body {
-    background: #09090B;
-    color: #FAFAFA;
-    min-height: 100vh;
-    padding: 56px 32px 32px;
-    overflow-y: auto;
-  }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>界面总览 · Mock Studio</title>
+    <link rel="stylesheet" href="theme.css" />
+    <style>
+      body {
+        background: #09090b;
+        color: #fafafa;
+        min-height: 100vh;
+        padding: 56px 32px 32px;
+        overflow-y: auto;
+      }
 
-  /* 微妙径向光晕 */
-  body::before {
-    content: "";
-    position: fixed;
-    top: -200px; left: 50%;
-    width: 1000px; height: 1000px;
-    transform: translateX(-50%);
-    background: radial-gradient(closest-side, rgba(99,102,241,0.06), transparent);
-    pointer-events: none;
-  }
+      /* 微妙径向光晕 */
+      body::before {
+        content: '';
+        position: fixed;
+        top: -200px;
+        left: 50%;
+        width: 1000px;
+        height: 1000px;
+        transform: translateX(-50%);
+        background: radial-gradient(closest-side, rgba(99, 102, 241, 0.06), transparent);
+        pointer-events: none;
+      }
 
-  .hero { text-align: center; margin-bottom: 56px; position: relative; }
+      .hero {
+        text-align: center;
+        margin-bottom: 56px;
+        position: relative;
+      }
 
-  .hero .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
-    margin-bottom: 18px;
-    color: #D4D4D8;
-    backdrop-filter: blur(10px);
-  }
-  .hero .badge::before {
-    content: "";
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: #22C55E;
-  }
+      .hero .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        margin-bottom: 18px;
+        color: #d4d4d8;
+        backdrop-filter: blur(10px);
+      }
+      .hero .badge::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #22c55e;
+      }
 
-  .hero h1 {
-    font-size: 44px;
-    font-weight: 600;
-    margin-bottom: 14px;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-  }
+      .hero h1 {
+        font-size: 44px;
+        font-weight: 600;
+        margin-bottom: 14px;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+      }
 
-  .hero h1 .accent {
-    color: #FAFAFA;
-    background: linear-gradient(120deg, #FAFAFA 0%, #A1A1AA 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
+      .hero h1 .accent {
+        color: #fafafa;
+        background: linear-gradient(120deg, #fafafa 0%, #a1a1aa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
 
-  .hero p {
-    font-size: 16px;
-    color: #A1A1AA;
-    max-width: 600px;
-    margin: 0 auto;
-    line-height: 1.6;
-  }
+      .hero p {
+        font-size: 16px;
+        color: #a1a1aa;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+      }
 
-  .hero-meta {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 26px;
-    font-size: 12px;
-    flex-wrap: wrap;
-  }
-  .hero-meta span {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 6px 14px;
-    border-radius: 18px;
-    color: #D4D4D8;
-    backdrop-filter: blur(10px);
-  }
+      .hero-meta {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 26px;
+        font-size: 12px;
+        flex-wrap: wrap;
+      }
+      .hero-meta span {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 6px 14px;
+        border-radius: 18px;
+        color: #d4d4d8;
+        backdrop-filter: blur(10px);
+      }
 
-  .pages-grid {
-    max-width: 1280px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-    gap: 18px;
-    position: relative;
-  }
+      .pages-grid {
+        max-width: 1280px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        gap: 18px;
+        position: relative;
+      }
 
-  .page-card {
-    background: var(--bg-elevated);
-    color: var(--text-primary);
-    border-radius: 14px;
-    overflow: hidden;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.3);
-    transition: all 0.3s;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-  .page-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 28px 60px rgba(0,0,0,0.5), 0 8px 16px rgba(0,0,0,0.3);
-    border-color: rgba(99,102,241,0.3);
-  }
+      .page-card {
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow:
+          0 20px 40px rgba(0, 0, 0, 0.4),
+          0 8px 16px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .page-card:hover {
+        transform: translateY(-4px);
+        box-shadow:
+          0 28px 60px rgba(0, 0, 0, 0.5),
+          0 8px 16px rgba(0, 0, 0, 0.3);
+        border-color: rgba(99, 102, 241, 0.3);
+      }
 
-  .page-preview {
-    height: 220px;
-    overflow: hidden;
-    position: relative;
-    background: var(--bg-base);
-    border-bottom: 1px solid var(--border-default);
-  }
-  .page-preview iframe {
-    width: 1280px;
-    height: 800px;
-    border: none;
-    transform: scale(0.3);
-    transform-origin: top left;
-    pointer-events: none;
-    background: white;
-  }
-  .page-preview .label {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 4px 10px;
-    border-radius: 5px;
-    font-size: 11px;
-    font-weight: 600;
-    backdrop-filter: blur(4px);
-    font-family: "JetBrains Mono", monospace;
-    letter-spacing: 0.04em;
-  }
+      .page-preview {
+        height: 220px;
+        overflow: hidden;
+        position: relative;
+        background: var(--bg-base);
+        border-bottom: 1px solid var(--border-default);
+      }
+      .page-preview iframe {
+        width: 1280px;
+        height: 800px;
+        border: none;
+        transform: scale(0.3);
+        transform-origin: top left;
+        pointer-events: none;
+        background: white;
+      }
+      .page-preview .label {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 5px;
+        font-size: 11px;
+        font-weight: 600;
+        backdrop-filter: blur(4px);
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: 0.04em;
+      }
 
-  .page-info {
-    padding: 18px 20px;
-  }
-  .page-info h3 {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    letter-spacing: -0.01em;
-  }
-  .page-info h3 .num {
-    background: var(--bg-deep);
-    color: var(--text-inverse);
-    width: 22px; height: 22px;
-    border-radius: 5px;
-    display: grid;
-    place-items: center;
-    font-size: 11px;
-    font-family: "JetBrains Mono", monospace;
-    font-weight: 600;
-  }
-  .page-info p {
-    font-size: 12.5px;
-    color: var(--text-tertiary);
-    line-height: 1.55;
-    margin-bottom: 12px;
-  }
-  .feature-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-bottom: 14px;
-  }
-  .feature-tag {
-    background: var(--bg-subtle);
-    color: var(--text-secondary);
-    font-size: 10.5px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    border: 1px solid var(--border-default);
-    font-weight: 500;
-  }
+      .page-info {
+        padding: 18px 20px;
+      }
+      .page-info h3 {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        letter-spacing: -0.01em;
+      }
+      .page-info h3 .num {
+        background: var(--bg-deep);
+        color: var(--text-inverse);
+        width: 22px;
+        height: 22px;
+        border-radius: 5px;
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+      }
+      .page-info p {
+        font-size: 12.5px;
+        color: var(--text-tertiary);
+        line-height: 1.55;
+        margin-bottom: 12px;
+      }
+      .feature-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-bottom: 14px;
+      }
+      .feature-tag {
+        background: var(--bg-subtle);
+        color: var(--text-secondary);
+        font-size: 10.5px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        border: 1px solid var(--border-default);
+        font-weight: 500;
+      }
 
-  .open-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--text-primary);
-    font-size: 12.5px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: gap 0.15s;
-  }
-  .open-link:hover {
-    gap: 8px;
-  }
-  .open-link svg { width: 13px; height: 13px; }
+      .open-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-primary);
+        font-size: 12.5px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: gap 0.15s;
+      }
+      .open-link:hover {
+        gap: 8px;
+      }
+      .open-link svg {
+        width: 13px;
+        height: 13px;
+      }
 
-  /* footer */
-  .footer {
-    max-width: 1280px;
-    margin: 64px auto 0;
-    padding: 32px;
-    background: rgba(255,255,255,0.03);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px;
-    color: #FAFAFA;
-    text-align: center;
-    position: relative;
-  }
-  .footer h2 {
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 10px;
-    letter-spacing: -0.02em;
-  }
-  .footer .lead {
-    color: #A1A1AA;
-    font-size: 14px;
-    line-height: 1.7;
-    max-width: 720px;
-    margin: 0 auto 24px;
-  }
+      /* footer */
+      .footer {
+        max-width: 1280px;
+        margin: 64px auto 0;
+        padding: 32px;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        color: #fafafa;
+        text-align: center;
+        position: relative;
+      }
+      .footer h2 {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        letter-spacing: -0.02em;
+      }
+      .footer .lead {
+        color: #a1a1aa;
+        font-size: 14px;
+        line-height: 1.7;
+        max-width: 720px;
+        margin: 0 auto 24px;
+      }
 
-  .feature-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-top: 24px;
-    text-align: left;
-  }
-  .feature-item {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
-    padding: 14px 16px;
-  }
-  .feature-item-title {
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: #FAFAFA;
-  }
-  .feature-item-desc {
-    font-size: 12px;
-    color: #A1A1AA;
-    line-height: 1.55;
-  }
-</style>
-</head>
-<body>
-
-<div class="hero">
-  <span class="badge">UI 设计预览 · 高保真静态原型</span>
-  <h1><span class="accent">通用接口 Mock 服务平台</span></h1>
-  <p>基于 PRD v1.0 设计的完整前端界面预览，覆盖项目管理、接口配置、数据联动、延迟回调、调用日志等全部核心场景</p>
-  <div class="hero-meta">
-    <span>📄 6 个核心页面</span>
-    <span>🎨 完整交互设计</span>
-    <span>📱 桌面端优先</span>
-    <span>⚡ 纯 HTML · 静态预览</span>
-  </div>
-</div>
-
-<div class="pages-grid">
-  <a class="page-card" href="index.html" target="_blank">
-    <div class="page-preview">
-      <span class="label">01 · 项目首页</span>
-      <iframe src="index.html" loading="lazy"></iframe>
-    </div>
-    <div class="page-info">
-      <h3><span class="num">1</span>项目首页（项目列表）</h3>
-      <p>展示所有 Mock 项目卡片，支持搜索、过滤、统计概览和快速创建。</p>
-      <div class="feature-list">
-        <span class="feature-tag">项目卡片</span>
-        <span class="feature-tag">统计卡片</span>
-        <span class="feature-tag">新建/编辑/删除</span>
-        <span class="feature-tag">搜索过滤</span>
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-top: 24px;
+        text-align: left;
+      }
+      .feature-item {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 14px 16px;
+      }
+      .feature-item-title {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #fafafa;
+      }
+      .feature-item-desc {
+        font-size: 12px;
+        color: #a1a1aa;
+        line-height: 1.55;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hero">
+      <span class="badge">UI 设计预览 · 高保真静态原型</span>
+      <h1><span class="accent">通用接口 Mock 服务平台</span></h1>
+      <p>
+        基于 PRD v1.0
+        设计的完整前端界面预览，覆盖项目管理、接口配置、数据联动、延迟回调、调用日志等全部核心场景
+      </p>
+      <div class="hero-meta">
+        <span>📄 6 个核心页面</span>
+        <span>🎨 完整交互设计</span>
+        <span>📱 桌面端优先</span>
+        <span>⚡ 纯 HTML · 静态预览</span>
       </div>
-      <span class="open-link">
-        打开预览
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      </span>
     </div>
-  </a>
 
-  <a class="page-card" href="project.html" target="_blank">
-    <div class="page-preview">
-      <span class="label">02 · 项目详情</span>
-      <iframe src="project.html" loading="lazy"></iframe>
-    </div>
-    <div class="page-info">
-      <h3><span class="num">2</span>项目详情页</h3>
-      <p>左侧项目/功能组树形导航，右侧接口列表。展示所有 Mock 接口的状态、调用次数、特性标签。</p>
-      <div class="feature-list">
-        <span class="feature-tag">树形导航</span>
-        <span class="feature-tag">API 列表</span>
-        <span class="feature-tag">状态开关</span>
-        <span class="feature-tag">特性徽章</span>
-      </div>
-      <span class="open-link">
-        打开预览
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      </span>
-    </div>
-  </a>
+    <div class="pages-grid">
+      <a class="page-card" href="index.html" target="_blank">
+        <div class="page-preview">
+          <span class="label">01 · 项目首页</span>
+          <iframe src="index.html" loading="lazy"></iframe>
+        </div>
+        <div class="page-info">
+          <h3><span class="num">1</span>项目首页（项目列表）</h3>
+          <p>展示所有 Mock 项目卡片，支持搜索、过滤、统计概览和快速创建。</p>
+          <div class="feature-list">
+            <span class="feature-tag">项目卡片</span>
+            <span class="feature-tag">统计卡片</span>
+            <span class="feature-tag">新建/编辑/删除</span>
+            <span class="feature-tag">搜索过滤</span>
+          </div>
+          <span class="open-link">
+            打开预览
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </span>
+        </div>
+      </a>
 
-  <a class="page-card" href="api-edit.html" target="_blank">
-    <div class="page-preview">
-      <span class="label">03 · 接口配置 ⭐ 核心</span>
-      <iframe src="api-edit.html" loading="lazy"></iframe>
-    </div>
-    <div class="page-info">
-      <h3><span class="num">3</span>接口编辑页（核心）</h3>
-      <p>完整的 Mock 接口配置界面：基本配置、请求参数、响应配置、参数校验、延迟回调、数据联动、自定义脚本、在线测试。</p>
-      <div class="feature-list">
-        <span class="feature-tag">6 大配置模块</span>
-        <span class="feature-tag">延迟回调</span>
-        <span class="feature-tag">数据联动</span>
-        <span class="feature-tag">脚本编辑器</span>
-        <span class="feature-tag">在线测试</span>
-      </div>
-      <span class="open-link">
-        打开预览
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      </span>
-    </div>
-  </a>
+      <a class="page-card" href="project.html" target="_blank">
+        <div class="page-preview">
+          <span class="label">02 · 项目详情</span>
+          <iframe src="project.html" loading="lazy"></iframe>
+        </div>
+        <div class="page-info">
+          <h3><span class="num">2</span>项目详情页</h3>
+          <p>
+            左侧项目/功能组树形导航，右侧接口列表。展示所有 Mock 接口的状态、调用次数、特性标签。
+          </p>
+          <div class="feature-list">
+            <span class="feature-tag">树形导航</span>
+            <span class="feature-tag">API 列表</span>
+            <span class="feature-tag">状态开关</span>
+            <span class="feature-tag">特性徽章</span>
+          </div>
+          <span class="open-link">
+            打开预览
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </span>
+        </div>
+      </a>
 
-  <a class="page-card" href="callback-tasks.html" target="_blank">
-    <div class="page-preview">
-      <span class="label">04 · 回调任务</span>
-      <iframe src="callback-tasks.html" loading="lazy"></iframe>
-    </div>
-    <div class="page-info">
-      <h3><span class="num">4</span>回调任务管理</h3>
-      <p>所有延迟回调任务的统一管理面板：状态、重试次数、时间线、失败重发等关键能力。</p>
-      <div class="feature-list">
-        <span class="feature-tag">执行时间线</span>
-        <span class="feature-tag">失败重试</span>
-        <span class="feature-tag">手动重发</span>
-        <span class="feature-tag">状态徽章</span>
-      </div>
-      <span class="open-link">
-        打开预览
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      </span>
-    </div>
-  </a>
+      <a class="page-card" href="api-edit.html" target="_blank">
+        <div class="page-preview">
+          <span class="label">03 · 接口配置 ⭐ 核心</span>
+          <iframe src="api-edit.html" loading="lazy"></iframe>
+        </div>
+        <div class="page-info">
+          <h3><span class="num">3</span>接口编辑页（核心）</h3>
+          <p>
+            完整的 Mock
+            接口配置界面：基本配置、请求参数、响应配置、参数校验、延迟回调、数据联动、自定义脚本、在线测试。
+          </p>
+          <div class="feature-list">
+            <span class="feature-tag">6 大配置模块</span>
+            <span class="feature-tag">延迟回调</span>
+            <span class="feature-tag">数据联动</span>
+            <span class="feature-tag">脚本编辑器</span>
+            <span class="feature-tag">在线测试</span>
+          </div>
+          <span class="open-link">
+            打开预览
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </span>
+        </div>
+      </a>
 
-  <a class="page-card" href="data.html" target="_blank">
-    <div class="page-preview">
-      <span class="label">05 · 数据管理</span>
-      <iframe src="data.html" loading="lazy"></iframe>
-    </div>
-    <div class="page-info">
-      <h3><span class="num">5</span>数据管理（Mock 数据库）</h3>
-      <p>查看所有数据联动产生的 Mock 数据，支持 SQL 在线查询、表结构查看和数据导入/导出。</p>
-      <div class="feature-list">
-        <span class="feature-tag">表列表</span>
-        <span class="feature-tag">SQL 查询</span>
-        <span class="feature-tag">JSON 预览</span>
-        <span class="feature-tag">导入/导出</span>
-      </div>
-      <span class="open-link">
-        打开预览
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      </span>
-    </div>
-  </a>
+      <a class="page-card" href="callback-tasks.html" target="_blank">
+        <div class="page-preview">
+          <span class="label">04 · 回调任务</span>
+          <iframe src="callback-tasks.html" loading="lazy"></iframe>
+        </div>
+        <div class="page-info">
+          <h3><span class="num">4</span>回调任务管理</h3>
+          <p>所有延迟回调任务的统一管理面板：状态、重试次数、时间线、失败重发等关键能力。</p>
+          <div class="feature-list">
+            <span class="feature-tag">执行时间线</span>
+            <span class="feature-tag">失败重试</span>
+            <span class="feature-tag">手动重发</span>
+            <span class="feature-tag">状态徽章</span>
+          </div>
+          <span class="open-link">
+            打开预览
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </span>
+        </div>
+      </a>
 
-  <a class="page-card" href="logs.html" target="_blank">
-    <div class="page-preview">
-      <span class="label">06 · 调用日志</span>
-      <iframe src="logs.html" loading="lazy"></iframe>
-    </div>
-    <div class="page-info">
-      <h3><span class="num">6</span>调用日志</h3>
-      <p>所有 Mock 接口的请求记录，含统计图表、状态码分布、实时刷新、详情查看（脚本执行日志）。</p>
-      <div class="feature-list">
-        <span class="feature-tag">趋势图表</span>
-        <span class="feature-tag">状态码分布</span>
-        <span class="feature-tag">实时刷新</span>
-        <span class="feature-tag">脚本日志</span>
-      </div>
-      <span class="open-link">
-        打开预览
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      </span>
-    </div>
-  </a>
-</div>
+      <a class="page-card" href="data.html" target="_blank">
+        <div class="page-preview">
+          <span class="label">05 · 数据管理</span>
+          <iframe src="data.html" loading="lazy"></iframe>
+        </div>
+        <div class="page-info">
+          <h3><span class="num">5</span>数据管理（Mock 数据库）</h3>
+          <p>查看所有数据联动产生的 Mock 数据，支持 SQL 在线查询、表结构查看和数据导入/导出。</p>
+          <div class="feature-list">
+            <span class="feature-tag">表列表</span>
+            <span class="feature-tag">SQL 查询</span>
+            <span class="feature-tag">JSON 预览</span>
+            <span class="feature-tag">导入/导出</span>
+          </div>
+          <span class="open-link">
+            打开预览
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </span>
+        </div>
+      </a>
 
-<div class="footer">
-  <h2>设计理念</h2>
-  <p class="lead">基于 PRD v1.0 的核心需求，强调数据可视化、操作流畅性和开发者友好。通过可视化界面，让开发者无需编写代码即可完成 Mock 配置工作。</p>
+      <a class="page-card" href="logs.html" target="_blank">
+        <div class="page-preview">
+          <span class="label">06 · 调用日志</span>
+          <iframe src="logs.html" loading="lazy"></iframe>
+        </div>
+        <div class="page-info">
+          <h3><span class="num">6</span>调用日志</h3>
+          <p>
+            所有 Mock 接口的请求记录，含统计图表、状态码分布、实时刷新、详情查看（脚本执行日志）。
+          </p>
+          <div class="feature-list">
+            <span class="feature-tag">趋势图表</span>
+            <span class="feature-tag">状态码分布</span>
+            <span class="feature-tag">实时刷新</span>
+            <span class="feature-tag">脚本日志</span>
+          </div>
+          <span class="open-link">
+            打开预览
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </span>
+        </div>
+      </a>
+    </div>
 
-  <div class="feature-grid">
-    <div class="feature-item">
-      <div class="feature-item-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        克制黑白灰
-      </div>
-      <div class="feature-item-desc">纯黑主色 + 高级灰阶，避免视觉疲劳</div>
-    </div>
-    <div class="feature-item">
-      <div class="feature-item-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-        深度层次
-      </div>
-      <div class="feature-item-desc">微阴影 + 等宽字体 + JetBrains Mono</div>
-    </div>
-    <div class="feature-item">
-      <div class="feature-item-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        数据可视
-      </div>
-      <div class="feature-item-desc">折线图 + 饼图 + 实时状态指示</div>
-    </div>
-    <div class="feature-item">
-      <div class="feature-item-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>
-        精致细节
-      </div>
-      <div class="feature-item-desc">pulse 动画、dashed 边框、live dot</div>
-    </div>
-  </div>
-</div>
+    <div class="footer">
+      <h2>设计理念</h2>
+      <p class="lead">
+        基于 PRD v1.0
+        的核心需求，强调数据可视化、操作流畅性和开发者友好。通过可视化界面，让开发者无需编写代码即可完成
+        Mock 配置工作。
+      </p>
 
-</body>
+      <div class="feature-grid">
+        <div class="feature-item">
+          <div class="feature-item-title">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            克制黑白灰
+          </div>
+          <div class="feature-item-desc">纯黑主色 + 高级灰阶，避免视觉疲劳</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-item-title">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+            </svg>
+            深度层次
+          </div>
+          <div class="feature-item-desc">微阴影 + 等宽字体 + JetBrains Mono</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-item-title">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+            数据可视
+          </div>
+          <div class="feature-item-desc">折线图 + 饼图 + 实时状态指示</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-item-title">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            精致细节
+          </div>
+          <div class="feature-item-desc">pulse 动画、dashed 边框、live dot</div>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

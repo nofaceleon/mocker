@@ -26,7 +26,11 @@ export type ScriptReq = {
 export type ScriptDbApi = {
   insert: (table: string, data: Record<string, unknown>) => unknown;
   select: (table: string, where?: WhereClause) => unknown[];
-  update: (table: string, where: WhereClause, patch: Record<string, unknown>) => { affected: number };
+  update: (
+    table: string,
+    where: WhereClause,
+    patch: Record<string, unknown>,
+  ) => { affected: number };
   delete: (table: string, where?: WhereClause) => { affected: number };
 };
 
@@ -199,7 +203,10 @@ export async function runScript(input: ScriptRunInput): Promise<ScriptRunResult>
     const value = await Promise.race([
       runPromise,
       new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new ScriptError(`脚本执行超时（>${timeoutMs}ms）`)), timeoutMs + 50);
+        setTimeout(
+          () => reject(new ScriptError(`脚本执行超时（>${timeoutMs}ms）`)),
+          timeoutMs + 50,
+        );
       }),
     ]);
 

@@ -1,11 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import {
-  index,
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /**
  * MockHub 数据模型 (对齐 PRD 9.1)
@@ -173,18 +167,18 @@ export const callbackConfigs = sqliteTable(
     name: text('name'),
     sortOrder: integer('sort_order').notNull().default(0),
     isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(false),
-  callbackUrl: text('callback_url'),
-  callbackMethod: text('callback_method').notNull().default('POST'),
-  callbackHeaders: text('callback_headers', { mode: 'json' }).$type<Record<string, string>>(),
-  callbackBody: text('callback_body'),
-  delayType: text('delay_type', { enum: DELAY_TYPES }).notNull().default('fixed'),
-  delayValue: text('delay_value').notNull().default('0'),
-  retryEnabled: integer('retry_enabled', { mode: 'boolean' }).notNull().default(false),
-  maxRetries: integer('max_retries').notNull().default(3),
-  retryInterval: integer('retry_interval').notNull().default(5000),
-  retryStrategy: text('retry_strategy', { enum: RETRY_STRATEGIES }).notNull().default('fixed'),
-  retryCondition: text('retry_condition'),
-  ...timestamps,
+    callbackUrl: text('callback_url'),
+    callbackMethod: text('callback_method').notNull().default('POST'),
+    callbackHeaders: text('callback_headers', { mode: 'json' }).$type<Record<string, string>>(),
+    callbackBody: text('callback_body'),
+    delayType: text('delay_type', { enum: DELAY_TYPES }).notNull().default('fixed'),
+    delayValue: text('delay_value').notNull().default('0'),
+    retryEnabled: integer('retry_enabled', { mode: 'boolean' }).notNull().default(false),
+    maxRetries: integer('max_retries').notNull().default(3),
+    retryInterval: integer('retry_interval').notNull().default(5000),
+    retryStrategy: text('retry_strategy', { enum: RETRY_STRATEGIES }).notNull().default('fixed'),
+    retryCondition: text('retry_condition'),
+    ...timestamps,
   },
   (t) => [index('idx_cc_api_sort').on(t.apiId, t.sortOrder)],
 );

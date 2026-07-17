@@ -85,34 +85,37 @@ export function ApiSwitcherPanel({
   );
 }
 
-function ApiItem({
-  api,
-  active,
-  onClick,
-}: {
-  api: MockApi;
-  active: boolean;
-  onClick: () => void;
-}) {
+function ApiItem({ api, active, onClick }: { api: MockApi; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
         'group mb-0.5 flex w-full items-start gap-2 rounded-md px-2.5 py-2 text-left transition-all',
-        active
-          ? 'bg-canvas-deep'
-          : 'hover:bg-canvas-subtle',
+        active ? 'bg-canvas-deep' : 'hover:bg-canvas-subtle',
       )}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <MethodBadge method={api.method} className={cn('!text-[10px] !py-[0px] !px-[4px]', active && '!border-transparent !bg-white/15 !text-white')} />
-          <span className={cn('text-[11.5px] font-medium truncate', active ? 'text-white' : 'text-ink')}>
+          <MethodBadge
+            method={api.method}
+            className={cn(
+              '!text-[10px] !py-[0px] !px-[4px]',
+              active && '!border-transparent !bg-white/15 !text-white',
+            )}
+          />
+          <span
+            className={cn('text-[11.5px] font-medium truncate', active ? 'text-white' : 'text-ink')}
+          >
             {api.name}
           </span>
         </div>
-        <div className={cn('mt-1 truncate font-mono text-[10.5px]', active ? 'text-white/70' : 'text-ink-subtle')}>
+        <div
+          className={cn(
+            'mt-1 truncate font-mono text-[10.5px]',
+            active ? 'text-white/70' : 'text-ink-subtle',
+          )}
+        >
           {api.path}
         </div>
       </div>

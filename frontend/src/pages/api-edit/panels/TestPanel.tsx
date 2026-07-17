@@ -6,10 +6,7 @@ import { CodeEditor } from '@/components/CodeEditor';
 import type { MockApi, MockApiResponse } from '@/types/api';
 import type { TestApiInput, TestApiOutput } from '@/hooks/queries/use-mock-apis';
 import { config as runtimeConfig } from '@/lib/runtime-config';
-import {
-  buildMockRequestSample,
-  type MockRequestSample,
-} from '@/lib/mock-request-sample';
+import { buildMockRequestSample, type MockRequestSample } from '@/lib/mock-request-sample';
 import { PanelHeader } from '../PanelHeader';
 import { copyToClipboard } from '@/lib/clipboard';
 
@@ -31,13 +28,9 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
   const initialSample = useMemo<MockRequestSample>(() => buildMockRequestSample(api), [api]);
 
   const [path, setPath] = useState(initialSample.path);
-  const [queryText, setQueryText] = useState(
-    JSON.stringify(initialSample.query ?? {}, null, 2),
-  );
+  const [queryText, setQueryText] = useState(JSON.stringify(initialSample.query ?? {}, null, 2));
   const [bodyText, setBodyText] = useState(
-    api.method !== 'GET'
-      ? JSON.stringify(initialSample.body ?? {}, null, 2)
-      : '',
+    api.method !== 'GET' ? JSON.stringify(initialSample.body ?? {}, null, 2) : '',
   );
   const [headersText, setHeadersText] = useState(
     JSON.stringify(initialSample.headers ?? {}, null, 2),
@@ -56,9 +49,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
     const sample = buildMockRequestSample(api);
     setPath(sample.path);
     setQueryText(JSON.stringify(sample.query ?? {}, null, 2));
-    setBodyText(
-      api.method !== 'GET' ? JSON.stringify(sample.body ?? {}, null, 2) : '',
-    );
+    setBodyText(api.method !== 'GET' ? JSON.stringify(sample.body ?? {}, null, 2) : '');
     setHeadersText(JSON.stringify(sample.headers ?? {}, null, 2));
     setResult(null);
     setErr(null);
@@ -70,9 +61,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
     const sample = buildMockRequestSample(api);
     setPath(sample.path);
     setQueryText(JSON.stringify(sample.query ?? {}, null, 2));
-    setBodyText(
-      api.method !== 'GET' ? JSON.stringify(sample.body ?? {}, null, 2) : '',
-    );
+    setBodyText(api.method !== 'GET' ? JSON.stringify(sample.body ?? {}, null, 2) : '');
     setHeadersText(JSON.stringify(sample.headers ?? {}, null, 2));
     toast.success('已按接口定义重新生成示例');
   };
@@ -131,7 +120,8 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         setResult(r as unknown as TestApiOutput);
 
         const sseUrl = (r as unknown as Record<string, unknown>).fullUrl as string;
-        const sseConfig = (r as unknown as Record<string, unknown>).sseConfig as Record<string, unknown> | undefined;
+        const sseConfig = (r as unknown as Record<string, unknown>).sseConfig as
+          Record<string, unknown> | undefined;
 
         // GET方法使用EventSource，其他方法使用fetch
         if (api.method === 'GET') {
@@ -200,7 +190,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
       const response = await fetch(url, {
         method: api.method,
         headers: {
-          'Accept': 'text/event-stream',
+          Accept: 'text/event-stream',
           'Content-Type': 'application/json',
           ...headers,
         },
@@ -295,7 +285,11 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
   };
 
   // 设置SSE事件监听器（用于EventSource）
-  const setupSSEEventListeners = (es: EventSource, sseConfig?: Record<string, unknown>, t0?: number) => {
+  const setupSSEEventListeners = (
+    es: EventSource,
+    sseConfig?: Record<string, unknown>,
+    t0?: number,
+  ) => {
     const eventTypes = new Set<string>();
     if (sseConfig?.events && Array.isArray(sseConfig.events)) {
       const events = sseConfig.events as Array<{ event?: string }>;
@@ -368,7 +362,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         method: api.method,
         baseUrl: 'http://localhost:3000',
         path: path,
-        headers: { 'Accept': 'text/event-stream' },
+        headers: { Accept: 'text/event-stream' },
         body: api.method !== 'GET' ? { example: 'data' } : null,
       })
     : result
@@ -386,14 +380,23 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
       <PanelHeader
         icon={TestTube}
         title="在线测试"
-        description={isSSE ? '测试 SSE 事件流连接：接收服务器推送的事件。' : '在保存前即可发起测试调用：传入请求体 / 头部，查看 Mock 服务的实际响应。便于联调前快速验证。'}
+        description={
+          isSSE
+            ? '测试 SSE 事件流连接：接收服务器推送的事件。'
+            : '在保存前即可发起测试调用：传入请求体 / 头部，查看 Mock 服务的实际响应。便于联调前快速验证。'
+        }
       />
 
       <Card
         title="请求"
         extra={
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={regenerateSample} title="按接口的 validationRules 重新生成示例">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={regenerateSample}
+              title="按接口的 validationRules 重新生成示例"
+            >
               <Wand2 className="h-3 w-3" />
               生成示例
             </Button>
@@ -414,7 +417,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         <FormField label="请求路径">
           <Input className="mono" value={path} onChange={(e) => setPath(e.target.value)} />
         </FormField>
-        {((api.validationRules?.query?.length ?? 0) > 0) && (
+        {(api.validationRules?.query?.length ?? 0) > 0 && (
           <FormField
             label="Query 参数"
             hint={
@@ -446,11 +449,11 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
             hint={
               <span>
                 按 body 规则（含 default / example）生成示例；可手动编辑。
-                {((api.validationRules?.body?.length ?? 0) > 0) && (
+                {(api.validationRules?.body?.length ?? 0) > 0 && (
                   <>
-                    {' '}当前接口有{' '}
-                    <strong>{api.validationRules?.body?.length ?? 0}</strong>
-                    {' '}个字段规则。
+                    {' '}
+                    当前接口有 <strong>{api.validationRules?.body?.length ?? 0}</strong>{' '}
+                    个字段规则。
                   </>
                 )}
               </span>
@@ -477,10 +480,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
 
         {/* 多响应手动选择 */}
         {responses && responses.length > 0 && (
-          <FormField
-            label="指定响应"
-            hint="选择特定响应进行测试，不选则按条件自动匹配"
-          >
+          <FormField label="指定响应" hint="选择特定响应进行测试，不选则按条件自动匹配">
             <Select
               value={selectedResponseId}
               onChange={(e) => setSelectedResponseId(e.target.value)}
@@ -554,13 +554,15 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
                 type="button"
                 className="tool-link inline-flex items-center gap-1"
                 onClick={() => {
-                  const text = sseEvents.map((e) => {
-                    const parts = [];
-                    if (e.event) parts.push(`event: ${e.event}`);
-                    if (e.id) parts.push(`id: ${e.id}`);
-                    parts.push(`data: ${e.data}`);
-                    return parts.join('\n') + '\n';
-                  }).join('\n');
+                  const text = sseEvents
+                    .map((e) => {
+                      const parts = [];
+                      if (e.event) parts.push(`event: ${e.event}`);
+                      if (e.id) parts.push(`id: ${e.id}`);
+                      parts.push(`data: ${e.data}`);
+                      return parts.join('\n') + '\n';
+                    })
+                    .join('\n');
                   copyToClipboard(text).then(() => {
                     toast.success('事件已复制');
                   });
@@ -574,9 +576,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
         >
           <div className="max-h-[400px] overflow-y-auto space-y-2">
             {sseEvents.length === 0 ? (
-              <div className="text-center py-8 text-ink-subtle text-[13px]">
-                等待事件...
-              </div>
+              <div className="text-center py-8 text-ink-subtle text-[13px]">等待事件...</div>
             ) : (
               sseEvents.map((event, index) => (
                 <div key={index} className="rounded-md border border-line bg-canvas-subtle p-3">
@@ -587,9 +587,7 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
                       </span>
                     )}
                     {event.id && (
-                      <span className="text-[11px] text-ink-subtle">
-                        id: {event.id}
-                      </span>
+                      <span className="text-[11px] text-ink-subtle">id: {event.id}</span>
                     )}
                     <span className="text-[11px] text-ink-subtle ml-auto">
                       {new Date(event.timestamp).toLocaleTimeString()}
@@ -612,7 +610,10 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
             className="mt-3"
             title={
               <>
-                响应 <span className="font-normal text-ink-subtle">· {api.method} {result.path}</span>
+                响应{' '}
+                <span className="font-normal text-ink-subtle">
+                  · {api.method} {result.path}
+                </span>
               </>
             }
             extra={
@@ -646,7 +647,12 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
           <Card
             className="mt-3"
             title="响应头"
-            extra={<CopyButton text={JSON.stringify(result.responseHeaders, null, 2)} label="响应头已复制" />}
+            extra={
+              <CopyButton
+                text={JSON.stringify(result.responseHeaders, null, 2)}
+                label="响应头已复制"
+              />
+            }
           >
             <JsonPretty value={result.responseHeaders} />
           </Card>
@@ -701,7 +707,9 @@ function buildCurl(opts: {
   headers?: Record<string, string>;
   body?: unknown;
 }): string {
-  const parts: string[] = [`curl -X ${opts.method.toUpperCase()} '${opts.baseUrl.replace(/\/$/, '')}${opts.path}'`];
+  const parts: string[] = [
+    `curl -X ${opts.method.toUpperCase()} '${opts.baseUrl.replace(/\/$/, '')}${opts.path}'`,
+  ];
   if (opts.headers) {
     Object.entries(opts.headers).forEach(([k, v]) => {
       parts.push(`  -H '${k}: ${v.replace(/'/g, "'\\''")}'`);
@@ -715,9 +723,7 @@ function buildCurl(opts: {
 
 function JsonPretty({ value }: { value: unknown }) {
   return (
-    <pre className="font-mono text-[12.5px] leading-[1.75] text-ink">
-      {renderJson(value, 0)}
-    </pre>
+    <pre className="font-mono text-[12.5px] leading-[1.75] text-ink">{renderJson(value, 0)}</pre>
   );
 }
 

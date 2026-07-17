@@ -47,7 +47,13 @@ export function attachWebSocketServer(server: HttpServer): WebSocketServer {
 
   wss.on(
     'connection',
-    (ws: WebSocket, req: IncomingMessage, api: MockApi, pathParams: Record<string, string>, url: URL) => {
+    (
+      ws: WebSocket,
+      req: IncomingMessage,
+      api: MockApi,
+      pathParams: Record<string, string>,
+      url: URL,
+    ) => {
       void handleConnection(ws, req, api, pathParams, url);
     },
   );
@@ -60,8 +66,13 @@ function matchWebSocketApi(
   path: string,
   candidates: Candidate[],
 ): { api: MockApi; params: Record<string, string> } | null {
-  const hits: Array<{ api: MockApi; params: Record<string, string>; sortOrder: number; id: number; precision: number }> =
-    [];
+  const hits: Array<{
+    api: MockApi;
+    params: Record<string, string>;
+    sortOrder: number;
+    id: number;
+    precision: number;
+  }> = [];
 
   for (const c of candidates) {
     if (!c.api.isEnabled || c.api.protocol !== 'WebSocket') continue;
@@ -211,7 +222,11 @@ async function onMessage(
     }
   } catch (err) {
     const message =
-      err instanceof ScriptError ? err.message : err instanceof Error ? err.message : 'script error';
+      err instanceof ScriptError
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : 'script error';
     if (ws.readyState === WebSocket.OPEN) {
       sendJson(ws, { type: 'error', code: 'SCRIPT_ERROR', message });
     }

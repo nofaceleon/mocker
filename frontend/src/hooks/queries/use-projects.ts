@@ -37,7 +37,8 @@ export function useProjects() {
 export function useProject(id: ID | undefined) {
   return useQuery({
     queryKey: id ? KEYS.detail(id) : ['projects', 'detail', 'none'],
-    queryFn: async () => unwrap(await api.get<Project & { featureGroups: unknown[] }>(`/projects/${id}`)),
+    queryFn: async () =>
+      unwrap(await api.get<Project & { featureGroups: unknown[] }>(`/projects/${id}`)),
     enabled: !!id,
   });
 }
@@ -54,8 +55,10 @@ export function useCreateProject() {
 export function useUpdateProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { id: ID; data: Partial<{ name: string; description: string | null }> }) =>
-      unwrap(await api.put<Project>(`/projects/${vars.id}`, vars.data)),
+    mutationFn: async (vars: {
+      id: ID;
+      data: Partial<{ name: string; description: string | null }>;
+    }) => unwrap(await api.put<Project>(`/projects/${vars.id}`, vars.data)),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: KEYS.all });
       qc.invalidateQueries({ queryKey: KEYS.detail(vars.id) });
@@ -66,7 +69,8 @@ export function useUpdateProject() {
 export function useDeleteProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: ID) => unwrap(await api.delete<{ id: ID; deleted: true }>(`/projects/${id}`)),
+    mutationFn: async (id: ID) =>
+      unwrap(await api.delete<{ id: ID; deleted: true }>(`/projects/${id}`)),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.all }),
   });
 }

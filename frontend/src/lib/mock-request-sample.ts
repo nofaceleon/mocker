@@ -36,7 +36,8 @@ function sampleString(rule: ValidationParamRule): string {
   else if (name === 'mobile' || name === 'phone') value = '13800000000';
   else if (name === 'username' || name === 'user_name') value = 'demo_user';
   else if (name === 'password') value = 'demo_pass_123';
-  else if (name === 'url' || name === 'imageurl' || name.endsWith('url')) value = 'https://example.com';
+  else if (name === 'url' || name === 'imageurl' || name.endsWith('url'))
+    value = 'https://example.com';
   else if (name === 'id' || name.endsWith('_id') || name.endsWith('id')) value = '1';
   else if (name === 'name' || name.endsWith('name')) value = 'demo';
   else if (name === 'type' || name.endsWith('_type')) value = 'hlht';
@@ -94,9 +95,7 @@ export function buildPathFromTemplate(
  * key 使用 camelCase（与 mock 引擎的 normalizeKeys 对齐，
  * 避免 validator 拿不到值误报 Required）。
  */
-export function buildBodySample(
-  bodyRules: ValidationParamRule[],
-): Record<string, unknown> {
+export function buildBodySample(bodyRules: ValidationParamRule[]): Record<string, unknown> {
   const obj: Record<string, unknown> = {};
   for (const rule of bodyRules) {
     const key = toCamelCase(rule.name);
@@ -108,9 +107,7 @@ export function buildBodySample(
 /**
  * 把 query rules 转成示例 query 对象（值都是字符串）
  */
-export function buildQuerySample(
-  queryRules: ValidationParamRule[],
-): Record<string, string> {
+export function buildQuerySample(queryRules: ValidationParamRule[]): Record<string, string> {
   const obj: Record<string, string> = {};
   for (const rule of queryRules) {
     const key = toCamelCase(rule.name);
@@ -129,9 +126,7 @@ function toCamelCase(s: string): string {
 /**
  * 把 header rules 转成示例 header 对象
  */
-export function buildHeaderSample(
-  headerRules: ValidationParamRule[],
-): Record<string, string> {
+export function buildHeaderSample(headerRules: ValidationParamRule[]): Record<string, string> {
   return buildQuerySample(headerRules);
 }
 
@@ -159,4 +154,3 @@ export function buildMockRequestSample(api: MockApi): MockRequestSample {
     headers: buildHeaderSample(headerRules),
   };
 }
-

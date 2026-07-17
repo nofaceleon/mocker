@@ -26,7 +26,9 @@ export function ResponseConditionEditor({ conditions, onChange }: ResponseCondit
   return (
     <div className="space-y-2">
       {conditions.length === 0 && (
-        <div className="text-[12px] text-ink-subtle py-1">无条件（仅通过手动选择或作为默认响应使用）</div>
+        <div className="text-[12px] text-ink-subtle py-1">
+          无条件（仅通过手动选择或作为默认响应使用）
+        </div>
       )}
       {conditions.map((cond, index) => (
         <ResponseConditionRow

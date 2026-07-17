@@ -2,13 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { and, desc, eq, gte, inArray, like, lte, sql, isNull, or } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
-import {
-  featureGroups,
-  mockApis,
-  projects,
-  requestLogs,
-  type RequestLog,
-} from '../db/schema.js';
+import { featureGroups, mockApis, projects, requestLogs, type RequestLog } from '../db/schema.js';
 import { ApiError, asyncHandler } from '../middleware/error-handler.js';
 
 const router = Router();
@@ -82,7 +76,11 @@ type JoinedRow = RequestLog & {
 function buildRangeCondition(q: { range?: string; start?: number; end?: number }) {
   const now = Date.now();
   if (q.range === 'custom') {
-    if (q.start && q.end) return and(gte(requestLogs.createdAt, new Date(q.start)), lte(requestLogs.createdAt, new Date(q.end)));
+    if (q.start && q.end)
+      return and(
+        gte(requestLogs.createdAt, new Date(q.start)),
+        lte(requestLogs.createdAt, new Date(q.end)),
+      );
     if (q.start) return gte(requestLogs.createdAt, new Date(q.start));
     if (q.end) return lte(requestLogs.createdAt, new Date(q.end));
     return undefined;
@@ -96,10 +94,14 @@ function buildRangeCondition(q: { range?: string; start?: number; end?: number }
 
 function statusClassCondition(cls: '2xx' | '3xx' | '4xx' | '5xx' | undefined) {
   if (!cls) return undefined;
-  if (cls === '2xx') return and(gte(requestLogs.responseStatus, 200), lte(requestLogs.responseStatus, 299));
-  if (cls === '3xx') return and(gte(requestLogs.responseStatus, 300), lte(requestLogs.responseStatus, 399));
-  if (cls === '4xx') return and(gte(requestLogs.responseStatus, 400), lte(requestLogs.responseStatus, 499));
-  if (cls === '5xx') return and(gte(requestLogs.responseStatus, 500), lte(requestLogs.responseStatus, 599));
+  if (cls === '2xx')
+    return and(gte(requestLogs.responseStatus, 200), lte(requestLogs.responseStatus, 299));
+  if (cls === '3xx')
+    return and(gte(requestLogs.responseStatus, 300), lte(requestLogs.responseStatus, 399));
+  if (cls === '4xx')
+    return and(gte(requestLogs.responseStatus, 400), lte(requestLogs.responseStatus, 499));
+  if (cls === '5xx')
+    return and(gte(requestLogs.responseStatus, 500), lte(requestLogs.responseStatus, 599));
   return undefined;
 }
 
@@ -177,11 +179,7 @@ router.get(
       .select({ count: sql<number>`COUNT(*)` })
       .from(requestLogs)
       .where(
-        and(
-          rangeCond,
-          gte(requestLogs.responseStatus, 200),
-          lte(requestLogs.responseStatus, 299),
-        ),
+        and(rangeCond, gte(requestLogs.responseStatus, 200), lte(requestLogs.responseStatus, 299)),
       )
       .get();
     const success = successRow?.count ?? 0;
@@ -476,7 +474,10 @@ router.get(
       .all();
 
     const apiWhere = q.projectId
-      ? and(eq(featureGroups.projectId, q.projectId), isNull(sql`${mockApis.featureGroupId} IS NULL`))
+      ? and(
+          eq(featureGroups.projectId, q.projectId),
+          isNull(sql`${mockApis.featureGroupId} IS NULL`),
+        )
       : undefined;
     const apiRows = db
       .select({
@@ -547,11 +548,7 @@ router.get(
       .select({ count: sql<number>`COUNT(*)` })
       .from(requestLogs)
       .where(
-        and(
-          rangeCond,
-          gte(requestLogs.responseStatus, 200),
-          lte(requestLogs.responseStatus, 299),
-        ),
+        and(rangeCond, gte(requestLogs.responseStatus, 200), lte(requestLogs.responseStatus, 299)),
       )
       .get();
     const success = successRow?.count ?? 0;
@@ -662,7 +659,15 @@ router.delete(
         .where(eq(featureGroups.projectId, body.projectId))
         .all();
       if (ids.length > 0) {
-        const r = db.delete(requestLogs).where(inArray(requestLogs.id, ids.map((x) => x.id))).run();
+        const r = db
+          .delete(requestLogs)
+          .where(
+            inArray(
+              requestLogs.id,
+              ids.map((x) => x.id),
+            ),
+          )
+          .run();
         deleted = r.changes ?? 0;
       }
     } else if (body.all) {

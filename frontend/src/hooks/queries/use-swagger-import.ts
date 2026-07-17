@@ -10,11 +10,7 @@ import type {
 
 export function useParseSwagger() {
   return useMutation({
-    mutationFn: async (vars: {
-      featureGroupId: ID;
-      fileName: string;
-      content: string;
-    }) =>
+    mutationFn: async (vars: { featureGroupId: ID; fileName: string; content: string }) =>
       unwrap(
         await api.post<SwaggerImportParseResponse>(
           `/feature-groups/${vars.featureGroupId}/swagger/parse`,

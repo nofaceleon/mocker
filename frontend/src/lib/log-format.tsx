@@ -48,10 +48,7 @@ export function HeadersBlock({
           <span className="truncate font-mono text-ink-tertiary" title={k}>
             {k}
           </span>
-          <span
-            className="break-all font-mono text-ink-secondary"
-            title={String(v)}
-          >
+          <span className="break-all font-mono text-ink-secondary" title={String(v)}>
             {String(v)}
           </span>
         </div>
@@ -94,7 +91,8 @@ function highlight(value: unknown): Array<{ kind: string; text: string }> {
   if (value == null) return [];
   const source = JSON.stringify(value, null, 2);
   const tokens: Array<{ kind: string; text: string }> = [];
-  const re = /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(\b(?:true|false|null)\b)|([{}\[\],])/g;
+  const re =
+    /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(\b(?:true|false|null)\b)|([{}\[\],])/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(source)) !== null) {
@@ -121,7 +119,11 @@ function JsonView({ value }: { value: object }) {
     <div className="code-content !max-h-72 !overflow-auto !rounded-md !p-3 !text-[12px]">
       {tokens.map((t, i) => {
         if (t.kind === 'plain') return <span key={i}>{t.text}</span>;
-        return <span key={i} className={t.kind}>{t.text}</span>;
+        return (
+          <span key={i} className={t.kind}>
+            {t.text}
+          </span>
+        );
       })}
     </div>
   );

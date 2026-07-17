@@ -146,10 +146,7 @@
       "indexes": {
         "idx_cc_api_sort": {
           "name": "idx_cc_api_sort",
-          "columns": [
-            "api_id",
-            "sort_order"
-          ],
+          "columns": ["api_id", "sort_order"],
           "isUnique": false
         }
       },
@@ -158,12 +155,8 @@
           "name": "callback_configs_api_id_mock_apis_id_fk",
           "tableFrom": "callback_configs",
           "tableTo": "mock_apis",
-          "columnsFrom": [
-            "api_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["api_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -330,18 +323,12 @@
       "indexes": {
         "idx_ct_status_scheduled": {
           "name": "idx_ct_status_scheduled",
-          "columns": [
-            "status",
-            "scheduled_at"
-          ],
+          "columns": ["status", "scheduled_at"],
           "isUnique": false
         },
         "idx_ct_api_created": {
           "name": "idx_ct_api_created",
-          "columns": [
-            "api_id",
-            "created_at"
-          ],
+          "columns": ["api_id", "created_at"],
           "isUnique": false
         }
       },
@@ -350,12 +337,8 @@
           "name": "callback_tasks_callback_config_id_callback_configs_id_fk",
           "tableFrom": "callback_tasks",
           "tableTo": "callback_configs",
-          "columnsFrom": [
-            "callback_config_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["callback_config_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -363,12 +346,8 @@
           "name": "callback_tasks_api_id_mock_apis_id_fk",
           "tableFrom": "callback_tasks",
           "tableTo": "mock_apis",
-          "columnsFrom": [
-            "api_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["api_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -434,17 +413,12 @@
       "indexes": {
         "uniq_fg_project_name": {
           "name": "uniq_fg_project_name",
-          "columns": [
-            "project_id",
-            "name"
-          ],
+          "columns": ["project_id", "name"],
           "isUnique": true
         },
         "idx_fg_project": {
           "name": "idx_fg_project",
-          "columns": [
-            "project_id"
-          ],
+          "columns": ["project_id"],
           "isUnique": false
         }
       },
@@ -453,12 +427,8 @@
           "name": "feature_groups_project_id_projects_id_fk",
           "tableFrom": "feature_groups",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -650,17 +620,12 @@
       "indexes": {
         "idx_apis_fg": {
           "name": "idx_apis_fg",
-          "columns": [
-            "feature_group_id"
-          ],
+          "columns": ["feature_group_id"],
           "isUnique": false
         },
         "idx_apis_method_path": {
           "name": "idx_apis_method_path",
-          "columns": [
-            "method",
-            "path"
-          ],
+          "columns": ["method", "path"],
           "isUnique": false
         }
       },
@@ -669,12 +634,8 @@
           "name": "mock_apis_feature_group_id_feature_groups_id_fk",
           "tableFrom": "mock_apis",
           "tableTo": "feature_groups",
-          "columnsFrom": [
-            "feature_group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["feature_group_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -732,9 +693,7 @@
       "indexes": {
         "idx_md_api": {
           "name": "idx_md_api",
-          "columns": [
-            "api_id"
-          ],
+          "columns": ["api_id"],
           "isUnique": false
         }
       },
@@ -743,12 +702,8 @@
           "name": "mock_data_api_id_mock_apis_id_fk",
           "tableFrom": "mock_data",
           "tableTo": "mock_apis",
-          "columnsFrom": [
-            "api_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["api_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -799,9 +754,7 @@
       "indexes": {
         "uniq_projects_name": {
           "name": "uniq_projects_name",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": true
         }
       },
@@ -915,17 +868,12 @@
       "indexes": {
         "idx_rl_api_created": {
           "name": "idx_rl_api_created",
-          "columns": [
-            "api_id",
-            "created_at"
-          ],
+          "columns": ["api_id", "created_at"],
           "isUnique": false
         },
         "idx_rl_created": {
           "name": "idx_rl_created",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         }
       },
@@ -934,12 +882,8 @@
           "name": "request_logs_api_id_mock_apis_id_fk",
           "tableFrom": "request_logs",
           "tableTo": "mock_apis",
-          "columnsFrom": [
-            "api_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["api_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }

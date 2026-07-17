@@ -34,7 +34,11 @@ export function execute(
   }
 }
 
-function doInsert(sqlite: Database.Database, table: string, data: Record<string, unknown>): DbOpsResult {
+function doInsert(
+  sqlite: Database.Database,
+  table: string,
+  data: Record<string, unknown>,
+): DbOpsResult {
   const entries = Object.entries(data).filter(([, v]) => v !== undefined);
   if (entries.length === 0) {
     return { kind: 'affected', affected: 0 };

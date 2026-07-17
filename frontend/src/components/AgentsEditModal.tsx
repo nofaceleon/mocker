@@ -1,11 +1,7 @@
 import { Check, Copy, Download, FileText, Link2, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  AGENTS_EDIT_URLS,
-  buildAgentsEditPrompt,
-  resolveAgentBaseUrl,
-} from '@/data/agents-edit';
+import { AGENTS_EDIT_URLS, buildAgentsEditPrompt, resolveAgentBaseUrl } from '@/data/agents-edit';
 import { copyToClipboard } from '@/lib/clipboard';
 import { Button, Modal } from '@/components/ui';
 import { CodeEditor } from '@/components/CodeEditor';
@@ -38,8 +34,8 @@ export function AgentsEditModal({ open, onClose, projectId, projectName }: Props
     >
       <div className="space-y-5">
         <p className="text-[13px] leading-[1.65] text-ink-secondary">
-          把下面的提示词复制到 <b className="font-medium text-ink">Cursor / 本地 Copilot / 可访问本机的
-          Agent</b>
+          把下面的提示词复制到{' '}
+          <b className="font-medium text-ink">Cursor / 本地 Copilot / 可访问本机的 Agent</b>
           ，用自然语言描述要改的接口。AI 会通过管理 REST API 直接改本项目（
           <code className="rounded bg-canvas-subtle px-1 text-[12px]">id={projectId}</code>
           ）。云端 ChatGPT 默认访问不到 localhost，请用本机 Agent。

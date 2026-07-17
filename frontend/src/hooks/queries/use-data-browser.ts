@@ -48,7 +48,9 @@ export function useBusinessTableRows(
   const pageSize = opts?.pageSize ?? 50;
   const q = opts?.q ?? '';
   return useQuery({
-    queryKey: tableName ? KEYS.tableRows(tableName, page, pageSize, q) : ['data-browser', 'table', 'none'],
+    queryKey: tableName
+      ? KEYS.tableRows(tableName, page, pageSize, q)
+      : ['data-browser', 'table', 'none'],
     queryFn: async () =>
       unwrap(
         await api.get<TableQueryResult>(`/data-browser/tables/${tableName}`, {

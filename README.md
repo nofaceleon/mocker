@@ -62,16 +62,16 @@ mockhub/
 
 ## 常用命令
 
-| 命令 | 说明 |
-| --- | --- |
-| `pnpm dev` | 同时启动 backend + frontend 开发模式 |
-| `pnpm build` | 构建生产产物 |
-| `pnpm start` | 启动后端（需先 build） |
-| `pnpm typecheck` | 全工程类型检查 |
-| `pnpm lint` | 全工程 ESLint |
-| `pnpm format` | Prettier 格式化 |
-| `pnpm db:migrate` | 执行数据库迁移 |
-| `pnpm db:seed` | 注入种子数据 |
+| 命令              | 说明                                 |
+| ----------------- | ------------------------------------ |
+| `pnpm dev`        | 同时启动 backend + frontend 开发模式 |
+| `pnpm build`      | 构建生产产物                         |
+| `pnpm start`      | 启动后端（需先 build）               |
+| `pnpm typecheck`  | 全工程类型检查                       |
+| `pnpm lint`       | 全工程 ESLint                        |
+| `pnpm format`     | Prettier 格式化                      |
+| `pnpm db:migrate` | 执行数据库迁移                       |
+| `pnpm db:seed`    | 注入种子数据                         |
 
 ## 文档
 

@@ -184,7 +184,13 @@ export function ApiEditPage() {
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 54px)' }}>
-      <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: showSwitcher && activeGroup && !isNew ? '264px 1fr 240px' : '264px 1fr' }}>
+      <div
+        className="grid min-h-0 flex-1"
+        style={{
+          gridTemplateColumns:
+            showSwitcher && activeGroup && !isNew ? '264px 1fr 240px' : '264px 1fr',
+        }}
+      >
         <ConfigNav
           current={tab}
           onChange={setTab}
@@ -195,7 +201,9 @@ export function ApiEditPage() {
             { label: project?.name ?? '...', to: `/projects/${projectId}` },
             ...(activeGroup ? [{ label: activeGroup.name, to: `/projects/${projectId}` }] : []),
           ]}
-          onLogClick={() => navigate(`/logs?projectId=${projectId}${apiId ? `&apiId=${apiId}` : ''}`)}
+          onLogClick={() =>
+            navigate(`/logs?projectId=${projectId}${apiId ? `&apiId=${apiId}` : ''}`)
+          }
           summary={configSummary}
           featureState={featureState}
           showSwitcher={showSwitcher}
@@ -214,15 +222,50 @@ export function ApiEditPage() {
               onExtraChange={setExtra}
             />
           )}
-          {tab === 'params' && <ParamsPanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
-          {tab === 'response' && <ResponsePanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
-          {tab === 'callback' && api && (
-            <CallbackPanel apiId={api.id} onSave={() => setLastSavedAt(new Date().toISOString())} saving={saving} />
+          {tab === 'params' && (
+            <ParamsPanel
+              formData={formData}
+              onChange={setFormData}
+              onSave={handleSave}
+              saving={saving}
+            />
           )}
-          {tab === 'datalink' && <DataLinkPanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
-          {tab === 'script' && <ScriptPanel formData={formData} onChange={setFormData} onSave={handleSave} saving={saving} />}
+          {tab === 'response' && (
+            <ResponsePanel
+              formData={formData}
+              onChange={setFormData}
+              onSave={handleSave}
+              saving={saving}
+            />
+          )}
+          {tab === 'callback' && api && (
+            <CallbackPanel
+              apiId={api.id}
+              onSave={() => setLastSavedAt(new Date().toISOString())}
+              saving={saving}
+            />
+          )}
+          {tab === 'datalink' && (
+            <DataLinkPanel
+              formData={formData}
+              onChange={setFormData}
+              onSave={handleSave}
+              saving={saving}
+            />
+          )}
+          {tab === 'script' && (
+            <ScriptPanel
+              formData={formData}
+              onChange={setFormData}
+              onSave={handleSave}
+              saving={saving}
+            />
+          )}
           {tab === 'test' && (
-            <TestPanel api={summary} onRun={async (input) => testMut.mutateAsync({ id: summary.id, input })} />
+            <TestPanel
+              api={summary}
+              onRun={async (input) => testMut.mutateAsync({ id: summary.id, input })}
+            />
           )}
         </div>
 
@@ -301,18 +344,20 @@ function apiToFormData(api: MockApi): MockApiPayload {
   // 旧接口没有 responses 数据时，从扁平字段生成默认响应
   let responses = api.responses;
   if (!responses || responses.length === 0) {
-    responses = [{
-      id: genId(),
-      name: '默认响应',
-      conditions: [],
-      isDefault: true,
-      responseStatus: api.responseStatus ?? 200,
-      responseDelay: api.responseDelay ?? 0,
-      responseDelayMax: api.responseDelayMax ?? 0,
-      responseContentType: api.responseContentType ?? 'application/json',
-      responseHeaders: api.responseHeaders ?? null,
-      responseBody: api.responseBody ?? null,
-    }];
+    responses = [
+      {
+        id: genId(),
+        name: '默认响应',
+        conditions: [],
+        isDefault: true,
+        responseStatus: api.responseStatus ?? 200,
+        responseDelay: api.responseDelay ?? 0,
+        responseDelayMax: api.responseDelayMax ?? 0,
+        responseContentType: api.responseContentType ?? 'application/json',
+        responseHeaders: api.responseHeaders ?? null,
+        responseBody: api.responseBody ?? null,
+      },
+    ];
   }
 
   return {

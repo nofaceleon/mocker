@@ -9,7 +9,13 @@ type PanelHeaderProps = {
   className?: string;
 };
 
-export function PanelHeader({ icon: Icon, title, description, action, className }: PanelHeaderProps) {
+export function PanelHeader({
+  icon: Icon,
+  title,
+  description,
+  action,
+  className,
+}: PanelHeaderProps) {
   return (
     <div className={cn('mb-5', className)}>
       <h2 className="mb-2 flex items-center gap-2.5 text-[22px] font-semibold leading-tight tracking-[-0.025em] text-ink">
@@ -20,7 +26,9 @@ export function PanelHeader({ icon: Icon, title, description, action, className 
         {action}
       </h2>
       {description && (
-        <p className="max-w-[600px] text-[13.5px] leading-[1.6] text-ink-secondary">{description}</p>
+        <p className="max-w-[600px] text-[13.5px] leading-[1.6] text-ink-secondary">
+          {description}
+        </p>
       )}
     </div>
   );

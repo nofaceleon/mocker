@@ -72,10 +72,7 @@ export async function handleMockRequest(
       return;
     }
 
-    const routeConflict = buildRouteConflict(
-      result.matched.api,
-      result.exactPathConflicts,
-    );
+    const routeConflict = buildRouteConflict(result.matched.api, result.exactPathConflicts);
     await executeMatched(
       req,
       res,
@@ -124,7 +121,10 @@ export async function executeMockApi(
     await executeMatched(req, res, api, pathParams, start, meta, routeConflict);
     return routeConflict;
   } catch (err) {
-    logger.error({ err, apiId: api.id, path: req.path, method: req.method }, 'executeMockApi failed');
+    logger.error(
+      { err, apiId: api.id, path: req.path, method: req.method },
+      'executeMockApi failed',
+    );
     if (!res.headersSent) {
       res.status(500).json({
         code: 'INTERNAL_ERROR',
@@ -151,9 +151,10 @@ async function executeMatched(
 
   // 2. 校验
   const rules = parseValidationRules(api.validationRules);
-  const valid = rules.isEnabled === false
-    ? { ok: true as const }
-    : validate(rules, reqCtx as unknown as Record<string, unknown>);
+  const valid =
+    rules.isEnabled === false
+      ? { ok: true as const }
+      : validate(rules, reqCtx as unknown as Record<string, unknown>);
   if (!valid.ok) {
     const fail = buildFailResponse(rules, valid.errors);
     res.status(fail.status).json(fail.body);
@@ -258,12 +259,28 @@ async function executeMatched(
 
   // 7. 判断是否为SSE请求（根据protocol字段）
   if (api.protocol === 'SSE') {
-    await handleSSERequest(req, res, resolvedApi, renderCtx, start, meta, scriptOverride ? scriptResult : undefined);
+    await handleSSERequest(
+      req,
+      res,
+      resolvedApi,
+      renderCtx,
+      start,
+      meta,
+      scriptOverride ? scriptResult : undefined,
+    );
     return;
   }
 
   // 8. 普通HTTP响应
-  await handleHTTPResponse(req, res, resolvedApi, renderCtx, start, meta, scriptOverride ? scriptResult : undefined);
+  await handleHTTPResponse(
+    req,
+    res,
+    resolvedApi,
+    renderCtx,
+    start,
+    meta,
+    scriptOverride ? scriptResult : undefined,
+  );
 }
 
 /**
@@ -278,15 +295,15 @@ async function handleSSERequest(
   meta: RequestMeta,
   scriptBody?: unknown,
 ): Promise<void> {
-  const responseBody =
-    scriptBody !== undefined ? scriptBody : parseResponseBody(api.responseBody);
+  const responseBody = scriptBody !== undefined ? scriptBody : parseResponseBody(api.responseBody);
   const sseConfig = parseSSEConfig(responseBody, renderCtx);
 
   if (!sseConfig || sseConfig.events.length === 0) {
     // 无效的SSE配置，返回错误
     res.status(400).json({
       code: 'INVALID_SSE_CONFIG',
-      message: 'SSE接口需要配置events数组，格式：{ "events": [{ "event": "message", "data": {...} }] }',
+      message:
+        'SSE接口需要配置events数组，格式：{ "events": [{ "event": "message", "data": {...} }] }',
     });
     writeLogSafely({
       apiId: api.id,
@@ -316,9 +333,11 @@ async function handleSSERequest(
   if (headers) {
     for (const [k, v] of Object.entries(headers)) {
       // 覆盖Content-Type等可能导致问题的头
-      if (k.toLowerCase() !== 'content-type' &&
-          k.toLowerCase() !== 'cache-control' &&
-          k.toLowerCase() !== 'connection') {
+      if (
+        k.toLowerCase() !== 'content-type' &&
+        k.toLowerCase() !== 'cache-control' &&
+        k.toLowerCase() !== 'connection'
+      ) {
         res.setHeader(k, String(v));
       }
     }
@@ -577,7 +596,12 @@ function resolveDataPayload(
   const template = parseObjectField(
     (api as MockApi & { dataPayload?: unknown }).dataPayload,
   ) as Record<string, unknown> | null;
-  if (template && typeof template === 'object' && !Array.isArray(template) && Object.keys(template).length > 0) {
+  if (
+    template &&
+    typeof template === 'object' &&
+    !Array.isArray(template) &&
+    Object.keys(template).length > 0
+  ) {
     const rendered = renderTemplate(template, { req: ctx });
     if (rendered && typeof rendered === 'object' && !Array.isArray(rendered)) {
       // 去掉模板未解析到的 undefined 字段
@@ -630,10 +654,7 @@ function extractRequestMeta(req: Request): RequestMeta {
     typeof headerId === 'string' && headerId.trim().length > 0
       ? headerId.trim().slice(0, 64)
       : crypto.randomBytes(8).toString('hex');
-  const clientIp =
-    (typeof req.ip === 'string' && req.ip) ||
-    req.socket?.remoteAddress ||
-    'unknown';
+  const clientIp = (typeof req.ip === 'string' && req.ip) || req.socket?.remoteAddress || 'unknown';
   return { clientIp, requestId };
 }
 
@@ -697,9 +718,7 @@ function truncateForLog(v: unknown, asString = false): string {
   }
 }
 
-function sanitizeHeaders(
-  h: Record<string, string | string[] | undefined>,
-): Record<string, string> {
+function sanitizeHeaders(h: Record<string, string | string[] | undefined>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(h)) {
     if (v === undefined) continue;
@@ -743,9 +762,7 @@ function scheduleCallback(
       apiId: api.id,
       callbackConfigId: cfg.id,
       requestId:
-        reqCtxForTemplate.headers['xRequestId'] ??
-        reqCtxForTemplate.headers['xrequestid'] ??
-        null,
+        reqCtxForTemplate.headers['xRequestId'] ?? reqCtxForTemplate.headers['xrequestid'] ?? null,
     });
     if (task) callbackScheduler.scheduleExisting(task.id);
   } catch (err) {

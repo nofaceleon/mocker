@@ -162,7 +162,9 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
                 onDragStart: (e) => {
                   e.dataTransfer.effectAllowed = 'move';
                   e.dataTransfer.setData('text/plain', String(index));
-                  const el = (e.currentTarget as HTMLElement).closest('.rounded-lg') as HTMLElement | null;
+                  const el = (e.currentTarget as HTMLElement).closest(
+                    '.rounded-lg',
+                  ) as HTMLElement | null;
                   if (el) {
                     el.style.opacity = '0.4';
                     dragElRef.current = el;
@@ -197,11 +199,7 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
             添加响应
           </Button>
 
-          <PanelActions
-            hint="下次请求生效"
-            onSave={handleMultiResponseSave}
-            saving={saving}
-          />
+          <PanelActions hint="下次请求生效" onSave={handleMultiResponseSave} saving={saving} />
         </div>
       )}
 
@@ -217,7 +215,9 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
                     min={100}
                     max={60000}
                     value={sseConfig.interval ?? 500}
-                    onChange={(e) => setSSEConfig({ ...sseConfig, interval: Number(e.target.value) || 500 })}
+                    onChange={(e) =>
+                      setSSEConfig({ ...sseConfig, interval: Number(e.target.value) || 500 })
+                    }
                   />
                 </FormField>
               )}
@@ -239,7 +239,9 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
                 <FormField label="初始注释" hint="可选">
                   <Input
                     value={sseConfig.comment ?? ''}
-                    onChange={(e) => setSSEConfig({ ...sseConfig, comment: e.target.value || undefined })}
+                    onChange={(e) =>
+                      setSSEConfig({ ...sseConfig, comment: e.target.value || undefined })
+                    }
                     placeholder="连接建立时的注释内容"
                   />
                 </FormField>
@@ -252,8 +254,8 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
               <div className="info-tip mb-4">
                 <AlertCircle />
                 <div>
-                  配置 SSE 事件流。每个事件包含 <code>event</code>（事件类型）、<code>data</code>（数据内容）。
-                  支持变量插值：<code>{'{{req.body.xxx}}'}</code>
+                  配置 SSE 事件流。每个事件包含 <code>event</code>（事件类型）、<code>data</code>
+                  （数据内容）。 支持变量插值：<code>{'{{req.body.xxx}}'}</code>
                 </div>
               </div>
 
@@ -276,14 +278,18 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
                       <FormField label="事件类型">
                         <Input
                           value={event.event ?? ''}
-                          onChange={(e) => updateSSEEvent(index, { ...event, event: e.target.value || undefined })}
+                          onChange={(e) =>
+                            updateSSEEvent(index, { ...event, event: e.target.value || undefined })
+                          }
                           placeholder="message"
                         />
                       </FormField>
                       <FormField label="事件 ID">
                         <Input
                           value={event.id ?? ''}
-                          onChange={(e) => updateSSEEvent(index, { ...event, id: e.target.value || undefined })}
+                          onChange={(e) =>
+                            updateSSEEvent(index, { ...event, id: e.target.value || undefined })
+                          }
                           placeholder="可选"
                         />
                       </FormField>
@@ -292,7 +298,12 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
                           type="number"
                           min={0}
                           value={event.retry ?? ''}
-                          onChange={(e) => updateSSEEvent(index, { ...event, retry: Number(e.target.value) || undefined })}
+                          onChange={(e) =>
+                            updateSSEEvent(index, {
+                              ...event,
+                              retry: Number(e.target.value) || undefined,
+                            })
+                          }
                           placeholder="可选"
                         />
                       </FormField>
@@ -328,11 +339,7 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
             </Card>
           )}
 
-          <PanelActions
-            hint="下次请求生效"
-            onSave={handleSSESave}
-            saving={saving}
-          />
+          <PanelActions hint="下次请求生效" onSave={handleSSESave} saving={saving} />
         </>
       )}
     </div>

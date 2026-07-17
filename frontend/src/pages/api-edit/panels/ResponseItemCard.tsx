@@ -70,9 +70,10 @@ export function ResponseItemCard({
   }, [item.responseHeaders]);
 
   const status = item.responseStatus ?? 200;
-  const conditionSummary = item.conditions.length > 0
-    ? item.conditions.map((c) => `${c.source}.${c.field} ${c.operator} ${c.value}`).join(' AND ')
-    : '无条件';
+  const conditionSummary =
+    item.conditions.length > 0
+      ? item.conditions.map((c) => `${c.source}.${c.field} ${c.operator} ${c.value}`).join(' AND ')
+      : '无条件';
 
   const handleSaveBody = () => {
     try {
@@ -117,27 +118,42 @@ export function ResponseItemCard({
         onDrop={(e) => {
           dragHandleProps.onDrop(e);
           // 延迟重置，避免 drop 后立即触发 click
-          setTimeout(() => { isDragging.current = false; }, 0);
+          setTimeout(() => {
+            isDragging.current = false;
+          }, 0);
         }}
         onDragEnd={(e) => {
           dragHandleProps.onDragEnd(e);
-          setTimeout(() => { isDragging.current = false; }, 0);
+          setTimeout(() => {
+            isDragging.current = false;
+          }, 0);
         }}
       >
         <GripVertical className="h-4 w-4 text-ink-subtle flex-shrink-0 cursor-grab active:cursor-grabbing" />
 
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpanded(!expanded);
+          }}
           className="flex items-center gap-2 flex-1 min-w-0 text-left"
         >
-          {expanded ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+          {expanded ? (
+            <ChevronDown className="h-4 w-4 flex-shrink-0" />
+          ) : (
+            <ChevronRight className="h-4 w-4 flex-shrink-0" />
+          )}
           <span className="text-[13px] font-medium truncate">{item.name}</span>
-          <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-mono ${
-            status >= 500 ? 'bg-danger/10 text-danger' :
-            status >= 400 ? 'bg-warning/10 text-warning' :
-            'bg-success/10 text-success'
-          }`}>
+          <span
+            className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-mono ${
+              status >= 500
+                ? 'bg-danger/10 text-danger'
+                : status >= 400
+                  ? 'bg-warning/10 text-warning'
+                  : 'bg-success/10 text-success'
+            }`}
+          >
             {status}
           </span>
           {item.isDefault && (
@@ -159,7 +175,12 @@ export function ResponseItemCard({
           >
             <Star className="h-3.5 w-3.5" fill={item.isDefault ? 'currentColor' : 'none'} />
           </Button>
-          <Button variant="ghost" size="sm" onClick={onRemove} className="h-6 w-6 p-0 text-danger hover:text-danger">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            className="h-6 w-6 p-0 text-danger hover:text-danger"
+          >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -198,7 +219,9 @@ export function ResponseItemCard({
                 onChange={(e) => onChange({ ...item, responseStatus: Number(e.target.value) })}
               >
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
                 ))}
               </Select>
             </div>
@@ -220,7 +243,9 @@ export function ResponseItemCard({
                 max={60000}
                 value={item.responseDelayMax ?? 0}
                 placeholder="0"
-                onChange={(e) => onChange({ ...item, responseDelayMax: Number(e.target.value) || 0 })}
+                onChange={(e) =>
+                  onChange({ ...item, responseDelayMax: Number(e.target.value) || 0 })
+                }
               />
             </div>
           </div>
@@ -234,7 +259,9 @@ export function ResponseItemCard({
                   onChange={(e) => onChange({ ...item, responseContentType: e.target.value })}
                 >
                   {CONTENT_TYPES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </Select>
               </div>
@@ -243,11 +270,16 @@ export function ResponseItemCard({
 
           {/* Response headers */}
           <div>
-            <label className="form-label">响应头 <span className="text-ink-subtle font-normal">· JSON 对象</span></label>
+            <label className="form-label">
+              响应头 <span className="text-ink-subtle font-normal">· JSON 对象</span>
+            </label>
             <CodeEditor
               language="json"
               value={headersText}
-              onChange={(v) => { setHeadersText(v); setHeadersErr(null); }}
+              onChange={(v) => {
+                setHeadersText(v);
+                setHeadersErr(null);
+              }}
               onBlur={handleSaveHeaders}
               rows={3}
               invalid={!!headersErr}
@@ -257,20 +289,26 @@ export function ResponseItemCard({
 
           {/* Response body */}
           <div>
-            <label className="form-label">响应体 <span className="text-ink-subtle font-normal">· 支持变量插值</span></label>
+            <label className="form-label">
+              响应体 <span className="text-ink-subtle font-normal">· 支持变量插值</span>
+            </label>
             <div className="info-tip mb-2">
               <AlertCircle />
               <div>
-                支持变量：<code>{'{{req.body.xxx}}'}</code> 请求体、<code>{'{{req.query.xxx}}'}</code> 查询参数、
+                支持变量：<code>{'{{req.body.xxx}}'}</code> 请求体、
+                <code>{'{{req.query.xxx}}'}</code> 查询参数、
                 <code>{'{{req.path.xxx}}'}</code> 路径参数、
-                <code>{'{{dbResult}}'}</code> 数据联动结果（insert 为行对象，select 为数组，update/delete 为{' '}
-                <code>{'{ affected }'}</code>）
+                <code>{'{{dbResult}}'}</code> 数据联动结果（insert 为行对象，select
+                为数组，update/delete 为 <code>{'{ affected }'}</code>）
               </div>
             </div>
             <CodeEditor
               language="json"
               value={bodyText}
-              onChange={(v) => { setBodyText(v); setBodyErr(null); }}
+              onChange={(v) => {
+                setBodyText(v);
+                setBodyErr(null);
+              }}
               onBlur={handleSaveBody}
               rows={8}
               invalid={!!bodyErr}

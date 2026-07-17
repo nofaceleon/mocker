@@ -163,7 +163,11 @@ export function isReservedColumn(name: string): boolean {
 }
 
 /** 新增业务列（不可覆盖内置列） */
-export function addBusinessColumn(table: string, name: string, type: string = 'TEXT'): ColumnInfo[] {
+export function addBusinessColumn(
+  table: string,
+  name: string,
+  type: string = 'TEXT',
+): ColumnInfo[] {
   validateIdentifier(table);
   validateIdentifier(name);
   if (RESERVED_COLUMNS.has(name)) {
@@ -182,7 +186,11 @@ export function addBusinessColumn(table: string, name: string, type: string = 'T
 }
 
 /** 重命名业务列（不可改内置列） */
-export function renameBusinessColumn(table: string, oldName: string, newName: string): ColumnInfo[] {
+export function renameBusinessColumn(
+  table: string,
+  oldName: string,
+  newName: string,
+): ColumnInfo[] {
   validateIdentifier(table);
   validateIdentifier(oldName);
   validateIdentifier(newName);

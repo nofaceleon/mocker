@@ -105,9 +105,7 @@ export function Select({
       width: Math.max(rect.width, 120),
       maxHeight: Math.max(120, maxH),
       zIndex: 300,
-      ...(openUp
-        ? { bottom: window.innerHeight - rect.top + gap }
-        : { top: rect.bottom + gap }),
+      ...(openUp ? { bottom: window.innerHeight - rect.top + gap } : { top: rect.bottom + gap }),
     });
   }, []);
 

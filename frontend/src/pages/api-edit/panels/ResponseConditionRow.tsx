@@ -31,11 +31,15 @@ export function ResponseConditionRow({ condition, onChange, onRemove }: Response
     <div className="flex items-center gap-2">
       <Select
         value={condition.source}
-        onChange={(e) => onChange({ ...condition, source: e.target.value as ResponseConditionSource })}
+        onChange={(e) =>
+          onChange({ ...condition, source: e.target.value as ResponseConditionSource })
+        }
         className="w-[100px] flex-shrink-0"
       >
         {SOURCE_OPTIONS.map((s) => (
-          <option key={s.value} value={s.value}>{s.label}</option>
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
         ))}
       </Select>
       <Input
@@ -50,7 +54,9 @@ export function ResponseConditionRow({ condition, onChange, onRemove }: Response
         className="w-[110px] flex-shrink-0"
       >
         {OPERATOR_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
         ))}
       </Select>
       <Input
@@ -59,7 +65,12 @@ export function ResponseConditionRow({ condition, onChange, onRemove }: Response
         placeholder="期望值"
         className="flex-1 min-w-0"
       />
-      <Button variant="ghost" size="sm" onClick={onRemove} className="text-danger hover:text-danger flex-shrink-0">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRemove}
+        className="text-danger hover:text-danger flex-shrink-0"
+      >
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>

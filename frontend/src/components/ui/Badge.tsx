@@ -44,13 +44,20 @@ export function Badge({
   children: ReactNode;
   className?: string;
 }) {
-  if (variant === 'method-get') return <span className={cn(methodClass.GET, className)}>{children}</span>;
-  if (variant === 'method-post') return <span className={cn(methodClass.POST, className)}>{children}</span>;
-  if (variant === 'method-put') return <span className={cn(methodClass.PUT, className)}>{children}</span>;
-  if (variant === 'method-delete') return <span className={cn(methodClass.DELETE, className)}>{children}</span>;
-  if (variant === 'method-patch') return <span className={cn(methodClass.PATCH, className)}>{children}</span>;
-  if (variant === 'method-ws') return <span className={cn(methodClass.WS, className)}>{children}</span>;
-  if (variant === 'method-sse') return <span className={cn(methodClass.SSE, className)}>{children}</span>;
+  if (variant === 'method-get')
+    return <span className={cn(methodClass.GET, className)}>{children}</span>;
+  if (variant === 'method-post')
+    return <span className={cn(methodClass.POST, className)}>{children}</span>;
+  if (variant === 'method-put')
+    return <span className={cn(methodClass.PUT, className)}>{children}</span>;
+  if (variant === 'method-delete')
+    return <span className={cn(methodClass.DELETE, className)}>{children}</span>;
+  if (variant === 'method-patch')
+    return <span className={cn(methodClass.PATCH, className)}>{children}</span>;
+  if (variant === 'method-ws')
+    return <span className={cn(methodClass.WS, className)}>{children}</span>;
+  if (variant === 'method-sse')
+    return <span className={cn(methodClass.SSE, className)}>{children}</span>;
   if (variant.startsWith('status-')) {
     return <span className={cn(statusClass[variant], className)}>{children}</span>;
   }

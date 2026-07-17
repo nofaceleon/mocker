@@ -35,9 +35,7 @@ export function extractContext(
 }
 
 /** 把 query/body 中的横杠命名的键转成驼峰，方便 `{{req.body.userName}}` 访问 */
-export function normalizeKeys(
-  input: Record<string, unknown> | undefined,
-): Record<string, unknown> {
+export function normalizeKeys(input: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(input)) {

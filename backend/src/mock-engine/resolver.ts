@@ -1,4 +1,9 @@
-import type { MockApi, MockApiResponse, ResponseCondition, ResponseOperator } from '../db/schema.js';
+import type {
+  MockApi,
+  MockApiResponse,
+  ResponseCondition,
+  ResponseOperator,
+} from '../db/schema.js';
 import type { RequestContext } from './request.js';
 import { logger } from '../utils/logger.js';
 
@@ -24,7 +29,10 @@ export function resolveResponse(
     return { resolved: null, fields: fallbackFields(api) };
   }
 
-  logger.debug({ apiId: api.id, count: responses.length, query: reqCtx.originalQuery }, 'resolver: evaluating responses');
+  logger.debug(
+    { apiId: api.id, count: responses.length, query: reqCtx.originalQuery },
+    'resolver: evaluating responses',
+  );
 
   // 1. 手动选择：X-Mock-Response-Id
   const manualId = reqCtx.headers['xMockResponseId'];
@@ -51,11 +59,17 @@ export function resolveResponse(
       continue;
     }
     if (!resp.conditions || resp.conditions.length === 0) {
-      logger.debug({ apiId: api.id, respName: resp.name }, 'resolver: skip response with no conditions');
+      logger.debug(
+        { apiId: api.id, respName: resp.name },
+        'resolver: skip response with no conditions',
+      );
       continue;
     }
     const matched = matchConditions(resp.conditions, reqCtx);
-    logger.debug({ apiId: api.id, respName: resp.name, conditions: resp.conditions, matched }, 'resolver: condition check');
+    logger.debug(
+      { apiId: api.id, respName: resp.name, conditions: resp.conditions, matched },
+      'resolver: condition check',
+    );
     if (matched) {
       return { resolved: resp, fields: mergeFields(api, resp) };
     }
@@ -108,7 +122,17 @@ function matchConditions(conditions: ResponseCondition[], reqCtx: RequestContext
   return conditions.every((cond) => {
     const actual = getSourceValue(cond.source, cond.field, reqCtx);
     const result = evaluateCondition(actual, cond.operator, cond.value);
-    logger.debug({ source: cond.source, field: cond.field, operator: cond.operator, expected: cond.value, actual, result }, 'resolver: condition eval');
+    logger.debug(
+      {
+        source: cond.source,
+        field: cond.field,
+        operator: cond.operator,
+        expected: cond.value,
+        actual,
+        result,
+      },
+      'resolver: condition eval',
+    );
     return result;
   });
 }
@@ -181,7 +205,10 @@ function evaluateCondition(actual: unknown, operator: ResponseOperator, expected
         const result = regex.test(actualStr);
         const elapsed = Date.now() - startTime;
         if (elapsed > 100) {
-          logger.warn({ pattern: expected, elapsed }, 'resolver: regex evaluation took too long, possible ReDoS');
+          logger.warn(
+            { pattern: expected, elapsed },
+            'resolver: regex evaluation took too long, possible ReDoS',
+          );
         }
         return result;
       } catch {

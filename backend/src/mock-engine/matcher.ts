@@ -1,5 +1,10 @@
 import type { MockApi } from '../db/schema.js';
-import { compileRoute, ROUTE_PRECISION, type CompiledRoute, type RoutePrecision } from './router.js';
+import {
+  compileRoute,
+  ROUTE_PRECISION,
+  type CompiledRoute,
+  type RoutePrecision,
+} from './router.js';
 
 export type MatchedApi = {
   api: MockApi;
@@ -106,10 +111,7 @@ export function findExactPathConflicts(
   return candidates
     .filter(
       (c) =>
-        c.api.isEnabled &&
-        c.api.method === method &&
-        c.api.path === path &&
-        c.api.id !== excludeId,
+        c.api.isEnabled && c.api.method === method && c.api.path === path && c.api.id !== excludeId,
     )
     .map((c) => toConflictApi(c.api));
 }

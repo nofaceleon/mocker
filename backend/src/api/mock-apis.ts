@@ -94,7 +94,12 @@ const createSchema = z.object({
   responseBody: z.unknown().optional().nullable(),
   validationRules: validationRulesSchema.optional().nullable(),
   dataOp: z.enum(DATA_OPS).optional().default('none'),
-  dataTable: z.string().max(100).regex(/^[A-Za-z_][A-Za-z0-9_]*$/).optional().nullable(),
+  dataTable: z
+    .string()
+    .max(100)
+    .regex(/^[A-Za-z_][A-Za-z0-9_]*$/)
+    .optional()
+    .nullable(),
   dataWhere: z.record(z.string(), z.unknown()).optional().nullable(),
   dataPayload: z.record(z.string(), z.unknown()).optional().nullable(),
   script: z.string().optional().nullable(),
@@ -157,13 +162,14 @@ router.get(
 
     // 批量查询哪些 API 有启用的回调配置
     const apiIds = rows.map((r) => r.id);
-    const enabledCallbacks = apiIds.length > 0
-      ? db
-          .select({ apiId: callbackConfigs.apiId })
-          .from(callbackConfigs)
-          .where(and(inArray(callbackConfigs.apiId, apiIds), eq(callbackConfigs.isEnabled, true)))
-          .all()
-      : [];
+    const enabledCallbacks =
+      apiIds.length > 0
+        ? db
+            .select({ apiId: callbackConfigs.apiId })
+            .from(callbackConfigs)
+            .where(and(inArray(callbackConfigs.apiId, apiIds), eq(callbackConfigs.isEnabled, true)))
+            .all()
+        : [];
     const callbackSet = new Set(enabledCallbacks.map((c) => c.apiId));
 
     // 添加完整的 mock 路由地址
@@ -238,11 +244,7 @@ router.post(
     const body = createSchema.parse(req.body);
     const db = getDb();
 
-    const fg = db
-      .select()
-      .from(featureGroups)
-      .where(eq(featureGroups.id, featureGroupId))
-      .get();
+    const fg = db.select().from(featureGroups).where(eq(featureGroups.id, featureGroupId)).get();
     if (!fg) throw new ApiError('NOT_FOUND', `功能组 ${featureGroupId} 不存在`, 404);
 
     assertNoConflict(db, body.method as HttpMethod, body.path, null);
@@ -261,7 +263,10 @@ router.post(
         responseStatus: body.responseStatus ?? 200,
         responseDelay: body.responseDelay ?? 0,
         responseDelayMax: body.responseDelayMax ?? 0,
-        responseContentType: body.protocol === 'SSE' ? 'text/event-stream' : (body.responseContentType ?? 'application/json'),
+        responseContentType:
+          body.protocol === 'SSE'
+            ? 'text/event-stream'
+            : (body.responseContentType ?? 'application/json'),
         responseHeaders: body.responseHeaders ?? null,
         responseBody: body.responseBody ?? null,
         validationRules: (body.validationRules as ValidationRules | null) ?? null,
@@ -310,7 +315,10 @@ router.put(
       ...(body.responseDelay !== undefined ? { responseDelay: body.responseDelay } : {}),
       ...(body.responseDelayMax !== undefined ? { responseDelayMax: body.responseDelayMax } : {}),
       ...(body.responseContentType !== undefined
-        ? { responseContentType: finalProtocol === 'SSE' ? 'text/event-stream' : body.responseContentType }
+        ? {
+            responseContentType:
+              finalProtocol === 'SSE' ? 'text/event-stream' : body.responseContentType,
+          }
         : {}),
       ...(body.responseHeaders !== undefined ? { responseHeaders: body.responseHeaders } : {}),
       ...(body.responseBody !== undefined ? { responseBody: body.responseBody } : {}),
@@ -391,9 +399,10 @@ router.post(
           if (!sseMergedQuery[k]) sseMergedQuery[k] = v;
         });
       }
-      const sseQueryString = Object.keys(sseMergedQuery).length > 0
-        ? `?${new URLSearchParams(sseMergedQuery as Record<string, string>).toString()}`
-        : '';
+      const sseQueryString =
+        Object.keys(sseMergedQuery).length > 0
+          ? `?${new URLSearchParams(sseMergedQuery as Record<string, string>).toString()}`
+          : '';
       res.success({
         apiId: api.id,
         protocol: 'SSE',
@@ -407,7 +416,10 @@ router.post(
     }
 
     // 普通HTTP请求处理
-    const headers: Record<string, string> = { 'content-type': 'application/json', ...(input.headers ?? {}) };
+    const headers: Record<string, string> = {
+      'content-type': 'application/json',
+      ...(input.headers ?? {}),
+    };
     // 从 input.path 中提取纯路径部分和可能附带的 query string
     const rawPath = input.path ?? api.path;
     const questionIdx = rawPath.indexOf('?');
@@ -424,8 +436,16 @@ router.post(
     const fakeReq = {
       method: api.method,
       path: inputPath,
-      originalUrl: inputPath + (Object.keys(mergedQuery).length > 0 ? `?${new URLSearchParams(mergedQuery as Record<string, string>).toString()}` : ''),
-      url: inputPath + (Object.keys(mergedQuery).length > 0 ? `?${new URLSearchParams(mergedQuery as Record<string, string>).toString()}` : ''),
+      originalUrl:
+        inputPath +
+        (Object.keys(mergedQuery).length > 0
+          ? `?${new URLSearchParams(mergedQuery as Record<string, string>).toString()}`
+          : ''),
+      url:
+        inputPath +
+        (Object.keys(mergedQuery).length > 0
+          ? `?${new URLSearchParams(mergedQuery as Record<string, string>).toString()}`
+          : ''),
       query: mergedQuery,
       body: input.body ?? {},
       headers,
@@ -489,9 +509,7 @@ function assertNoConflict(
     .from(mockApis)
     .where(and(eq(mockApis.method, method), eq(mockApis.isEnabled, true)))
     .all();
-  const conflict = candidates.find(
-    (c) => c.path === path && c.id !== excludeId,
-  );
+  const conflict = candidates.find((c) => c.path === path && c.id !== excludeId);
   if (conflict) {
     throw new ApiError(
       'ROUTE_CONFLICT',

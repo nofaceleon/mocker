@@ -42,29 +42,29 @@ Project 1───* FeatureGroup 1───* MockApi ─┬─ * CallbackConfig�
 
 ## 3. MockApi 字段（每个接口都要填全）
 
-| 字段 | 类型 | 必填 | 说明 |
-|---|---|---|---|
-| `name` | string | ✅ | 接口名，显示在列表 |
-| `description` | string \| null | – | 备注 |
-| `protocol` | enum | ✅ | `HTTP` \| `WebSocket` \| `SSE`，默认 `HTTP` |
-| `method` | enum | ✅ | HTTP: `GET` `POST` `PUT` `DELETE` `PATCH` |
-| `path` | string | ✅ | 如 `/users/:id`；支持 `:param` 与末尾 `*` 通配 |
-| `isEnabled` | bool | – | 默认 true |
-| `sortOrder` | number | – | 排序；同 method 下越小越优先 |
-| `responseStatus` | number | – | 默认 200 |
-| `responseDelay` | number | – | 固定延迟 ms，默认 0 |
-| `responseDelayMax` | number | – | 随机延迟上限 ms；> responseDelay 时区间随机 |
-| `responseContentType` | string | – | 默认 `application/json` |
-| `responseHeaders` | object \| null | – | 额外响应头 |
-| `responseBody` | any | – | 默认响应体；HTTP/SSE/WS 含义不同，详见 §5 |
-| `validationRules` | object \| null | – | 校验规则，详见 §7 |
-| `dataOp` | enum | – | `none` \| `insert` \| `select` \| `update` \| `delete` |
-| `dataTable` | string \| null | – | 业务表名；首次 insert 时自动建表 |
-| `dataWhere` | object \| null | – | 等值匹配条件 |
-| `dataPayload` | object \| null | – | insert/update 写入字段模板，详见 §8 |
-| `script` | string \| null | – | 自定义脚本，详见 §10 |
-| `responses` | array \| null | – | 多响应配置，详见 §9 |
-| `callbacks` | array | – | 延时回调，详见 §11 |
+| 字段                  | 类型           | 必填 | 说明                                                   |
+| --------------------- | -------------- | ---- | ------------------------------------------------------ |
+| `name`                | string         | ✅   | 接口名，显示在列表                                     |
+| `description`         | string \| null | –    | 备注                                                   |
+| `protocol`            | enum           | ✅   | `HTTP` \| `WebSocket` \| `SSE`，默认 `HTTP`            |
+| `method`              | enum           | ✅   | HTTP: `GET` `POST` `PUT` `DELETE` `PATCH`              |
+| `path`                | string         | ✅   | 如 `/users/:id`；支持 `:param` 与末尾 `*` 通配         |
+| `isEnabled`           | bool           | –    | 默认 true                                              |
+| `sortOrder`           | number         | –    | 排序；同 method 下越小越优先                           |
+| `responseStatus`      | number         | –    | 默认 200                                               |
+| `responseDelay`       | number         | –    | 固定延迟 ms，默认 0                                    |
+| `responseDelayMax`    | number         | –    | 随机延迟上限 ms；> responseDelay 时区间随机            |
+| `responseContentType` | string         | –    | 默认 `application/json`                                |
+| `responseHeaders`     | object \| null | –    | 额外响应头                                             |
+| `responseBody`        | any            | –    | 默认响应体；HTTP/SSE/WS 含义不同，详见 §5              |
+| `validationRules`     | object \| null | –    | 校验规则，详见 §7                                      |
+| `dataOp`              | enum           | –    | `none` \| `insert` \| `select` \| `update` \| `delete` |
+| `dataTable`           | string \| null | –    | 业务表名；首次 insert 时自动建表                       |
+| `dataWhere`           | object \| null | –    | 等值匹配条件                                           |
+| `dataPayload`         | object \| null | –    | insert/update 写入字段模板，详见 §8                    |
+| `script`              | string \| null | –    | 自定义脚本，详见 §10                                   |
+| `responses`           | array \| null  | –    | 多响应配置，详见 §9                                    |
+| `callbacks`           | array          | –    | 延时回调，详见 §11                                     |
 
 ## 4. 路径匹配规则
 
@@ -76,10 +76,12 @@ Project 1───* FeatureGroup 1───* MockApi ─┬─ * CallbackConfig�
 ## 5. responseBody 三种协议的语义
 
 ### 5.1 HTTP（最常见）
+
 任意 JSON 值，直接作为响应体返回。**字段名/结构必须贴近用户描述的真实响应**，
 不要编造与业务无关的 `foo/bar`。能用模板就用 `{{req.body.x}}` 回显请求字段。
 
 ### 5.2 WebSocket
+
 `responseBody` 是 **WsConfig 对象**：
 
 ```json
@@ -100,9 +102,11 @@ Project 1───* FeatureGroup 1───* MockApi ─┬─ * CallbackConfig�
 如果定义了 `script`，收到消息时执行 `handle(req, db, log)`，返回值即回送内容。
 
 ### 5.3 SSE
+
 `responseBody` 两种形式：
 
 **A) SSEConfig 对象（多事件流）**：
+
 ```json
 {
   "comment": "stream start",
@@ -124,17 +128,18 @@ Project 1───* FeatureGroup 1───* MockApi ─┬─ * CallbackConfig�
 在 `responseBody`、`responseHeaders`、`dataPayload`、`callbackBody` 字符串中
 都可以使用 `{{...}}` 引用上下文：
 
-| 路径 | 含义 |
-|---|---|
-| `{{req.body.x}}` | 请求体字段（**键名自动转驼峰**：`user_name` → `userName`） |
-| `{{req.query.x}}` | query 参数 |
-| `{{req.path.x}}` | 路径参数（来自 `:x` 段） |
-| `{{req.headers.x}}` | header（自动转驼峰：`x-request-id` → `xRequestId`） |
-| `{{dbResult}}` | dataOp=select 的查询结果（数组/对象） |
-| `{{dbResult.id}}` | 查询结果里的具体字段 |
-| `{{response.x}}` | 当前接口响应体（**仅在 callbackBody 里可用**） |
+| 路径                | 含义                                                       |
+| ------------------- | ---------------------------------------------------------- |
+| `{{req.body.x}}`    | 请求体字段（**键名自动转驼峰**：`user_name` → `userName`） |
+| `{{req.query.x}}`   | query 参数                                                 |
+| `{{req.path.x}}`    | 路径参数（来自 `:x` 段）                                   |
+| `{{req.headers.x}}` | header（自动转驼峰：`x-request-id` → `xRequestId`）        |
+| `{{dbResult}}`      | dataOp=select 的查询结果（数组/对象）                      |
+| `{{dbResult.id}}`   | 查询结果里的具体字段                                       |
+| `{{response.x}}`    | 当前接口响应体（**仅在 callbackBody 里可用**）             |
 
 **两种语义**：
+
 - 整段 `{{...}}` → 解析为原始值（保留数字 / 布尔 / 对象类型）
 - 字符串片段中嵌入 `{{...}}` → 替换为该值的 JSON.stringify
 
@@ -146,13 +151,15 @@ Project 1───* FeatureGroup 1───* MockApi ─┬─ * CallbackConfig�
 ```json
 {
   "isEnabled": true,
-  "query":  [{ "name": "page", "type": "number", "default": 1, "min": 1 }],
-  "body":   [
+  "query": [{ "name": "page", "type": "number", "default": 1, "min": 1 }],
+  "body": [
     { "name": "name", "type": "string", "required": true, "min": 1, "max": 50, "default": "demo" },
     { "name": "age", "type": "number", "required": false, "min": 0, "max": 150, "default": 18 }
   ],
-  "path":   [{ "name": "id", "type": "string", "required": true, "default": "1" }],
-  "header": [{ "name": "authorization", "type": "string", "required": true, "default": "Bearer demo-token" }],
+  "path": [{ "name": "id", "type": "string", "required": true, "default": "1" }],
+  "header": [
+    { "name": "authorization", "type": "string", "required": true, "default": "Bearer demo-token" }
+  ],
   "failStatus": 400,
   "failMessage": "参数校验失败"
 }
@@ -160,16 +167,16 @@ Project 1───* FeatureGroup 1───* MockApi ─┬─ * CallbackConfig�
 
 ### 7.1 字段说明
 
-| 字段 | 说明 |
-|---|---|
-| `name` | 参数名，**必须与真实请求 key 一致**；body/query 引擎会转驼峰，规则 name 也写驼峰 |
-| `type` | `string` `number` `boolean` `array` `object` |
-| `required` | 是否必填 |
-| `default` | **强烈建议每个规则都写**。缺省时引擎会填入；在线测试也会用它生成假数据 |
-| `min` / `max` | string=长度；number=数值范围 |
-| `pattern` | 正则字符串。**若写了 pattern，default 必须能通过该正则** |
-| `enum` | 枚举数组。**若写了 enum，default 必须是 enum 中的一个** |
-| `failStatus` / `failMessage` | 校验失败时的 HTTP 状态与文案 |
+| 字段                         | 说明                                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| `name`                       | 参数名，**必须与真实请求 key 一致**；body/query 引擎会转驼峰，规则 name 也写驼峰 |
+| `type`                       | `string` `number` `boolean` `array` `object`                                     |
+| `required`                   | 是否必填                                                                         |
+| `default`                    | **强烈建议每个规则都写**。缺省时引擎会填入；在线测试也会用它生成假数据           |
+| `min` / `max`                | string=长度；number=数值范围                                                     |
+| `pattern`                    | 正则字符串。**若写了 pattern，default 必须能通过该正则**                         |
+| `enum`                       | 枚举数组。**若写了 enum，default 必须是 enum 中的一个**                          |
+| `failStatus` / `failMessage` | 校验失败时的 HTTP 状态与文案                                                     |
 
 ### 7.2 类型与位置（关键）
 
@@ -211,6 +218,7 @@ delete  → 删除；dataTable + dataWhere
 - **dataPayload / dataWhere 里引用的 req 字段，必须在 validationRules 里声明**（并给 default）
 
 例：列表分页查询
+
 ```json
 {
   "method": "GET",
@@ -237,9 +245,7 @@ delete  → 删除；dataTable + dataWhere
       "id": "r1",
       "name": "命中 type=user",
       "isDefault": false,
-      "conditions": [
-        { "source": "query", "field": "type", "operator": "equals", "value": "user" }
-      ],
+      "conditions": [{ "source": "query", "field": "type", "operator": "equals", "value": "user" }],
       "responseStatus": 200,
       "responseBody": { "code": 0, "data": "user-specific" }
     },
@@ -313,15 +319,15 @@ async function handle(req, db, log) {
 
 ## 12. 工作流（你应当这样产出）
 
-1) **拆解**：把用户的描述拆成 N 个功能组（一个业务域 = 一个功能组）
-2) **列接口**：每个功能组下用「动词 + 资源」识别 method + path
-3) **对齐规格**：用户给了字段表/OpenAPI/示例请求时，**原样映射**到 validationRules 与 responseBody，禁止臆造字段
-4) **选协议**：默认 HTTP；需要服务端推送流选 SSE；需要双向长连接选 WebSocket
-5) **设计响应**：优先固定值；需要动态拼接就用 `{{...}}` 模板；需要真业务数据用 dataOp；需要复杂逻辑用 script
-6) **校验**：识别必填字段、长度、枚举；每条规则写能通过校验的 `default`
-7) **回调**：识别需要异步触发的下游，写到 callbacks
-8) **组装**：把上面的结果填入 v2 bundle，**确保顶层 `version: 2`**
-9) **自检**（输出前必须过一遍）：
+1. **拆解**：把用户的描述拆成 N 个功能组（一个业务域 = 一个功能组）
+2. **列接口**：每个功能组下用「动词 + 资源」识别 method + path
+3. **对齐规格**：用户给了字段表/OpenAPI/示例请求时，**原样映射**到 validationRules 与 responseBody，禁止臆造字段
+4. **选协议**：默认 HTTP；需要服务端推送流选 SSE；需要双向长连接选 WebSocket
+5. **设计响应**：优先固定值；需要动态拼接就用 `{{...}}` 模板；需要真业务数据用 dataOp；需要复杂逻辑用 script
+6. **校验**：识别必填字段、长度、枚举；每条规则写能通过校验的 `default`
+7. **回调**：识别需要异步触发的下游，写到 callbacks
+8. **组装**：把上面的结果填入 v2 bundle，**确保顶层 `version: 2`**
+9. **自检**（输出前必须过一遍）：
    - JSON 可被 `JSON.parse`
    - 所有枚举值合法；不要写 id 字段
    - 每个 `required:true` 的规则都有合法 `default`

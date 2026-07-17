@@ -180,14 +180,16 @@ export function ScriptPanel({ formData, onChange, onSave, saving }: ScriptPanelP
           <div>
             <code>req.body</code> / <code>req.query</code> / <code>req.params</code> ·{' '}
             <code>db.insert/select/update/delete</code> · <code>log.info</code> ·{' '}
-            <code>dbResult</code>（声明式数据联动结果）。超时 2s；抛错返回{' '}
-            <code>SCRIPT_ERROR</code>。
+            <code>dbResult</code>（声明式数据联动结果）。超时 2s；抛错返回 <code>SCRIPT_ERROR</code>
+            。
           </div>
         </div>
 
         <div className="mt-2.5">
           <div className="mb-0 flex items-center gap-2 rounded-t-md border border-b-0 border-[#27272A] bg-[#1f1f23] px-3 py-1.5 text-[11px]">
-            <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[#A1A1AA]">JavaScript</span>
+            <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[#A1A1AA]">
+              JavaScript
+            </span>
             <span style={{ color: '#52525B' }}>对象：</span>
             <code style={{ color: '#C4B5FD' }}>req</code>
             <code style={{ color: '#86EFAC' }}>db</code>
@@ -206,7 +208,11 @@ export function ScriptPanel({ formData, onChange, onSave, saving }: ScriptPanelP
         </div>
       </Card>
 
-      <PanelActions hint="下次请求生效 · 脚本返回值优先于响应模板" onSave={onSave} saving={saving} />
+      <PanelActions
+        hint="下次请求生效 · 脚本返回值优先于响应模板"
+        onSave={onSave}
+        saving={saving}
+      />
     </div>
   );
 }

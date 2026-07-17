@@ -92,7 +92,10 @@ function rowsToRules(rows: ValidateRow[]): ValidationParamRule[] {
       if (r.required || r.rule === 'required') rule.required = true;
       if (r.rule === 'pattern' && r.ruleValue.trim()) rule.pattern = r.ruleValue.trim();
       if (r.rule === 'enum' && r.ruleValue.trim()) {
-        rule.enum = r.ruleValue.split(',').map((s) => s.trim()).filter(Boolean);
+        rule.enum = r.ruleValue
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
       }
       if (r.rule === 'min') {
         const n = Number(r.ruleValue);
@@ -217,7 +220,9 @@ export function ValidatePanel({ formData, onChange, onSave, saving }: ValidatePa
               render: (r, idx) => (
                 <TextCell
                   value={r.name}
-                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, name: v } : x)))}
+                  onChange={(v) =>
+                    updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, name: v } : x)))
+                  }
                   placeholder="name"
                   mono
                 />
@@ -231,7 +236,11 @@ export function ValidatePanel({ formData, onChange, onSave, saving }: ValidatePa
                 <SelectCell
                   value={r.rule}
                   options={ruleOptions}
-                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, rule: v as RuleKind } : x)))}
+                  onChange={(v) =>
+                    updateRow((rs) =>
+                      rs.map((x, i) => (i === idx ? { ...x, rule: v as RuleKind } : x)),
+                    )
+                  }
                 />
               ),
             },
@@ -240,7 +249,12 @@ export function ValidatePanel({ formData, onChange, onSave, saving }: ValidatePa
               header: '规则参数',
               width: 160,
               render: (r, idx) => {
-                if (r.rule === 'required' || r.rule === 'string' || r.rule === 'number' || r.rule === 'boolean') {
+                if (
+                  r.rule === 'required' ||
+                  r.rule === 'string' ||
+                  r.rule === 'number' ||
+                  r.rule === 'boolean'
+                ) {
                   return <span className="text-[11px] text-ink-subtle">无需参数</span>;
                 }
                 const placeholder =
@@ -248,13 +262,18 @@ export function ValidatePanel({ formData, onChange, onSave, saving }: ValidatePa
                     ? 'v1,v2,v3'
                     : r.rule === 'pattern'
                       ? '^https://'
-                      : r.rule === 'min' || r.rule === 'max' || r.rule === 'minLen' || r.rule === 'maxLen'
+                      : r.rule === 'min' ||
+                          r.rule === 'max' ||
+                          r.rule === 'minLen' ||
+                          r.rule === 'maxLen'
                         ? 'N'
                         : '';
                 return (
                   <TextCell
                     value={r.ruleValue}
-                    onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, ruleValue: v } : x)))}
+                    onChange={(v) =>
+                      updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, ruleValue: v } : x)))
+                    }
                     placeholder={placeholder}
                     mono
                   />
@@ -268,7 +287,9 @@ export function ValidatePanel({ formData, onChange, onSave, saving }: ValidatePa
               render: (r, idx) => (
                 <TextCell
                   value={r.errCode}
-                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, errCode: v } : x)))}
+                  onChange={(v) =>
+                    updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, errCode: v } : x)))
+                  }
                   mono
                 />
               ),
@@ -279,7 +300,9 @@ export function ValidatePanel({ formData, onChange, onSave, saving }: ValidatePa
               render: (r, idx) => (
                 <TextCell
                   value={r.errMessage}
-                  onChange={(v) => updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, errMessage: v } : x)))}
+                  onChange={(v) =>
+                    updateRow((rs) => rs.map((x, i) => (i === idx ? { ...x, errMessage: v } : x)))
+                  }
                   placeholder="参数 name 校验失败"
                 />
               ),
@@ -291,7 +314,10 @@ export function ValidatePanel({ formData, onChange, onSave, saving }: ValidatePa
       <Card title="校验失败时的默认响应" className="mt-3">
         <div className="form-row">
           <FormField label="HTTP 状态码">
-            <Select value={failStatus} onChange={(e) => setFail({ failStatus: Number(e.target.value) })}>
+            <Select
+              value={failStatus}
+              onChange={(e) => setFail({ failStatus: Number(e.target.value) })}
+            >
               {STATUS_FAIL.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}

@@ -14,14 +14,7 @@ export default {
           '"Microsoft YaHei"',
           'sans-serif',
         ],
-        mono: [
-          '"JetBrains Mono"',
-          '"SF Mono"',
-          'Menlo',
-          'Monaco',
-          'Consolas',
-          'monospace',
-        ],
+        mono: ['"JetBrains Mono"', '"SF Mono"', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       colors: {
         // 背景层

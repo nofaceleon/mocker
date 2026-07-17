@@ -26,11 +26,7 @@ export function MainLayout() {
         nav={
           <nav className="nav-menu">
             {NAV_ITEMS.map(({ to, label }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) => cn(isActive && 'active')}
-              >
+              <NavLink key={to} to={to} className={({ isActive }) => cn(isActive && 'active')}>
                 {label}
               </NavLink>
             ))}
