@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  ChevronRight,
   Download,
   FolderTree,
   LayoutGrid,
@@ -130,10 +131,6 @@ export function ProjectsPage() {
         description="管理所有 Mock 项目，按业务系统隔离组织"
         actions={
           <>
-            <Button variant="secondary" onClick={() => setAgentsGuideOpen(true)}>
-              <Sparkles className="h-3.5 w-3.5" />
-              AGENTS 对接指南
-            </Button>
             <Button variant="secondary" onClick={() => setImportOpen(true)}>
               <Upload className="h-3.5 w-3.5" />
               导入项目
@@ -145,6 +142,31 @@ export function ProjectsPage() {
           </>
         }
       />
+
+      <button
+        type="button"
+        onClick={() => setAgentsGuideOpen(true)}
+        className="group mb-5 flex w-full items-center gap-3 rounded-lg border border-violet-200 bg-[linear-gradient(135deg,#F5F3FF_0%,#FAF5FF_55%,#FDF4FF_100%)] px-3.5 py-2.5 text-left shadow-[0_1px_0_rgba(109,40,217,0.06)] transition-all hover:border-violet-300 hover:shadow-[0_2px_8px_rgba(109,40,217,0.1)]"
+      >
+        <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-md bg-violet-100 text-violet-700 ring-1 ring-violet-200/80 transition-colors group-hover:bg-violet-200/70">
+          <Sparkles className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-[13px] font-semibold text-violet-900">AGENTS 对接指南</span>
+            <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10.5px] font-medium text-violet-700">
+              推荐
+            </span>
+          </span>
+          <span className="mt-0.5 block text-[11.5px] leading-snug text-violet-700/75">
+            把提示词交给 AI，一键生成可导入的完整 Mock 项目包（含接口 / 回调 / 脚本）
+          </span>
+        </span>
+        <span className="flex flex-shrink-0 items-center gap-1 text-[12px] font-medium text-violet-700 opacity-80 transition-all group-hover:translate-x-0.5 group-hover:opacity-100">
+          查看指南
+          <ChevronRight className="h-3.5 w-3.5" />
+        </span>
+      </button>
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
