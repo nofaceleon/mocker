@@ -28,6 +28,7 @@ coverage/
 
 # 日志
 logs/
+!frontend/src/components/logs/
 *.log
 
 # 临时
