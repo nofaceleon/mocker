@@ -167,11 +167,11 @@ export function ProjectsPage() {
             </span>
             <span className="gold-tag animate-gold-glow">推荐</span>
           </span>
-          <span className="mt-0.5 block text-[11.5px] leading-snug text-rose-900/80">
+          <span className="mt-0.5 block text-[11.5px] leading-snug text-violet-900/80">
             把提示词交给 AI，一键生成可导入的完整 Mock 项目包（含接口 / 回调 / 脚本）
           </span>
         </span>
-        <span className="relative flex flex-shrink-0 items-center gap-1 rounded-full bg-rose-100 px-2.5 py-1 text-[12px] font-semibold text-rose-900 ring-1 ring-rose-300/60 transition-all group-hover:translate-x-0.5 group-hover:bg-rose-200">
+        <span className="relative flex flex-shrink-0 items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-[12px] font-semibold text-violet-900 ring-1 ring-violet-300/60 transition-all group-hover:translate-x-0.5 group-hover:bg-violet-200">
           查看指南
           <ChevronRight className="h-3.5 w-3.5 animate-gold-nudge" />
         </span>

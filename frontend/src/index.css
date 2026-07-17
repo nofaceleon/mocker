@@ -35,9 +35,9 @@
 }
 
 /* ======== 液态金属横幅（AGENTS 对接指南等高亮卡片） ======== */
-/* 设计思路：玫瑰金（rose gold）液态曲面
-   - 多停色玫瑰金渐变作为基底（浅粉 → 古铜 → 深玫瑰 → 浅粉 的曲面反射）
-   - 油膜虹彩层缓慢漂移（::before，粉 / 桃 / 薰衣草粉的虹彩）
+/* 设计思路：淡紫（薰衣草紫 / pale lavender）液态曲面
+   - 多停色淡紫渐变作为基底（浅薰 → 深紫 → 浅薰 的曲面反射）
+   - 油膜虹彩层缓慢漂移（::before，淡紫 / 粉紫 / 蓝紫的虹彩）
    - 镜面反射光带缓慢扫过（::after，暖白高光）
    - 极细颗粒噪点叠加金属质感
    - 渐变边框 + 内阴影 制造倒角
@@ -54,37 +54,37 @@
     linear-gradient(
       180deg,
       rgba(255, 255, 255, 0.95) 0%,
-      rgba(255, 220, 210, 0.6) 6%,
+      rgba(240, 230, 250, 0.6) 6%,
       rgba(255, 255, 255, 0) 16%,
       rgba(255, 255, 255, 0) 80%,
-      rgba(255, 200, 185, 0.55) 96%,
-      rgba(255, 235, 225, 0.92) 100%
+      rgba(220, 210, 240, 0.55) 96%,
+      rgba(245, 240, 252, 0.92) 100%
     ),
-    /* 主体玫瑰金反射（亮 → 暗 → 亮 的曲面反射，深谷在中央偏下） */
+    /* 主体淡紫反射（亮 → 暗 → 亮 的曲面反射，深谷在中央偏下） */
     linear-gradient(
       135deg,
-      #fde2d3 0%,
-      #ffece2 18%,
-      #e6a995 36%,
-      #ffd9c8 50%,
-      #a86a5d 64%,
-      #f0bca8 82%,
-      #ffe0d2 100%
+      #f3edfa 0%,
+      #faf5ff 18%,
+      #c4b4dc 36%,
+      #ede4f7 50%,
+      #5a4878 64%,
+      #cab8e0 82%,
+      #f0e8fa 100%
     );
   background-clip: padding-box;
   /* 渐变倒角边框 + 内外光带 */
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 0 rgba(120, 50, 40, 0.3),
+    inset 0 -1px 0 rgba(80, 60, 110, 0.3),
     inset 0 0 0 1px rgba(255, 255, 255, 0.6),
-    0 0 0 1px rgba(216, 145, 130, 0.6),
-    0 2px 6px -2px rgba(160, 70, 55, 0.18);
+    0 0 0 1px rgba(150, 130, 180, 0.6),
+    0 2px 6px -2px rgba(110, 80, 140, 0.18);
   transition:
     box-shadow 0.5s ease,
     transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-/* 油膜虹彩层：粉 / 桃 / 薰衣草粉的玫瑰金油膜 */
+/* 油膜虹彩层：淡紫 / 粉紫 / 蓝紫的虹彩 */
 .gold-banner::before {
   content: '';
   position: absolute;
@@ -92,11 +92,11 @@
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(40% 55% at 18% 30%, rgba(255, 200, 195, 0.7) 0%, transparent 65%),
-    radial-gradient(38% 50% at 82% 65%, rgba(255, 180, 160, 0.65) 0%, transparent 65%),
-    radial-gradient(32% 45% at 60% 20%, rgba(255, 220, 200, 0.65) 0%, transparent 65%),
-    radial-gradient(28% 40% at 28% 85%, rgba(230, 180, 200, 0.55) 0%, transparent 65%),
-    radial-gradient(25% 38% at 75% 25%, rgba(255, 195, 175, 0.6) 0%, transparent 65%);
+    radial-gradient(40% 55% at 18% 30%, rgba(220, 200, 245, 0.7) 0%, transparent 65%),
+    radial-gradient(38% 50% at 82% 65%, rgba(200, 175, 235, 0.65) 0%, transparent 65%),
+    radial-gradient(32% 45% at 60% 20%, rgba(225, 210, 245, 0.65) 0%, transparent 65%),
+    radial-gradient(28% 40% at 28% 85%, rgba(195, 200, 235, 0.55) 0%, transparent 65%),
+    radial-gradient(25% 38% at 75% 25%, rgba(230, 200, 235, 0.6) 0%, transparent 65%);
   mix-blend-mode: color;
   filter: blur(22px);
   animation: liquid-aurora-drift 16s ease-in-out infinite;
@@ -114,7 +114,7 @@
     100deg,
     rgba(255, 255, 255, 0) 0%,
     rgba(255, 255, 255, 0) 35%,
-    rgba(255, 240, 232, 0.65) 50%,
+    rgba(245, 235, 252, 0.7) 50%,
     rgba(255, 255, 255, 0) 65%,
     rgba(255, 255, 255, 0) 100%
   );
@@ -124,29 +124,29 @@
   animation: liquid-shine 7.5s cubic-bezier(0.42, 0, 0.58, 1) infinite;
 }
 
-/* 颗粒纹理叠加层（极淡的金属噪点，粉调） */
+/* 颗粒纹理叠加层（极淡的金属噪点，淡紫调） */
 .gold-banner-decor {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.85 0 0 0 0 0.6 0 0 0 0 0.55 0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.7 0 0 0 0 0.65 0 0 0 0 0.85 0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   background-size: 180px 180px;
   opacity: 0.2;
   mix-blend-mode: overlay;
 }
 
-/* 漂浮小亮点：玫瑰金球面（高光 + 玫瑰金 + 边缘溢出暖粉光） */
+/* 漂浮小亮点：薰衣草珍珠球面（高光 + 淡紫 + 边缘溢出冷光） */
 .gold-spark {
   position: absolute;
   border-radius: 50%;
   background: radial-gradient(
     circle at 35% 30%,
-    #fff5f0 0%,
-    #f4b8a8 45%,
-    rgba(168, 90, 75, 0) 100%
+    #faf5ff 0%,
+    #c8b4e0 45%,
+    rgba(90, 72, 120, 0) 100%
   );
-  box-shadow: 0 0 5px rgba(244, 184, 168, 0.85);
+  box-shadow: 0 0 5px rgba(200, 180, 230, 0.85);
   opacity: 0;
   animation: liquid-sparkle 6s ease-in-out infinite;
 }
@@ -168,15 +168,15 @@
 .gold-banner:hover {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 1),
-    inset 0 -1px 0 rgba(120, 50, 40, 0.35),
+    inset 0 -1px 0 rgba(80, 60, 110, 0.35),
     inset 0 0 0 1px rgba(255, 255, 255, 0.75),
-    0 0 0 1px rgba(196, 130, 115, 0.75),
-    0 6px 18px -6px rgba(170, 80, 65, 0.3),
-    0 2px 6px -2px rgba(160, 70, 55, 0.2);
+    0 0 0 1px rgba(130, 110, 165, 0.75),
+    0 6px 18px -6px rgba(120, 90, 150, 0.3),
+    0 2px 6px -2px rgba(110, 80, 140, 0.2);
   transform: translateY(-1px);
 }
 
-/* 玫瑰金"推荐"徽章：浅粉 → 玫瑰金 → 古铜 */
+/* 淡紫"推荐"徽章：浅薰衣草 → 紫水晶 */
 .gold-tag {
   display: inline-flex;
   align-items: center;
@@ -186,19 +186,19 @@
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #6b3a2d;
+  color: #3a2855;
   text-transform: uppercase;
   background: linear-gradient(
     180deg,
-    #fde2d3 0%,
-    #f8c8b8 50%,
-    #e6a995 100%
+    #f3edfa 0%,
+    #d8c8e8 50%,
+    #b8a0d0 100%
   );
-  border: 1px solid rgba(168, 106, 93, 0.55);
+  border: 1px solid rgba(120, 100, 150, 0.55);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 0 rgba(140, 60, 50, 0.15),
-    0 1px 2px rgba(140, 60, 50, 0.15);
+    inset 0 -1px 0 rgba(80, 60, 110, 0.15),
+    0 1px 2px rgba(80, 60, 110, 0.15);
 }
 
 .gold-tag::before {
@@ -208,34 +208,34 @@
   border-radius: 50%;
   background: radial-gradient(
     circle at 35% 30%,
-    #fff5f0 0%,
-    #f0bca8 55%,
-    #8b4a3a 100%
+    #faf5ff 0%,
+    #c8b4e0 55%,
+    #4a3860 100%
   );
-  box-shadow: 0 0 5px rgba(240, 188, 168, 0.9);
+  box-shadow: 0 0 5px rgba(200, 180, 230, 0.9);
 }
 
-/* 玫瑰金渐变标题：深古铜 → 玫瑰金 → 深玫瑰（柔和粉金过渡） */
+/* 淡紫渐变标题：深紫 → 淡紫 → 深紫 */
 .gold-text {
   background: linear-gradient(
     135deg,
-    #8b4a3a 0%,
-    #b66a5c 28%,
-    #e6a995 50%,
-    #c98072 75%,
-    #8b4a3a 100%
+    #3a2855 0%,
+    #5a4070 28%,
+    #a890c0 50%,
+    #6b5080 75%,
+    #3a2855 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  filter: drop-shadow(0 1px 0 rgba(255, 230, 220, 0.55));
+  filter: drop-shadow(0 1px 0 rgba(245, 240, 252, 0.7));
 }
 
-/* 玫瑰金图标块：抛光粉金渐变 */
+/* 淡紫图标块：抛光紫水晶渐变 */
 .gold-icon {
   position: relative;
-  color: #6b3a2d;
+  color: #3a2855;
   background:
     radial-gradient(
       120% 100% at 30% 0%,
@@ -244,16 +244,16 @@
     ),
     linear-gradient(
       150deg,
-      #fde2d3 0%,
-      #f4c2b8 30%,
-      #c98a78 60%,
-      #fbe1d4 100%
+      #f0e8fa 0%,
+      #d8c8e8 30%,
+      #6b5080 60%,
+      #ede4f7 100%
     );
-  border: 1px solid rgba(168, 106, 93, 0.6);
+  border: 1px solid rgba(120, 100, 150, 0.6);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 0 rgba(120, 50, 40, 0.22),
-    0 2px 4px rgba(140, 60, 50, 0.18);
+    inset 0 -1px 0 rgba(80, 60, 110, 0.22),
+    0 2px 4px rgba(80, 60, 110, 0.18);
 }
 
 .gold-icon::after {
@@ -264,7 +264,7 @@
   pointer-events: none;
   background: radial-gradient(
     80% 60% at 75% 95%,
-    rgba(255, 170, 150, 0.45) 0%,
+    rgba(200, 180, 230, 0.45) 0%,
     transparent 60%
   );
   mix-blend-mode: color;
