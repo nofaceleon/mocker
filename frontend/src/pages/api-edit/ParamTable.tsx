@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Check, Plus, X } from 'lucide-react';
 import { Button, Select } from '@/components/ui';
+import { CodeEditor } from '@/components/CodeEditor';
 import { cn } from '@/lib/cn';
 import { JsonImportModal } from './JsonImportModal';
 
@@ -238,7 +239,7 @@ type JsonFieldProps = {
   className?: string;
 };
 
-export function JsonField({ value, onChange, rows = 5, placeholder, language, className }: JsonFieldProps) {
+export function JsonField({ value, onChange, rows = 5, language, className }: JsonFieldProps) {
   const [text, setText] = useState(() => safeStringify(value));
   const [err, setErr] = useState<string | null>(null);
 
@@ -273,15 +274,12 @@ export function JsonField({ value, onChange, rows = 5, placeholder, language, cl
           <span>修改后点「应用」保存</span>
         </div>
       )}
-      <textarea
+      <CodeEditor
+        language={language === 'javascript' || language === 'js' ? 'javascript' : 'json'}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={setText}
         rows={rows}
-        placeholder={placeholder}
-        className={cn(
-          'form-textarea mono !text-[12.5px]',
-          err && 'border-danger focus:border-danger',
-        )}
+        invalid={!!err}
       />
       {err && <div className="text-[11px] text-danger">{err}</div>}
       <div className="flex items-center gap-2">

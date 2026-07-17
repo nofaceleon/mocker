@@ -6,6 +6,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Button, FormField, Input, Select, Switch } from '@/components/ui';
+import { CodeEditor } from '@/components/CodeEditor';
 import type { CallbackConfig, CallbackConditionPreset, HttpMethod } from '@/types/api';
 import { cn } from '@/lib/cn';
 
@@ -289,17 +290,17 @@ export function CallbackItemCard({
           </div>
 
           <FormField label="回调请求头" hint="JSON 对象">
-            <textarea
-              className="form-textarea mono mono-dark !text-[12.5px]"
+            <CodeEditor
+              language="json"
               rows={3}
               value={headersText}
-              onChange={(e) => {
-                setHeadersText(e.target.value);
+              onChange={(v) => {
+                setHeadersText(v);
                 setHeadersErr(null);
               }}
               onBlur={handleHeadersBlur}
               disabled={!chainEnabled}
-              placeholder='{"Content-Type": "application/json"}'
+              invalid={!!headersErr}
             />
             {headersErr && <div className="text-[11px] text-danger mt-1">{headersErr}</div>}
           </FormField>
@@ -308,13 +309,12 @@ export function CallbackItemCard({
             label="回调请求体"
             hint="支持 JSON 文本；变量 {{req.body.x}} / {{response.x}} 会被替换"
           >
-            <textarea
-              className="form-textarea mono mono-dark !text-[12.5px]"
+            <CodeEditor
+              language="json"
               rows={6}
               value={item.callbackBody}
-              onChange={(e) => update({ callbackBody: e.target.value })}
+              onChange={(v) => update({ callbackBody: v })}
               disabled={!chainEnabled}
-              placeholder='{"faceId": "{{req.body.faceId}}", "result": "{{response.data}}"}'
             />
           </FormField>
 

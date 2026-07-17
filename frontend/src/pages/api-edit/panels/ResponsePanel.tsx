@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Check, AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { Card, FormField, Input, Button } from '@/components/ui';
+import { CodeEditor } from '@/components/CodeEditor';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
 import type { MockApiResponse } from '@/types/api';
 import { genId } from '@/lib/id';
@@ -298,12 +299,11 @@ export function ResponsePanel({ formData, onChange, onSave, saving }: ResponsePa
                     </div>
 
                     <FormField label="事件数据">
-                      <textarea
+                      <CodeEditor
+                        language="json"
                         value={safeStringify(event.data)}
-                        onChange={(e) => handleSSEDataChange(index, e.target.value)}
+                        onChange={(v) => handleSSEDataChange(index, v)}
                         rows={4}
-                        className="form-textarea mono mono-dark !text-[12.5px]"
-                        placeholder='{"text": "Hello, World!"}'
                       />
                     </FormField>
                   </div>

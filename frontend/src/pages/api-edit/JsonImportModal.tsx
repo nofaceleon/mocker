@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { UploadCloud, FileText, X, AlertTriangle } from 'lucide-react';
 import { Modal, Button } from '@/components/ui';
+import { CodeEditor } from '@/components/CodeEditor';
 
 type JsonImportModalProps = {
   open: boolean;
@@ -161,14 +162,16 @@ export function JsonImportModal({ open, onClose, onImport }: JsonImportModalProp
 
         <div>
           <label className="form-label">或直接粘贴文本</label>
-          <textarea
+          <CodeEditor
+            className="mt-1"
+            language="json"
             value={content}
-            onChange={(e) => {
-              setContent(e.target.value);
+            onChange={(v) => {
+              setContent(v);
               setError(null);
             }}
-            placeholder='[{"name": "id", "type": "number", "required": true}]'
-            className="form-textarea mt-1 h-32 font-mono text-[12px]"
+            height={128}
+            invalid={!!error}
           />
         </div>
 

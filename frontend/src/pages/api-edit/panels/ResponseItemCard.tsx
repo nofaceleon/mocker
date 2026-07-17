@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Trash2, Star, GripVertical, AlertCircle } from 'lucide-react';
 import { Button, Select, Input } from '@/components/ui';
+import { CodeEditor } from '@/components/CodeEditor';
 import type { MockApiResponse } from '@/types/api';
 import { ResponseConditionEditor } from './ResponseConditionEditor';
 
@@ -243,13 +244,13 @@ export function ResponseItemCard({
           {/* Response headers */}
           <div>
             <label className="form-label">响应头 <span className="text-ink-subtle font-normal">· JSON 对象</span></label>
-            <textarea
+            <CodeEditor
+              language="json"
               value={headersText}
-              onChange={(e) => { setHeadersText(e.target.value); setHeadersErr(null); }}
+              onChange={(v) => { setHeadersText(v); setHeadersErr(null); }}
               onBlur={handleSaveHeaders}
               rows={3}
-              className={`form-textarea mono mono-dark !text-[12.5px] ${headersErr ? 'border-danger' : ''}`}
-              placeholder='{"X-Request-Id": "{{req.headers[\"x-request-id\"]}}"}'
+              invalid={!!headersErr}
             />
             {headersErr && <div className="text-[11px] text-danger mt-1">{headersErr}</div>}
           </div>
@@ -266,13 +267,13 @@ export function ResponseItemCard({
                 <code>{'{ affected }'}</code>）
               </div>
             </div>
-            <textarea
+            <CodeEditor
+              language="json"
               value={bodyText}
-              onChange={(e) => { setBodyText(e.target.value); setBodyErr(null); }}
+              onChange={(v) => { setBodyText(v); setBodyErr(null); }}
               onBlur={handleSaveBody}
               rows={8}
-              className={`form-textarea mono mono-dark !text-[12.5px] ${bodyErr ? 'border-danger' : ''}`}
-              placeholder='{"code": 0, "message": "success"}'
+              invalid={!!bodyErr}
             />
             {bodyErr && <div className="text-[11px] text-danger mt-1">{bodyErr}</div>}
           </div>

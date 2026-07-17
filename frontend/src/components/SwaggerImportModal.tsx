@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import { ApiError } from '@/lib/api';
 import { Button, Input, MethodBadge, Modal, Select } from '@/components/ui';
+import { CodeEditor } from '@/components/CodeEditor';
 import type { ID, HttpMethod } from '@/types/api';
 import type {
   SwaggerImportDecision,
@@ -413,11 +414,12 @@ function UploadPhase({
 
       <div>
         <label className="form-label">或直接粘贴文本</label>
-        <textarea
+        <CodeEditor
+          className="mt-1"
+          language="json"
           value={content}
-          onChange={(e) => onPasteText(e.target.value)}
-          placeholder='{"openapi": "3.0.0", ...}'
-          className="form-textarea mt-1 h-32 font-mono text-[12px]"
+          onChange={onPasteText}
+          height={128}
         />
       </div>
 

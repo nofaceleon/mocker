@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { AlertCircle, Clipboard, Play, Square, TestTube, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, Button, FormField, Input, Select, Textarea, CopyButton } from '@/components/ui';
+import { Card, Button, FormField, Input, Select, CopyButton } from '@/components/ui';
+import { CodeEditor } from '@/components/CodeEditor';
 import type { MockApi, MockApiResponse } from '@/types/api';
 import type { TestApiInput, TestApiOutput } from '@/hooks/queries/use-mock-apis';
 import { config as runtimeConfig } from '@/lib/runtime-config';
@@ -423,22 +424,20 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
               </span>
             }
           >
-            <Textarea
-              className="mono mono-dark !text-[12.5px]"
-              rows={Math.max(2, (api.validationRules?.query?.length ?? 0))}
+            <CodeEditor
+              language="json"
+              rows={Math.max(2, api.validationRules?.query?.length ?? 0)}
               value={queryText}
-              onChange={(e) => setQueryText(e.target.value)}
-              placeholder='{"pageIndex":"1","pageNum":"20"}'
+              onChange={setQueryText}
             />
           </FormField>
         )}
         <FormField label="自定义 Header" hint="按 header 规则生成示例；可手动编辑（JSON 对象）">
-          <Textarea
-            className="mono mono-dark !text-[12.5px]"
+          <CodeEditor
+            language="json"
             rows={Math.max(2, (api.validationRules?.header?.length ?? 0) || 2)}
             value={headersText}
-            onChange={(e) => setHeadersText(e.target.value)}
-            placeholder='{"X-Token": "demo"}'
+            onChange={setHeadersText}
           />
         </FormField>
         {api.method !== 'GET' && (
@@ -457,11 +456,11 @@ export function TestPanel({ api, onRun }: TestPanelProps) {
               </span>
             }
           >
-            <Textarea
-              className="mono mono-dark !text-[12.5px]"
+            <CodeEditor
+              language="json"
               rows={Math.max(8, (api.validationRules?.body?.length ?? 0) * 2)}
               value={bodyText}
-              onChange={(e) => setBodyText(e.target.value)}
+              onChange={setBodyText}
             />
           </FormField>
         )}

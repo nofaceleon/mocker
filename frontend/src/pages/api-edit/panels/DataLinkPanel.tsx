@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Database, Link2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, FormField, Input, Select, Switch } from '@/components/ui';
+import { CodeEditor, type CodeEditorHandle } from '@/components/CodeEditor';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
 import { useBusinessTables, useBusinessTableRows } from '@/hooks/queries/use-data-browser';
 import type { DataOp } from '@/types/api';
@@ -59,8 +60,8 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
   );
   const [payloadErr, setPayloadErr] = useState<string | null>(null);
   const tableRef = useRef<HTMLInputElement>(null);
-  const payloadRef = useRef<HTMLTextAreaElement>(null);
-  const whereRef = useRef<HTMLTextAreaElement>(null);
+  const payloadRef = useRef<CodeEditorHandle>(null);
+  const whereRef = useRef<CodeEditorHandle>(null);
 
   useEffect(() => {
     setWhereText(safeStringify(formData.dataWhere ?? {}));
@@ -160,12 +161,14 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
 
     if (payloadResult.error) {
       setPayloadErr(payloadResult.error);
-      reportFieldError(payloadResult.error, payloadRef.current);
+      reportFieldError(payloadResult.error, payloadRef.current?.getElement());
+      payloadRef.current?.focus();
       return;
     }
     if (whereResult.error) {
       setWhereErr(whereResult.error);
-      reportFieldError(whereResult.error, whereRef.current);
+      reportFieldError(whereResult.error, whereRef.current?.getElement());
+      whereRef.current?.focus();
       return;
     }
 
@@ -272,14 +275,14 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
             error={payloadErr ?? parsedPayload.error ?? undefined}
           >
             <div className="space-y-1.5">
-              <textarea
+              <CodeEditor
                 ref={payloadRef}
+                language="json"
                 value={payloadText}
-                onChange={(e) => handlePayloadChange(e.target.value)}
+                onChange={handlePayloadChange}
                 rows={7}
                 disabled={!enabled}
-                className={`form-textarea mono mono-dark !text-[12.5px] ${payloadErr || parsedPayload.error ? 'border-danger' : ''}`}
-                placeholder={DEFAULT_INSERT_PAYLOAD}
+                invalid={!!(payloadErr || parsedPayload.error)}
               />
               <div className="flex flex-wrap items-center gap-3">
                 <button
@@ -327,14 +330,14 @@ export function DataLinkPanel({ formData, onChange, onSave, saving }: DataLinkPa
             error={whereErr ?? parsedWhere.error ?? undefined}
           >
             <div className="space-y-1.5">
-              <textarea
+              <CodeEditor
                 ref={whereRef}
+                language="json"
                 value={whereText}
-                onChange={(e) => handleWhereChange(e.target.value)}
+                onChange={handleWhereChange}
                 rows={4}
                 disabled={!enabled}
-                className={`form-textarea mono mono-dark !text-[12.5px] ${whereErr || parsedWhere.error ? 'border-danger' : ''}`}
-                placeholder='{"status": "active"}'
+                invalid={!!(whereErr || parsedWhere.error)}
               />
               <div className="flex items-center justify-between gap-2">
                 <button

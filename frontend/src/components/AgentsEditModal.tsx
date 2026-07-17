@@ -8,6 +8,7 @@ import {
 } from '@/data/agents-edit';
 import { copyToClipboard } from '@/lib/clipboard';
 import { Button, Modal } from '@/components/ui';
+import { CodeEditor } from '@/components/CodeEditor';
 
 type Props = {
   open: boolean;
@@ -162,14 +163,18 @@ function GuideSection({
           </Button>
         </div>
       </div>
-      <div className="overflow-hidden rounded-md border border-line bg-canvas-deep">
-        <div className="flex items-center justify-between gap-2 border-b border-line/60 bg-canvas-deep px-3 py-1.5 text-[11px] font-medium text-ink-tertiary">
+      <div className="overflow-hidden rounded-md border border-[#27272A] bg-[#18181B]">
+        <div className="flex items-center justify-between gap-2 border-b border-[#27272A] bg-[#18181B] px-3 py-1.5 text-[11px] font-medium text-zinc-500">
           <span className="font-mono">{language}</span>
-          <span className="text-ink-subtle">{text.length} 字符</span>
+          <span className="text-zinc-600">{text.length} 字符</span>
         </div>
-        <pre className="m-0 max-h-[360px] overflow-auto whitespace-pre bg-canvas-deep px-3 py-2.5 font-mono text-[11.5px] leading-[1.6] text-[#E4E4E7]">
-          {text}
-        </pre>
+        <CodeEditor
+          className="!rounded-none !border-0"
+          language={language}
+          value={text}
+          height={360}
+          readOnly
+        />
       </div>
     </section>
   );
