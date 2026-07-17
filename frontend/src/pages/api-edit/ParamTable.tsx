@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Check, Plus, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button, Select } from '@/components/ui';
 import { CodeEditor } from '@/components/CodeEditor';
 import { cn } from '@/lib/cn';
@@ -88,7 +89,7 @@ export function ParamTable<R extends { id: string }>({
       const appended = onImportJson ? onImportJson(raw) : (defaultParamImport(raw) as unknown as R[]);
       onChange([...rows, ...appended]);
     } catch (err) {
-      window.alert('解析失败：' + (err instanceof Error ? err.message : '未知错误'));
+      toast.error('解析失败：' + (err instanceof Error ? err.message : '未知错误'));
     }
   };
 

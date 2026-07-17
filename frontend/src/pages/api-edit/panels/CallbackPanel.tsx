@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Send, AlertCircle, ExternalLink, Save, Plus, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Button, Switch } from '@/components/ui';
+import { Button, Switch, confirm } from '@/components/ui';
 import type { CallbackConfig } from '@/types/api';
 import {
   useCallbackConfig,
@@ -121,7 +121,17 @@ function CallbackPanelForm({
   const removeItem = async (idx: number) => {
     const target = items[idx];
     const label = target.name?.trim() || `回调 ${idx + 1}`;
-    if (!confirm(`确认删除「${label}」？如有 pending 任务会一并取消。`)) return;
+    const ok = await confirm({
+      title: '删除回调',
+      message: (
+        <span>
+          确认删除 <b>{label}</b> ？如有 pending 任务会一并取消。
+        </span>
+      ),
+      confirmText: '删除',
+      danger: true,
+    });
+    if (!ok) return;
 
     // 已保存到后端的：调用单条删除接口
     if (target.id) {
@@ -151,7 +161,17 @@ function CallbackPanelForm({
 
   const removeAll = async () => {
     if (!items.length) return;
-    if (!confirm(`确认清空全部 ${items.length} 条回调配置？所有关联的 pending 任务会被取消。`)) return;
+    const ok = await confirm({
+      title: '清空全部回调',
+      message: (
+        <span>
+          确认清空全部 <b>{items.length}</b> 条回调配置？所有关联的 pending 任务会被取消。
+        </span>
+      ),
+      confirmText: '清空',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await deleteAllMut.mutateAsync();
       setItems([]);
