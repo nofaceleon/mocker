@@ -8,14 +8,12 @@ import {
   useClearRequestLogs,
   useRequestLog,
   useRequestLogFilters,
-  useRequestLogStats,
   useRequestLogs,
   type RequestLogHttpMethod,
   type RequestLogQuery,
   type RequestLogRange,
   type RequestLogStatusClass,
 } from '@/hooks/queries/use-request-logs';
-import { LogsAnalyticsBar } from '@/components/logs/LogsAnalyticsBar';
 import { LogsFilterBar } from '@/components/logs/LogsFilterBar';
 import { LogsStatusStrip } from '@/components/logs/LogsStatusStrip';
 import { LogsTable } from '@/components/logs/LogsTable';
@@ -108,7 +106,6 @@ export function LogsPage() {
     ],
   );
 
-  const stats = useRequestLogStats(range);
   const logs = useRequestLogs(listQuery);
   const detail = useRequestLog(selected ?? undefined);
   const clearMut = useClearRequestLogs();
@@ -124,7 +121,6 @@ export function LogsPage() {
       setProgress((prev) => {
         if (prev >= 100) {
           logs.refetch();
-          stats.refetch();
           return 0;
         }
         return prev + 1; // 50ms × 100 步 = 5s
@@ -205,8 +201,6 @@ export function LogsPage() {
       />
 
       <div className="mb-4 space-y-3">
-        <LogsAnalyticsBar stats={stats.data} isLoading={stats.isLoading} />
-
         <LogsFilterBar
           search={search}
           onSearchChange={setSearch}
@@ -236,7 +230,6 @@ export function LogsPage() {
           onTogglePause={() => setAutoRefreshPaused((v) => !v)}
           onRefreshNow={() => {
             logs.refetch();
-            stats.refetch();
           }}
         />
 

@@ -4,7 +4,6 @@ import {
   ChevronRight,
   Download,
   FolderTree,
-  LayoutGrid,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -12,9 +11,7 @@ import {
   Star,
   Trash2,
   TrendingUp,
-  Activity,
   Zap,
-  Clock,
   Upload,
   UploadCloud,
   FileText,
@@ -35,7 +32,6 @@ import {
   Modal,
   PageHeader,
   Select,
-  StatCard,
   Tabs,
   Textarea,
   confirm,
@@ -50,7 +46,6 @@ import {
   type ProjectExportBundle,
   type ProjectImportMode,
 } from '@/hooks/queries/use-projects';
-import { useCallbackStats } from '@/hooks/queries/use-callback-tasks';
 import { ApiError } from '@/lib/api';
 import type { HttpMethod, Project } from '@/types/api';
 import { AgentsGuideModal } from '@/components/AgentsGuideModal';
@@ -58,7 +53,6 @@ import { AgentsGuideModal } from '@/components/AgentsGuideModal';
 export function ProjectsPage() {
   const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
-  const { data: callbackStats } = useCallbackStats();
   const deleteMut = useDeleteProject();
   const [tab, setTab] = useState<'all' | 'recent' | 'pinned'>('all');
   const [sort, setSort] = useState<'updated' | 'created' | 'name'>('updated');
@@ -92,16 +86,6 @@ export function ProjectsPage() {
     });
     return list;
   }, [projects, search, tab, sort]);
-
-  const stats = useMemo(() => {
-    if (!projects) return { projects: 0, apis: 0, calls: 0, pending: 0 };
-    return {
-      projects: projects.length,
-      apis: projects.reduce((sum, p) => sum + (p.apiCount ?? 0), 0),
-      calls: projects.reduce((sum, p) => sum + (p.callCount ?? 0), 0),
-      pending: callbackStats?.pending ?? 0,
-    };
-  }, [projects, callbackStats]);
 
   const handleDelete = async (p: Project) => {
     const ok = await confirm({
@@ -177,26 +161,13 @@ export function ProjectsPage() {
         </span>
       </button>
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="项目总数"
-          value={stats.projects}
-          hint={`+1 本月`}
-          trend="up"
-          icon={<LayoutGrid />}
-        />
-        <StatCard label="Mock 接口" value={stats.apis} hint="+12 本周" trend="up" icon={<Zap />} />
-        <StatCard label="今日调用" value={stats.calls} hint="" icon={<Activity />} />
-        <StatCard label="待发回调" value={stats.pending} hint="— 无变化" icon={<Clock />} />
-      </div>
-
       <div className="mb-3 flex items-center justify-between">
         <Tabs<'all' | 'recent' | 'pinned'>
           variant="pill"
           value={tab}
           onChange={setTab}
           items={[
-            { value: 'all', label: `全部项目 · ${stats.projects}` },
+            { value: 'all', label: `全部项目 · ${projects?.length ?? 0}` },
             { value: 'recent', label: '最近访问 · 3' },
             { value: 'pinned', label: '已置顶 · 2' },
           ]}

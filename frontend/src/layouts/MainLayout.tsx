@@ -8,8 +8,9 @@ import { cn } from '@/lib/cn';
 const NAV_ITEMS = [
   { to: '/projects', label: '项目' },
   { to: '/callbacks', label: '回调任务' },
-  { to: '/data', label: '数据管理' },
   { to: '/logs', label: '调用日志' },
+  { to: '/data', label: '数据管理' },
+  { to: '/stats', label: '统计' },
 ] as const;
 
 export function MainLayout() {

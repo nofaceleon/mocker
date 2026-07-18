@@ -2,17 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  Activity,
-  CheckCircle2,
-  Clock,
   Edit2,
-  Inbox,
   RefreshCw,
   Search,
   Send,
   Trash2,
   X,
-  XCircle,
   Eye,
 } from 'lucide-react';
 import {
@@ -24,13 +19,11 @@ import {
   MethodBadge,
   Modal,
   PageHeader,
-  StatCard,
   StatusBadge,
   Tabs,
 } from '@/components/ui';
 import {
   useBatchDeleteCallbackTasks,
-  useCallbackStats,
   useCallbackTask,
   useCallbackTasks,
   useCancelCallbackTask,
@@ -104,7 +97,6 @@ export function CallbackTasksPage() {
     page,
     pageSize,
   });
-  const { data: stats } = useCallbackStats();
 
   const [progress, setProgress] = useState(0);
   // 进度条驱动的定时刷新（50ms × 100 步 = 5s）
@@ -159,23 +151,9 @@ export function CallbackTasksPage() {
     }
   }
 
-  const successRate = useMemo(() => {
-    if (!stats || stats.total === 0) return '—';
-    const rate = (stats.sent / stats.total) * 100;
-    return `${rate.toFixed(0)}%`;
-  }, [stats]);
-
   return (
     <div className="page-container">
       <PageHeader title="回调任务管理" description="查看、管理所有 Mock 接口产生的异步回调任务" />
-
-      <div className="mb-4 grid grid-cols-5 gap-3">
-        <StatCard label="待发送" value={stats?.pending ?? 0} icon={<Clock />} />
-        <StatCard label="今日已发送" value={stats?.sent ?? 0} icon={<CheckCircle2 />} />
-        <StatCard label="失败任务" value={stats?.failed ?? 0} icon={<XCircle />} />
-        <StatCard label="累计" value={stats?.total ?? 0} icon={<Inbox />} />
-        <StatCard label="成功率" value={successRate} icon={<Activity />} />
-      </div>
 
       <Card
         noBody
