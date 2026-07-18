@@ -1,13 +1,14 @@
-import { Check, Copy, Download, FileJson, FileText, Link2 } from 'lucide-react';
+import { Check, Copy, Download, FileJson, FileText, Link2, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { createPortal } from 'react-dom';
 import {
   AGENTS_GUIDE_EXAMPLE_BUNDLE,
   AGENTS_GUIDE_PROMPT,
   AGENTS_GUIDE_URLS,
 } from '@/data/agents-guide';
 import { copyToClipboard } from '@/lib/clipboard';
-import { Button, Modal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { CodeEditor } from '@/components/CodeEditor';
 
 type Props = {
@@ -16,48 +17,99 @@ type Props = {
 };
 
 export function AgentsGuideModal({ open, onClose }: Props) {
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      width="xl"
-      title="AGENTS 对接指南"
-      footer={
-        <Button variant="primary" onClick={onClose}>
-          关闭
-        </Button>
-      }
-    >
-      <div className="space-y-5">
-        <p className="text-[13px] leading-[1.65] text-ink-secondary">
-          把下面的提示词复制给任意 AI（ChatGPT / Claude / Gemini / Cursor / 内部 Copilot
-          等），告诉它你的业务场景，AI 即可按照 MockHub 的 JSON 契约直接产出一份可导入的 项目包。把
-          AI 给的 JSON 通过首页「导入项目」上传即可一键生成完整可调试的接口。
-        </p>
+  if (!open) return null;
 
-        <GuideSection
-          icon={<FileText className="h-3.5 w-3.5" />}
-          title="① 完整提示词（Markdown）"
-          hint="让 AI 按此规格输出"
-          language="markdown"
-          text={AGENTS_GUIDE_PROMPT}
-          fileName="MockHub-AGENTS-Guide.md"
-          mime="text/markdown;charset=utf-8"
-          publicUrl={AGENTS_GUIDE_URLS.prompt}
-        />
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      {/* 背景遮罩 */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden />
 
-        <GuideSection
-          icon={<FileJson className="h-3.5 w-3.5" />}
-          title="② 完整 JSON 示例（可直接导入）"
-          hint="覆盖 HTTP / SSE / WebSocket / 数据联动 / 脚本 / 回调 / 多响应"
-          language="json"
-          text={AGENTS_GUIDE_EXAMPLE_BUNDLE}
-          fileName="MockHub-Example-Bundle.json"
-          mime="application/json;charset=utf-8"
-          publicUrl={AGENTS_GUIDE_URLS.example}
-        />
+      {/* 紫色液态金属弹框 */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="agents-guide-modal relative z-10 w-full max-w-4xl overflow-hidden"
+      >
+        {/* 装饰层：油膜虹彩 */}
+        <div className="modal-aurora" aria-hidden />
+        {/* 装饰层：镜面光带 */}
+        <div className="modal-shine" aria-hidden />
+        {/* 装饰层：颗粒纹理 */}
+        <div className="modal-noise" aria-hidden />
+        {/* 装饰层：漂浮亮点 */}
+        <div className="modal-spark modal-spark-1" aria-hidden />
+        <div className="modal-spark modal-spark-2" aria-hidden />
+        <div className="modal-spark modal-spark-3" aria-hidden />
+
+        {/* 标题栏 */}
+        <div className="modal-header relative z-10 flex items-center justify-between border-b border-purple-200/30 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="modal-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" fill="url(#modalIconGrad)" />
+                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#modalIconGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <defs>
+                  <linearGradient id="modalIconGrad" x1="2" y1="2" x2="22" y2="22">
+                    <stop stopColor="#7c3aed" />
+                    <stop offset="1" stopColor="#a855f7" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <h3 className="text-[15px] font-bold gold-text">AGENTS 对接指南</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="modal-close-btn"
+            aria-label="关闭"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* 内容区域 */}
+        <div className="modal-body relative z-10 max-h-[calc(100vh-200px)] overflow-auto px-6 pb-6 scrollbar-modern">
+          <div className="space-y-5">
+            <p className="text-[13px] leading-[1.65] text-ink-secondary">
+              把下面的提示词复制给任意 AI（ChatGPT / Claude / Gemini / Cursor / 内部 Copilot
+              等），告诉它你的业务场景，AI 即可按照 MockHub 的 JSON 契约直接产出一份可导入的 项目包。把
+              AI 给的 JSON 通过首页「导入项目」上传即可一键生成完整可调试的接口。
+            </p>
+
+            <GuideSection
+              icon={<FileText className="h-3.5 w-3.5" />}
+              title="① 完整提示词（Markdown）"
+              hint="让 AI 按此规格输出"
+              language="markdown"
+              text={AGENTS_GUIDE_PROMPT}
+              fileName="MockHub-AGENTS-Guide.md"
+              mime="text/markdown;charset=utf-8"
+              publicUrl={AGENTS_GUIDE_URLS.prompt}
+            />
+
+            <GuideSection
+              icon={<FileJson className="h-3.5 w-3.5" />}
+              title="② 完整 JSON 示例（可直接导入）"
+              hint="覆盖 HTTP / SSE / WebSocket / 数据联动 / 脚本 / 回调 / 多响应"
+              language="json"
+              text={AGENTS_GUIDE_EXAMPLE_BUNDLE}
+              fileName="MockHub-Example-Bundle.json"
+              mime="application/json;charset=utf-8"
+              publicUrl={AGENTS_GUIDE_URLS.example}
+            />
+          </div>
+        </div>
+
+        {/* 底部按钮 */}
+        <div className="modal-footer relative z-10 flex items-center justify-end border-t border-purple-200/30 bg-purple-100/30 px-6 py-3">
+          <Button variant="primary" className="modal-footer-button" onClick={onClose}>
+            关闭
+          </Button>
+        </div>
       </div>
-    </Modal>
+    </div>,
+    document.body,
   );
 }
 
