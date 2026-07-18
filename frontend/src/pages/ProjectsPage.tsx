@@ -115,11 +115,11 @@ export function ProjectsPage() {
         description="管理所有 Mock 项目，按业务系统隔离组织"
         actions={
           <>
-            <Button variant="secondary" onClick={() => setImportOpen(true)}>
+            <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)} className="sm:!h-8 sm:!text-[13px] sm:!px-[13px]">
               <Upload className="h-3.5 w-3.5" />
               导入项目
             </Button>
-            <Button variant="primary" onClick={() => setCreating(true)}>
+            <Button variant="primary" size="sm" onClick={() => setCreating(true)} className="sm:!h-8 sm:!text-[13px] sm:!px-[13px]">
               <Plus className="h-3.5 w-3.5" />
               新建项目
             </Button>

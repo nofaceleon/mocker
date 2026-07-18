@@ -52,70 +52,74 @@ export function LogsFilterBar({
   const todayStr = new Date().toISOString().split('T')[0];
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+      {/* 移动端：允许换行；搜索框始终独立一行；其余筛选器可横向滚动 */}
+      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+        <div className="relative w-full sm:flex-1 sm:min-w-0">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-subtle" />
           <input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="按路径、接口名、IP、Request ID 搜索…"
-            className="form-input h-8 pl-8"
+            className="form-input h-8 w-full pl-8"
           />
         </div>
-        <Select
-          compact
-          value={projectFilter}
-          onChange={(e) => onProjectChange(e.target.value)}
-          className="w-auto min-w-[120px]"
-        >
-          <option value="all">全部项目</option>
-          {projects.map((p) => (
-            <option key={p.id} value={String(p.id)}>
-              {p.name}
-            </option>
-          ))}
-        </Select>
-        <Select
-          compact
-          value={apiFilter}
-          onChange={(e) => onApiChange(e.target.value)}
-          className="w-auto min-w-[140px]"
-        >
-          <option value="all">全部接口</option>
-          {apis.map((a) => (
-            <option key={a.id} value={String(a.id)}>
-              {a.name} · {a.method} {a.path}
-            </option>
-          ))}
-        </Select>
-        <Select
-          compact
-          value={methodFilter}
-          onChange={(e) => onMethodChange(e.target.value as RequestLogHttpMethod | 'all')}
-          className="w-auto min-w-[110px]"
-        >
-          {METHOD_OPTIONS.map((m) => (
-            <option key={m} value={m}>
-              {m === 'all' ? '全部方法' : m}
-            </option>
-          ))}
-        </Select>
-        <Select
-          compact
-          value={statusFilter}
-          onChange={(e) => onStatusChange(e.target.value as RequestLogStatusClass | 'all')}
-          className="w-auto min-w-[110px]"
-        >
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s === 'all' ? '全部状态' : s}
-            </option>
-          ))}
-        </Select>
-        <Button variant="ghost" size="sm" onClick={onReset}>
-          <RotateCcw className="h-3.5 w-3.5" />
-          重置
-        </Button>
+        {/* 筛选器行：移动端允许换行，sm+ 允许横向滚动不换行 */}
+        <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap sm:overflow-x-auto sm:gap-2 sm:pr-0">
+          <Select
+            compact
+            value={projectFilter}
+            onChange={(e) => onProjectChange(e.target.value)}
+            className="w-auto min-w-[100px] flex-shrink-0"
+          >
+            <option value="all">全部项目</option>
+            {projects.map((p) => (
+              <option key={p.id} value={String(p.id)}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            compact
+            value={apiFilter}
+            onChange={(e) => onApiChange(e.target.value)}
+            className="w-auto min-w-[120px] flex-shrink-0"
+          >
+            <option value="all">全部接口</option>
+            {apis.map((a) => (
+              <option key={a.id} value={String(a.id)}>
+                {a.name} · {a.method}
+              </option>
+            ))}
+          </Select>
+          <Select
+            compact
+            value={methodFilter}
+            onChange={(e) => onMethodChange(e.target.value as RequestLogHttpMethod | 'all')}
+            className="w-auto min-w-[90px] flex-shrink-0"
+          >
+            {METHOD_OPTIONS.map((m) => (
+              <option key={m} value={m}>
+                {m === 'all' ? '全部方法' : m}
+              </option>
+            ))}
+          </Select>
+          <Select
+            compact
+            value={statusFilter}
+            onChange={(e) => onStatusChange(e.target.value as RequestLogStatusClass | 'all')}
+            className="w-auto min-w-[90px] flex-shrink-0"
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s === 'all' ? '全部状态' : s}
+              </option>
+            ))}
+          </Select>
+          <Button variant="ghost" size="sm" onClick={onReset} className="flex-shrink-0">
+            <RotateCcw className="h-3.5 w-3.5" />
+            重置
+          </Button>
+        </div>
       </div>
       <div className="flex items-center gap-2.5">
         <span className="text-[12px] text-ink-tertiary">时间：</span>

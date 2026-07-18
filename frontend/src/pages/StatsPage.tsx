@@ -330,7 +330,7 @@ export function StatsPage() {
           回调任务
         </h2>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard label="待发送" value={callbackStats?.pending ?? 0} icon={<Clock />} />
           <StatCard label="今日已发送" value={callbackStats?.sent ?? 0} icon={<CheckCircle2 />} />
           <StatCard label="失败任务" value={callbackStats?.failed ?? 0} icon={<XCircle />} />
