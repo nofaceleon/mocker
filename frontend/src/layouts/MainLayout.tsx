@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Search, Bell, Settings, Menu } from 'lucide-react';
+import { Search, Bell, Settings } from 'lucide-react';
 import { Topbar, UserAvatar, IconBtn, Drawer } from '@/components/ui';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/cn';

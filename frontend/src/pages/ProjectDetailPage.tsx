@@ -10,7 +10,6 @@ import {
   FolderOpen,
   Layers,
   Loader2,
-  Menu,
   MoreVertical,
   Pencil,
   Play,
@@ -400,7 +399,6 @@ function ApiListPanel({
   const [testResults, setTestResults] = useState<TestApiOutput[] | null>(null);
   const [testing, setTesting] = useState(false);
   const [swaggerOpen, setSwaggerOpen] = useState(false);
-  const isMobile = useIsMobile();
 
   const filtered = useMemo(() => {
     if (!apis) return [];
