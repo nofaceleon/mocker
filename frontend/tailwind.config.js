@@ -3,6 +3,14 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      screens: {
+        'xs': '480px',   // 超小屏幕（竖屏手机）
+        'sm': '640px',   // 小屏幕（平板竖屏）
+        'md': '768px',   // 中等屏幕（平板横屏）
+        'lg': '1024px',  // 大屏幕（笔记本）
+        'xl': '1280px',  // 超大屏幕（桌面）
+        '2xl': '1536px', // 最大屏幕
+      },
       fontFamily: {
         sans: [
           '-apple-system',

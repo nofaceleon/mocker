@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button, Modal, PageHeader } from '@/components/ui';
+import { Button, Modal, PageHeader, Drawer } from '@/components/ui';
 import {
   buildRequestLogExportUrl,
   useClearRequestLogs,
@@ -21,6 +21,7 @@ import { LogsStatusStrip } from '@/components/logs/LogsStatusStrip';
 import { LogsTable } from '@/components/logs/LogsTable';
 import { LogsDetailPanel } from '@/components/logs/LogsDetailPanel';
 import { formatNumber } from '@/components/logs/log-shared';
+import { useIsMobile } from '@/lib/use-is-mobile';
 
 const PAGE_SIZE = 20;
 
@@ -51,6 +52,10 @@ export function LogsPage() {
   // ----- 自动刷新控制 -----
   const [progress, setProgress] = useState(0);
   const [autoRefreshPaused, setAutoRefreshPaused] = useState(false);
+
+  // ----- 移动端详情 Drawer -----
+  const isMobile = useIsMobile(1280);
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
 
   // 项目切换时清空接口筛选
   useEffect(() => {
@@ -242,7 +247,10 @@ export function LogsPage() {
             page={page}
             pageSize={PAGE_SIZE}
             selectedId={selected}
-            onSelect={(id) => setSelected(id)}
+            onSelect={(id) => {
+              setSelected(id);
+              if (isMobile && id !== null) setDetailDrawerOpen(true);
+            }}
             onPageChange={setPage}
             checkedIds={checkedIds}
             onToggleCheck={toggleCheckOne}
@@ -252,10 +260,25 @@ export function LogsPage() {
             isLoading={logs.isLoading}
           />
 
-          <div className="hidden min-h-[400px] xl:block">
-            <LogsDetailPanel log={detail.data ?? null} isLoading={detail.isLoading} />
-          </div>
+          {/* 桌面端：右侧固定详情面板 */}
+          {!isMobile && (
+            <div className="hidden min-h-[400px] xl:block">
+              <LogsDetailPanel log={detail.data ?? null} isLoading={detail.isLoading} />
+            </div>
+          )}
         </div>
+
+        {/* 移动端：详情 Drawer */}
+        {isMobile && (
+          <Drawer
+            open={detailDrawerOpen}
+            onClose={() => setDetailDrawerOpen(false)}
+            title="日志详情"
+            width="sm"
+          >
+            <LogsDetailPanel log={detail.data ?? null} isLoading={detail.isLoading} />
+          </Drawer>
+        )}
       </div>
 
       {/* 二次确认：清除全部 */}

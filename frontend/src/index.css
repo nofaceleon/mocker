@@ -1804,3 +1804,110 @@
     color: #09090b;
   }
 }
+
+/* ======== 移动端全局适配 ======== */
+@media screen and (max-width: 768px) {
+  /* 增大触摸区域：按钮 */
+  .btn {
+    height: 40px !important;
+    min-height: 40px;
+    font-size: 14px;
+    padding: 0 14px;
+  }
+
+  .btn-sm {
+    height: 36px !important;
+    min-height: 36px;
+    font-size: 13px;
+  }
+
+  .btn-lg {
+    height: 44px !important;
+    min-height: 44px;
+    font-size: 15px;
+  }
+
+  /* 增大触摸区域：表单输入 */
+  .form-input,
+  .form-select,
+  .form-textarea {
+    height: 40px !important;
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  .form-textarea {
+    height: auto !important;
+    min-height: 80px;
+  }
+
+  /* 页面容器响应式 */
+  .page-container {
+    padding: 16px 12px;
+  }
+
+  /* 页面头部响应式 */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .page-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* StatCard 网格响应式 */
+  .page-container .grid[class*='grid-cols-'] {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* 表格单元格增大触摸区域 */
+  .params-table td {
+    padding: 10px 12px;
+  }
+
+  /* 顶部导航 */
+  .nav-menu {
+    display: none;
+  }
+
+  /* Topbar 搜索框在移动端全宽 */
+  .topbar .relative input[type='text'] {
+    width: 100% !important;
+    max-width: 200px;
+  }
+}
+
+/* 移动端超小屏幕额外调整 */
+@media screen and (max-width: 480px) {
+  .page-container .grid[class*='grid-cols-'] {
+    grid-template-columns: 1fr;
+  }
+
+  /* StatCard 改单列 */
+  .page-container > div:nth-child(3).grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 日志页面过滤器响应式 */
+  .logs-filter-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* Drawer 移动端全屏动画 */
+@keyframes slide-from-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-from-bottom {
+  animation: slide-from-bottom 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}

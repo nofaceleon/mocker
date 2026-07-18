@@ -10,6 +10,7 @@ import {
   FolderOpen,
   Layers,
   Loader2,
+  Menu,
   MoreVertical,
   Pencil,
   Play,
@@ -26,6 +27,7 @@ import {
   Breadcrumb,
   Button,
   Card,
+  Drawer,
   Empty,
   FormField,
   Input,
@@ -60,6 +62,7 @@ import { SwaggerImportModal } from '@/components/SwaggerImportModal';
 import { AgentsEditModal } from '@/components/AgentsEditModal';
 import { buildMockRequestSample } from '@/lib/mock-request-sample';
 import { copyToClipboard } from '@/lib/clipboard';
+import { useIsMobile } from '@/lib/use-is-mobile';
 
 export function ProjectDetailPage() {
   const { projectId } = useParams();
@@ -71,6 +74,8 @@ export function ProjectDetailPage() {
   const setSelectedGroup = useUiStore((s) => s.setSelectedFeatureGroup);
   const [sidebarSearch, setSidebarSearch] = useState('');
   const [agentsEditOpen, setAgentsEditOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // 首次进入或组列表变化时，默认选中第一个
   useEffect(() => {
@@ -111,19 +116,48 @@ export function ProjectDetailPage() {
 
   return (
     <div className="flex" style={{ height: 'calc(100vh - 54px)' }}>
-      <Sidebar
-        project={project}
-        groups={groups ?? []}
-        selectedId={selectedGroupId}
-        onSelect={(id) => setSelectedGroup(id)}
-        onCreateGroup={() => setCreatingGroup(true)}
-        onEditGroup={(g) => setEditingGroup(g)}
-        search={sidebarSearch}
-        setSearch={setSidebarSearch}
-      />
+      {/* 桌面端：左侧固定 Sidebar；移动端：通过 Drawer 展示 */}
+      {isMobile ? (
+        <Drawer open={sidebarOpen} onClose={() => setSidebarOpen(false)} title="功能组" width="sm">
+          <Sidebar
+            project={project}
+            groups={groups ?? []}
+            selectedId={selectedGroupId}
+            onSelect={(id) => { setSelectedGroup(id); setSidebarOpen(false); }}
+            onCreateGroup={() => { setCreatingGroup(true); setSidebarOpen(false); }}
+            onEditGroup={(g) => { setEditingGroup(g); setSidebarOpen(false); }}
+            search={sidebarSearch}
+            setSearch={setSidebarSearch}
+            embedded
+          />
+        </Drawer>
+      ) : (
+        <Sidebar
+          project={project}
+          groups={groups ?? []}
+          selectedId={selectedGroupId}
+          onSelect={(id) => setSelectedGroup(id)}
+          onCreateGroup={() => setCreatingGroup(true)}
+          onEditGroup={(g) => setEditingGroup(g)}
+          search={sidebarSearch}
+          setSearch={setSidebarSearch}
+        />
+      )}
 
       <main className="flex-1 overflow-y-auto bg-canvas">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-white/85 px-6 py-3 backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-white/85 px-4 md:px-6 py-3 backdrop-blur">
+          {/* 移动端：显示功能组切换按钮 */}
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="flex items-center gap-1.5 rounded-md border border-line bg-white px-3 py-1.5 text-[12.5px] text-ink shadow-sm hover:bg-canvas-subtle"
+            >
+              <Layers className="h-3.5 w-3.5" />
+              {activeGroup?.name ?? '选择功能组'}
+              <ChevronDown className="h-3 w-3 text-ink-subtle" />
+            </button>
+          )}
           <Breadcrumb
             items={[
               { label: '项目', to: '/projects' },
@@ -181,6 +215,7 @@ function Sidebar({
   onEditGroup,
   search,
   setSearch,
+  embedded,
 }: {
   project: { id: number; name: string };
   groups: FeatureGroup[];
@@ -190,6 +225,7 @@ function Sidebar({
   onEditGroup: (g: FeatureGroup) => void;
   search: string;
   setSearch: (v: string) => void;
+  embedded?: boolean;
 }) {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -204,8 +240,11 @@ function Sidebar({
 
   return (
     <aside
-      className="flex w-[240px] flex-shrink-0 flex-col border-r border-line bg-white"
-      style={{ height: 'calc(100vh - 54px)' }}
+      className={cn(
+        'flex flex-shrink-0 flex-col border-r border-line bg-white',
+        embedded ? 'flex-1' : 'w-[240px]',
+      )}
+      style={embedded ? undefined : { height: 'calc(100vh - 54px)' }}
     >
       <div className="border-b border-line px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
@@ -361,6 +400,7 @@ function ApiListPanel({
   const [testResults, setTestResults] = useState<TestApiOutput[] | null>(null);
   const [testing, setTesting] = useState(false);
   const [swaggerOpen, setSwaggerOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const filtered = useMemo(() => {
     if (!apis) return [];
@@ -669,21 +709,21 @@ function ApiListPanel({
         </Button>
       </div>
 
-      <div className="mb-3.5 flex items-center gap-2">
-        <div className="relative">
+      <div className="mb-3.5 flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[140px] max-w-[240px]">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-subtle" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="按接口名 / 路径搜索…"
-            className="form-input h-8 w-[240px] pl-8"
+            className="form-input h-8 w-full pl-8"
           />
         </div>
         <Select
           compact
           value={methodFilter}
           onChange={(e) => setMethodFilter(e.target.value)}
-          className="w-auto min-w-[110px]"
+          className="w-auto min-w-[100px]"
         >
           <option value="all">全部方法</option>
           <option value="GET">GET</option>
@@ -696,7 +736,7 @@ function ApiListPanel({
           compact
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-auto min-w-[110px]"
+          className="w-auto min-w-[100px]"
         >
           <option value="all">全部状态</option>
           <option value="enabled">已启用</option>
@@ -719,6 +759,8 @@ function ApiListPanel({
           />
         ) : (
           <>
+            {/* 桌面端：表格视图 */}
+            <div className="hidden md:block overflow-x-auto">
             <table className="params-table">
               <thead>
                 <tr>
@@ -748,100 +790,35 @@ function ApiListPanel({
               </thead>
               <tbody>
                 {filtered.map((api) => (
-                  <tr
+                  <ApiTableRow
                     key={api.id}
-                    onClick={() => (batchMode ? toggleSelect(api.id) : onEditApi(api))}
-                    className={cn(
-                      'cursor-pointer transition-colors hover:bg-canvas',
-                      batchMode && selectedIds.has(api.id) && 'bg-blue-50',
-                    )}
-                  >
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={batchMode ? selectedIds.has(api.id) : false}
-                        onChange={() => batchMode && toggleSelect(api.id)}
-                        disabled={!batchMode}
-                        className={cn(
-                          'h-3.5 w-3.5 rounded accent-ink',
-                          batchMode ? 'cursor-pointer' : 'cursor-default opacity-0',
-                        )}
-                      />
-                    </td>
-                    <td>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[13.5px] font-medium text-ink">{api.name}</span>
-                        <span className="text-[11.5px] text-ink-subtle">
-                          {api.description ?? '—'}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <MethodBadge method={api.method} />
-                      <div className="mt-1">
-                        <span className="param-code" title={api.fullPath || api.path}>
-                          {api.fullPath || api.path}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="flex flex-wrap gap-1">
-                        {api.hasCallback && <span className="tag tag-orange">延迟回调</span>}
-                        {api.dataOp !== 'none' && api.dataTable && (
-                          <span className="tag tag-pink">数据联动</span>
-                        )}
-                        {api.validationRules && Object.keys(api.validationRules).length > 0 && (
-                          <span className="tag tag-blue">参数校验</span>
-                        )}
-                        {!api.isEnabled && <span className="tag tag-red">已禁用</span>}
-                      </div>
-                    </td>
-                    <td>
-                      <TagPill>{api.responseStatus}</TagPill>
-                    </td>
-                    <td className="text-[12px] text-ink-tertiary">{api.responseDelay || 0} ms</td>
-                    <td>
-                      <strong className="text-[13px] text-ink">0</strong>
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <Switch checked={api.isEnabled} onChange={() => handleToggle(api)} />
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          onClick={() => onEditApi(api)}
-                          className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
-                          title="编辑"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={() => handleTest(api)}
-                          className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
-                          title="测试"
-                        >
-                          <Play className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={() => handleCopy(api)}
-                          className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
-                          title="复制 curl"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(api)}
-                          className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-danger-soft hover:text-danger"
-                          title="删除"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    api={api}
+                    batchMode={batchMode}
+                    selected={selectedIds.has(api.id)}
+                    onToggleSelect={() => batchMode && toggleSelect(api.id)}
+                    onEdit={() => onEditApi(api)}
+                    onTest={() => handleTest(api)}
+                    onCopy={() => handleCopy(api)}
+                    onDelete={() => handleDelete(api)}
+                    onToggle={() => handleToggle(api)}
+                  />
                 ))}
               </tbody>
             </table>
+            </div>
+
+            {/* 移动端：卡片列表 */}
+            <div className="flex flex-col gap-2 px-3 py-2 md:hidden">
+              {filtered.map((api) => (
+                <ApiCard
+                  key={api.id}
+                  api={api}
+                  onEdit={() => onEditApi(api)}
+                  onToggle={() => handleToggle(api)}
+                />
+              ))}
+            </div>
+
             <div className="flex items-center justify-between border-t border-line bg-canvas px-4 py-2.5 text-[12px] text-ink-tertiary">
               <span>共 {filtered.length} 条</span>
               <div className="flex items-center gap-0.5">
@@ -869,6 +846,183 @@ function ApiListPanel({
           onClose={() => setSwaggerOpen(false)}
         />
       )}
+    </div>
+  );
+}
+
+function ApiTableRow({
+  api,
+  batchMode,
+  selected,
+  onToggleSelect,
+  onEdit,
+  onTest,
+  onCopy,
+  onDelete,
+  onToggle,
+}: {
+  api: MockApi;
+  batchMode: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
+  onEdit: () => void;
+  onTest: () => void;
+  onCopy: () => void;
+  onDelete: () => void;
+  onToggle: () => void;
+}) {
+  return (
+    <tr
+      onClick={() => (batchMode ? onToggleSelect() : onEdit())}
+      className={cn(
+        'cursor-pointer transition-colors hover:bg-canvas',
+        batchMode && selected && 'bg-blue-50',
+      )}
+    >
+      <td onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          checked={batchMode ? selected : false}
+          onChange={onToggleSelect}
+          disabled={!batchMode}
+          className={cn(
+            'h-3.5 w-3.5 rounded accent-ink',
+            batchMode ? 'cursor-pointer' : 'cursor-default opacity-0',
+          )}
+        />
+      </td>
+      <td>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[13.5px] font-medium text-ink">{api.name}</span>
+          <span className="text-[11.5px] text-ink-subtle">{api.description ?? '—'}</span>
+        </div>
+      </td>
+      <td>
+        <MethodBadge method={api.method} />
+        <div className="mt-1">
+          <span className="param-code" title={api.fullPath || api.path}>
+            {api.fullPath || api.path}
+          </span>
+        </div>
+      </td>
+      <td>
+        <div className="flex flex-wrap gap-1">
+          {api.hasCallback && <span className="tag tag-orange">延迟回调</span>}
+          {api.dataOp !== 'none' && api.dataTable && (
+            <span className="tag tag-pink">数据联动</span>
+          )}
+          {api.validationRules && Object.keys(api.validationRules).length > 0 && (
+            <span className="tag tag-blue">参数校验</span>
+          )}
+          {!api.isEnabled && <span className="tag tag-red">已禁用</span>}
+        </div>
+      </td>
+      <td>
+        <TagPill>{api.responseStatus}</TagPill>
+      </td>
+      <td className="text-[12px] text-ink-tertiary">{api.responseDelay || 0} ms</td>
+      <td>
+        <strong className="text-[13px] text-ink">0</strong>
+      </td>
+      <td onClick={(e) => e.stopPropagation()}>
+        <Switch checked={api.isEnabled} onChange={onToggle} />
+      </td>
+      <td onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={onEdit}
+            className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
+            title="编辑"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+          <button
+            onClick={onTest}
+            className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
+            title="测试"
+          >
+            <Play className="h-3 w-3" />
+          </button>
+          <button
+            onClick={onCopy}
+            className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-canvas-subtle hover:text-ink"
+            title="复制 curl"
+          >
+            <Copy className="h-3 w-3" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="grid h-[26px] w-[26px] place-items-center rounded text-ink-subtle transition-colors hover:bg-danger-soft hover:text-danger"
+            title="删除"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function ApiCard({
+  api,
+  onEdit,
+  onToggle,
+}: {
+  api: MockApi;
+  onEdit: () => void;
+  onToggle: () => void;
+}) {
+  return (
+    <div
+      className="rounded-lg border border-line bg-white p-3.5 shadow-sm"
+      onClick={onEdit}
+    >
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <MethodBadge method={api.method} />
+            <span className="text-[13.5px] font-semibold text-ink truncate">{api.name}</span>
+          </div>
+          <div className="mt-1 font-mono text-[11.5px] text-ink-tertiary truncate">
+            {api.fullPath || api.path}
+          </div>
+        </div>
+        <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
+          <Switch checked={api.isEnabled} onChange={onToggle} />
+        </div>
+      </div>
+
+      {api.description && (
+        <p className="mb-2 text-[11.5px] text-ink-secondary line-clamp-1">{api.description}</p>
+      )}
+
+      <div className="mb-2.5 flex flex-wrap gap-1">
+        {api.hasCallback && <span className="tag tag-orange">延迟回调</span>}
+        {api.dataOp !== 'none' && api.dataTable && (
+          <span className="tag tag-pink">数据联动</span>
+        )}
+        {api.validationRules && Object.keys(api.validationRules).length > 0 && (
+          <span className="tag tag-blue">参数校验</span>
+        )}
+        {!api.isEnabled && <span className="tag tag-red">已禁用</span>}
+        <span className="tag tag-gray">
+          <TagPill>{api.responseStatus}</TagPill>
+        </span>
+        <span className="text-[11px] text-ink-subtle">{api.responseDelay || 0}ms</span>
+      </div>
+
+      <div className="flex items-center justify-between border-t border-line-subtle pt-2.5">
+        <span className="text-[11px] text-ink-subtle">
+          {api.description ? '' : '—'}
+        </span>
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          className="flex items-center gap-1 text-[11.5px] font-medium text-ink hover:underline"
+        >
+          查看详情
+          <ChevronRight className="h-3 w-3" />
+        </button>
+      </div>
     </div>
   );
 }

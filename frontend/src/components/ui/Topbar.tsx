@@ -1,16 +1,31 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { IconBtn } from './IconBtn';
 
 export type TopbarProps = {
   brand?: ReactNode;
   nav?: ReactNode;
   right?: ReactNode;
+  onMobileMenuToggle?: () => void;
+  mobileMenuOpen?: boolean;
 };
 
-export function Topbar({ brand, nav, right }: TopbarProps) {
+export function Topbar({ brand, nav, right, onMobileMenuToggle, mobileMenuOpen }: TopbarProps) {
   return (
     <header className="topbar">
+      {/* 汉堡菜单按钮 - md~lg 屏幕显示（此时 nav 隐藏）；lg+ nav 显示，汉堡隐藏 */}
+      <div className="mr-2 md:hidden lg:block">
+        <IconBtn
+          onClick={onMobileMenuToggle}
+          title={mobileMenuOpen ? '关闭菜单' : '打开菜单'}
+          className={mobileMenuOpen ? 'bg-canvas-subtle' : ''}
+        >
+          {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        </IconBtn>
+      </div>
+
       {brand ?? (
         <a href="/" className="brand">
           <div className="brand-mark">M</div>
