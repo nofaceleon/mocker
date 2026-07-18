@@ -64,18 +64,18 @@ function LogRowView({
   log,
   checked,
   onToggleCheck,
-  expanded,
-  onToggleExpand,
+  selected,
+  onSelect,
 }: {
   log: RequestLog;
   checked: boolean;
   onToggleCheck: () => void;
-  expanded: boolean;
-  onToggleExpand: () => void;
+  selected: boolean;
+  onSelect: () => void;
 }) {
   const { dateStr, timeStr, msStr } = formatDateParts(log.createdAt);
   return (
-    <tr onClick={onToggleExpand} className="cursor-pointer hover:bg-canvas">
+    <tr onClick={onSelect} className={selected ? '' : 'cursor-pointer hover:bg-canvas-subtle'} style={selected ? { backgroundColor: '#f5f3ff' } : undefined}>
       <td onClick={(e) => e.stopPropagation()}>
         <input
           type="checkbox"
@@ -97,49 +97,21 @@ function LogRowView({
         <MethodBadge method={log.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'} />
       </td>
       <td>
-        <span className="param-code max-w-[260px] truncate" title={log.path}>
-          {log.path}
-        </span>
-      </td>
-      <td>
         <div className="flex flex-col leading-tight">
-          <span className="text-ink">{log.apiName ?? '—'}</span>
-          {log.projectName && (
-            <span className="text-[11px] text-ink-subtle">（{log.projectName}）</span>
-          )}
+          <span className="param-code max-w-[260px] truncate" title={log.path}>
+            {log.path}
+          </span>
+          <span className="text-[11px] text-ink-subtle">
+            {log.apiName ?? '—'}
+            {log.projectName && <span className="text-ink-disabled">（{log.projectName}）</span>}
+          </span>
         </div>
-      </td>
-      <td>
-        <span
-          className="max-w-[160px] truncate font-mono text-[11.5px] text-ink-tertiary"
-          title={log.requestId ?? ''}
-        >
-          {log.requestId ? `${log.requestId.slice(0, 8)}…` : '—'}
-        </span>
-      </td>
-      <td>
-        <span className="font-mono text-[11.5px] text-ink-tertiary">{log.clientIp ?? '—'}</span>
       </td>
       <td>
         <span className={statusKindClass(log.statusKind)}>{log.status}</span>
       </td>
       <td>
         <span className={responseTimeClass(log.responseTime)}>{log.responseTime} ms</span>
-      </td>
-      <td onClick={(e) => e.stopPropagation()}>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleExpand();
-          }}
-        >
-          {expanded ? '收起' : '查看'}
-          <ChevronRight
-            className={`h-3 w-3 transition-transform${expanded ? ' rotate-90' : ''}`}
-          />
-        </Button>
       </td>
     </tr>
   );
@@ -218,13 +190,9 @@ export function LogsTable({
                 </th>
                 <th>调用时间</th>
                 <th>方法</th>
-                <th>路径</th>
-                <th>所属接口</th>
-                <th>Request ID</th>
-                <th>客户端</th>
+                <th>路径 / 所属接口</th>
                 <th>状态</th>
                 <th>响应时间</th>
-                <th className="text-right">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -234,8 +202,8 @@ export function LogsTable({
                   log={l}
                   checked={checkedIds.includes(l.id)}
                   onToggleCheck={() => onToggleCheck(l.id)}
-                  expanded={selectedId === l.id}
-                  onToggleExpand={() => onSelect(selectedId === l.id ? null : l.id)}
+                  selected={selectedId === l.id}
+                  onSelect={() => onSelect(selectedId === l.id ? null : l.id)}
                 />
               ))}
             </tbody>
