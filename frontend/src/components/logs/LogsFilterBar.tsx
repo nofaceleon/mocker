@@ -1,12 +1,29 @@
 import { RotateCcw, Search } from 'lucide-react';
 import { Button, Select, Tabs } from '@/components/ui';
-import type { RequestLogHttpMethod, RequestLogRange, RequestLogStatusClass } from '@/hooks/queries/use-request-logs';
+import type {
+  RequestLogHttpMethod,
+  RequestLogRange,
+  RequestLogStatusClass,
+} from '@/hooks/queries/use-request-logs';
 
-const METHOD_OPTIONS: Array<RequestLogHttpMethod | 'all'> = ['all', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+const METHOD_OPTIONS: Array<RequestLogHttpMethod | 'all'> = [
+  'all',
+  'GET',
+  'POST',
+  'PUT',
+  'DELETE',
+  'PATCH',
+];
 const STATUS_OPTIONS: Array<RequestLogStatusClass | 'all'> = ['all', '2xx', '4xx', '5xx'];
 
 type ProjectOption = { id: number; name: string };
-type ApiOption = { id: number; name: string; method: string; path: string; projectId?: number | null };
+type ApiOption = {
+  id: number;
+  name: string;
+  method: string;
+  path: string;
+  projectId?: number | null;
+};
 
 export function LogsFilterBar({
   search,
@@ -52,9 +69,8 @@ export function LogsFilterBar({
   const todayStr = new Date().toISOString().split('T')[0];
   return (
     <div className="space-y-2.5">
-      {/* 移动端：允许换行；搜索框始终独立一行；其余筛选器可横向滚动 */}
-      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-        <div className="relative w-full sm:flex-1 sm:min-w-0">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-subtle" />
           <input
             value={search}
@@ -63,8 +79,7 @@ export function LogsFilterBar({
             className="form-input h-8 w-full pl-8"
           />
         </div>
-        {/* 筛选器行：移动端允许换行，sm+ 允许横向滚动不换行 */}
-        <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap sm:overflow-x-auto sm:gap-2 sm:pr-0">
+        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
           <Select
             compact
             value={projectFilter}
@@ -155,7 +170,8 @@ export function LogsFilterBar({
               max={todayStr}
               onChange={(e) => {
                 onCustomEndChange(e.target.value);
-                if (customStart && e.target.value < customStart) onCustomStartChange(e.target.value);
+                if (customStart && e.target.value < customStart)
+                  onCustomStartChange(e.target.value);
               }}
               className="form-input h-7 w-auto min-w-[130px] text-[12px]"
             />

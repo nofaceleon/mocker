@@ -115,11 +115,11 @@ export function ProjectsPage() {
         description="管理所有 Mock 项目，按业务系统隔离组织"
         actions={
           <>
-            <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)} className="sm:!h-8 sm:!text-[13px] sm:!px-[13px]">
+            <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
               <Upload className="h-3.5 w-3.5" />
               导入项目
             </Button>
-            <Button variant="primary" size="sm" onClick={() => setCreating(true)} className="sm:!h-8 sm:!text-[13px] sm:!px-[13px]">
+            <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
               <Plus className="h-3.5 w-3.5" />
               新建项目
             </Button>
@@ -210,7 +210,7 @@ export function ProjectsPage() {
           />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((p) => (
             <ProjectCard
               key={p.id}
@@ -924,7 +924,7 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
 
         <div>
           <div className="form-label mb-2">同名冲突策略</div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-2">
             {IMPORT_MODES.map((m) => {
               const Icon = m.icon;
               const active = mode === m.value;

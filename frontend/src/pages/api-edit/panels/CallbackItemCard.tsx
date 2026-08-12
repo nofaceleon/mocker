@@ -170,7 +170,7 @@ export function CallbackItemCard({
           >
             {item.callbackMethod}
           </span>
-          <span className="text-[11px] text-ink-subtle truncate hidden sm:inline">{summary}</span>
+          <span className="text-[11px] text-ink-subtle truncate inline">{summary}</span>
         </button>
 
         <div className="flex items-center gap-3 flex-shrink-0">

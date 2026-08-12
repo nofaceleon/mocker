@@ -9,7 +9,9 @@ function TrendChart({ data }: { data: TrendPoint[] | null }) {
   if (!data || data.length === 0) {
     return <div className="px-1 py-8 text-center text-[12px] text-ink-subtle">暂无趋势数据</div>;
   }
-  const W = 720, H = 180, pad = 24;
+  const W = 720,
+    H = 180,
+    pad = 24;
   const max = Math.max(1, ...data.map((d) => d.http + d.ws + d.sse));
   const xStep = (W - pad * 2) / Math.max(1, data.length - 1);
   const points = (key: 'http' | 'ws' | 'sse') =>
@@ -142,7 +144,7 @@ export function LogsAnalyticsBar({
 }) {
   if (isLoading) {
     return (
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
           <StatCard key={i} label="—" value="—" icon={<Activity />} />
         ))}
@@ -151,7 +153,7 @@ export function LogsAnalyticsBar({
   }
   return (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label="总调用次数"
           value={stats ? formatNumber(stats.total) : '—'}
@@ -172,11 +174,7 @@ export function LogsAnalyticsBar({
           }
           icon={<Clock />}
         />
-        <StatCard
-          label="成功率"
-          value={stats ? `${stats.successRate}%` : '—'}
-          icon={<Server />}
-        />
+        <StatCard label="成功率" value={stats ? `${stats.successRate}%` : '—'} icon={<Server />} />
       </div>
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card

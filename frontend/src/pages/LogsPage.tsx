@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button, Modal, PageHeader, Drawer } from '@/components/ui';
+import { Button, Modal, PageHeader } from '@/components/ui';
 import {
   buildRequestLogExportUrl,
   useClearRequestLogs,
@@ -19,7 +19,6 @@ import { LogsStatusStrip } from '@/components/logs/LogsStatusStrip';
 import { LogsTable } from '@/components/logs/LogsTable';
 import { LogsDetailPanel } from '@/components/logs/LogsDetailPanel';
 import { formatNumber } from '@/components/logs/log-shared';
-import { useIsMobile } from '@/lib/use-is-mobile';
 
 const PAGE_SIZE = 20;
 
@@ -50,10 +49,6 @@ export function LogsPage() {
   // ----- 自动刷新控制 -----
   const [progress, setProgress] = useState(0);
   const [autoRefreshPaused, setAutoRefreshPaused] = useState(false);
-
-  // ----- 移动端详情 Drawer -----
-  const isMobile = useIsMobile(1280);
-  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
 
   // 项目切换时清空接口筛选
   useEffect(() => {
@@ -233,17 +228,14 @@ export function LogsPage() {
           }}
         />
 
-        <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1fr)_480px]">
+        <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
           <LogsTable
             items={items}
             total={total}
             page={page}
             pageSize={PAGE_SIZE}
             selectedId={selected}
-            onSelect={(id) => {
-              setSelected(id);
-              if (isMobile && id !== null) setDetailDrawerOpen(true);
-            }}
+            onSelect={(id) => setSelected(id)}
             onPageChange={setPage}
             checkedIds={checkedIds}
             onToggleCheck={toggleCheckOne}
@@ -253,25 +245,10 @@ export function LogsPage() {
             isLoading={logs.isLoading}
           />
 
-          {/* 桌面端：右侧固定详情面板 */}
-          {!isMobile && (
-            <div className="hidden min-h-[400px] xl:block">
-              <LogsDetailPanel log={detail.data ?? null} isLoading={detail.isLoading} />
-            </div>
-          )}
-        </div>
-
-        {/* 移动端：详情 Drawer */}
-        {isMobile && (
-          <Drawer
-            open={detailDrawerOpen}
-            onClose={() => setDetailDrawerOpen(false)}
-            title="日志详情"
-            width="sm"
-          >
+          <div className="min-h-[400px]">
             <LogsDetailPanel log={detail.data ?? null} isLoading={detail.isLoading} />
-          </Drawer>
-        )}
+          </div>
+        </div>
       </div>
 
       {/* 二次确认：清除全部 */}

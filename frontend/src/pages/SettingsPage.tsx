@@ -157,7 +157,7 @@ export function SettingsPage() {
 
       {tab === 'backups' && (
         <>
-          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="mb-6 grid grid-cols-3 gap-3">
             <StatCard
               label="数据库文件"
               value={
@@ -303,8 +303,8 @@ export function SettingsPage() {
           <p className="mb-4 text-[12.5px] leading-[1.7] text-ink-secondary">
             由后端发起请求探测目标地址是否可达（绕过浏览器 CORS），适合验证回调 URL、第三方接口等。
           </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <FormField label="请求方法" className="sm:w-[120px]">
+          <div className="flex items-end gap-3">
+            <FormField label="请求方法" className="w-[120px]">
               <Select value={probeMethod} onChange={(e) => setProbeMethod(e.target.value)}>
                 {['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'].map((m) => (
                   <option key={m} value={m}>
@@ -344,7 +344,7 @@ export function SettingsPage() {
                     : '已连通（非 2xx/3xx）'
                   : '无法访问'}
               </div>
-              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 <Row
                   label="HTTP 状态"
                   value={

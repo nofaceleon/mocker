@@ -26,7 +26,6 @@ import {
   Breadcrumb,
   Button,
   Card,
-  Drawer,
   Empty,
   FormField,
   Input,
@@ -61,7 +60,6 @@ import { SwaggerImportModal } from '@/components/SwaggerImportModal';
 import { AgentsEditModal } from '@/components/AgentsEditModal';
 import { buildMockRequestSample } from '@/lib/mock-request-sample';
 import { copyToClipboard } from '@/lib/clipboard';
-import { useIsMobile } from '@/lib/use-is-mobile';
 
 export function ProjectDetailPage() {
   const { projectId } = useParams();
@@ -73,8 +71,6 @@ export function ProjectDetailPage() {
   const setSelectedGroup = useUiStore((s) => s.setSelectedFeatureGroup);
   const [sidebarSearch, setSidebarSearch] = useState('');
   const [agentsEditOpen, setAgentsEditOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isMobile = useIsMobile();
 
   // 首次进入或组列表变化时，默认选中第一个
   useEffect(() => {
@@ -115,48 +111,19 @@ export function ProjectDetailPage() {
 
   return (
     <div className="flex" style={{ height: 'calc(100vh - 54px)' }}>
-      {/* 桌面端：左侧固定 Sidebar；移动端：通过 Drawer 展示 */}
-      {isMobile ? (
-        <Drawer open={sidebarOpen} onClose={() => setSidebarOpen(false)} title="功能组" width="sm">
-          <Sidebar
-            project={project}
-            groups={groups ?? []}
-            selectedId={selectedGroupId}
-            onSelect={(id) => { setSelectedGroup(id); setSidebarOpen(false); }}
-            onCreateGroup={() => { setCreatingGroup(true); setSidebarOpen(false); }}
-            onEditGroup={(g) => { setEditingGroup(g); setSidebarOpen(false); }}
-            search={sidebarSearch}
-            setSearch={setSidebarSearch}
-            embedded
-          />
-        </Drawer>
-      ) : (
-        <Sidebar
-          project={project}
-          groups={groups ?? []}
-          selectedId={selectedGroupId}
-          onSelect={(id) => setSelectedGroup(id)}
-          onCreateGroup={() => setCreatingGroup(true)}
-          onEditGroup={(g) => setEditingGroup(g)}
-          search={sidebarSearch}
-          setSearch={setSidebarSearch}
-        />
-      )}
+      <Sidebar
+        project={project}
+        groups={groups ?? []}
+        selectedId={selectedGroupId}
+        onSelect={(id) => setSelectedGroup(id)}
+        onCreateGroup={() => setCreatingGroup(true)}
+        onEditGroup={(g) => setEditingGroup(g)}
+        search={sidebarSearch}
+        setSearch={setSidebarSearch}
+      />
 
       <main className="flex-1 overflow-y-auto bg-canvas">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-white/85 px-4 md:px-6 py-3 backdrop-blur">
-          {/* 移动端：显示功能组切换按钮 */}
-          {isMobile && (
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="flex items-center gap-1.5 rounded-md border border-line bg-white px-3 py-1.5 text-[12.5px] text-ink shadow-sm hover:bg-canvas-subtle"
-            >
-              <Layers className="h-3.5 w-3.5" />
-              {activeGroup?.name ?? '选择功能组'}
-              <ChevronDown className="h-3 w-3 text-ink-subtle" />
-            </button>
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-white/85 px-6 py-3 backdrop-blur">
           <Breadcrumb
             items={[
               { label: '项目', to: '/projects' },
@@ -214,7 +181,6 @@ function Sidebar({
   onEditGroup,
   search,
   setSearch,
-  embedded,
 }: {
   project: { id: number; name: string };
   groups: FeatureGroup[];
@@ -224,7 +190,6 @@ function Sidebar({
   onEditGroup: (g: FeatureGroup) => void;
   search: string;
   setSearch: (v: string) => void;
-  embedded?: boolean;
 }) {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -239,11 +204,8 @@ function Sidebar({
 
   return (
     <aside
-      className={cn(
-        'flex flex-shrink-0 flex-col border-r border-line bg-white',
-        embedded ? 'flex-1' : 'w-[240px]',
-      )}
-      style={embedded ? undefined : { height: 'calc(100vh - 54px)' }}
+      className="flex w-[240px] flex-shrink-0 flex-col border-r border-line bg-white"
+      style={{ height: 'calc(100vh - 54px)' }}
     >
       <div className="border-b border-line px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
@@ -757,64 +719,51 @@ function ApiListPanel({
           />
         ) : (
           <>
-            {/* 桌面端：表格视图 */}
-            <div className="hidden md:block overflow-x-auto">
-            <table className="params-table">
-              <thead>
-                <tr>
-                  <th style={{ width: 32 }}>
-                    <input
-                      type="checkbox"
-                      checked={
-                        batchMode && filtered.length > 0 && selectedIds.size === filtered.length
-                      }
-                      onChange={() => batchMode && toggleSelectAll()}
-                      disabled={!batchMode}
-                      className={cn(
-                        'h-3.5 w-3.5 rounded accent-ink',
-                        batchMode ? 'cursor-pointer' : 'cursor-default opacity-0',
-                      )}
+            <div className="overflow-x-auto">
+              <table className="params-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 32 }}>
+                      <input
+                        type="checkbox"
+                        checked={
+                          batchMode && filtered.length > 0 && selectedIds.size === filtered.length
+                        }
+                        onChange={() => batchMode && toggleSelectAll()}
+                        disabled={!batchMode}
+                        className={cn(
+                          'h-3.5 w-3.5 rounded accent-ink',
+                          batchMode ? 'cursor-pointer' : 'cursor-default opacity-0',
+                        )}
+                      />
+                    </th>
+                    <th>接口名称 / 描述</th>
+                    <th style={{ width: 200 }}>方法 / 路径</th>
+                    <th style={{ width: 200 }}>特性</th>
+                    <th style={{ width: 70 }}>状态码</th>
+                    <th style={{ width: 70 }}>延迟</th>
+                    <th style={{ width: 70 }}>调用</th>
+                    <th style={{ width: 80 }}>启用</th>
+                    <th style={{ width: 90 }}>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((api) => (
+                    <ApiTableRow
+                      key={api.id}
+                      api={api}
+                      batchMode={batchMode}
+                      selected={selectedIds.has(api.id)}
+                      onToggleSelect={() => batchMode && toggleSelect(api.id)}
+                      onEdit={() => onEditApi(api)}
+                      onTest={() => handleTest(api)}
+                      onCopy={() => handleCopy(api)}
+                      onDelete={() => handleDelete(api)}
+                      onToggle={() => handleToggle(api)}
                     />
-                  </th>
-                  <th>接口名称 / 描述</th>
-                  <th style={{ width: 200 }}>方法 / 路径</th>
-                  <th style={{ width: 200 }}>特性</th>
-                  <th style={{ width: 70 }}>状态码</th>
-                  <th style={{ width: 70 }}>延迟</th>
-                  <th style={{ width: 70 }}>调用</th>
-                  <th style={{ width: 80 }}>启用</th>
-                  <th style={{ width: 90 }}>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((api) => (
-                  <ApiTableRow
-                    key={api.id}
-                    api={api}
-                    batchMode={batchMode}
-                    selected={selectedIds.has(api.id)}
-                    onToggleSelect={() => batchMode && toggleSelect(api.id)}
-                    onEdit={() => onEditApi(api)}
-                    onTest={() => handleTest(api)}
-                    onCopy={() => handleCopy(api)}
-                    onDelete={() => handleDelete(api)}
-                    onToggle={() => handleToggle(api)}
-                  />
-                ))}
-              </tbody>
-            </table>
-            </div>
-
-            {/* 移动端：卡片列表 */}
-            <div className="flex flex-col gap-2 px-3 py-2 md:hidden">
-              {filtered.map((api) => (
-                <ApiCard
-                  key={api.id}
-                  api={api}
-                  onEdit={() => onEditApi(api)}
-                  onToggle={() => handleToggle(api)}
-                />
-              ))}
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             <div className="flex items-center justify-between border-t border-line bg-canvas px-4 py-2.5 text-[12px] text-ink-tertiary">
@@ -906,9 +855,7 @@ function ApiTableRow({
       <td>
         <div className="flex flex-wrap gap-1">
           {api.hasCallback && <span className="tag tag-orange">延迟回调</span>}
-          {api.dataOp !== 'none' && api.dataTable && (
-            <span className="tag tag-pink">数据联动</span>
-          )}
+          {api.dataOp !== 'none' && api.dataTable && <span className="tag tag-pink">数据联动</span>}
           {api.validationRules && Object.keys(api.validationRules).length > 0 && (
             <span className="tag tag-blue">参数校验</span>
           )}
@@ -958,70 +905,6 @@ function ApiTableRow({
         </div>
       </td>
     </tr>
-  );
-}
-
-function ApiCard({
-  api,
-  onEdit,
-  onToggle,
-}: {
-  api: MockApi;
-  onEdit: () => void;
-  onToggle: () => void;
-}) {
-  return (
-    <div
-      className="rounded-lg border border-line bg-white p-3.5 shadow-sm"
-      onClick={onEdit}
-    >
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <MethodBadge method={api.method} />
-            <span className="text-[13.5px] font-semibold text-ink truncate">{api.name}</span>
-          </div>
-          <div className="mt-1 font-mono text-[11.5px] text-ink-tertiary truncate">
-            {api.fullPath || api.path}
-          </div>
-        </div>
-        <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
-          <Switch checked={api.isEnabled} onChange={onToggle} />
-        </div>
-      </div>
-
-      {api.description && (
-        <p className="mb-2 text-[11.5px] text-ink-secondary line-clamp-1">{api.description}</p>
-      )}
-
-      <div className="mb-2.5 flex flex-wrap gap-1">
-        {api.hasCallback && <span className="tag tag-orange">延迟回调</span>}
-        {api.dataOp !== 'none' && api.dataTable && (
-          <span className="tag tag-pink">数据联动</span>
-        )}
-        {api.validationRules && Object.keys(api.validationRules).length > 0 && (
-          <span className="tag tag-blue">参数校验</span>
-        )}
-        {!api.isEnabled && <span className="tag tag-red">已禁用</span>}
-        <span className="tag tag-gray">
-          <TagPill>{api.responseStatus}</TagPill>
-        </span>
-        <span className="text-[11px] text-ink-subtle">{api.responseDelay || 0}ms</span>
-      </div>
-
-      <div className="flex items-center justify-between border-t border-line-subtle pt-2.5">
-        <span className="text-[11px] text-ink-subtle">
-          {api.description ? '' : '—'}
-        </span>
-        <button
-          onClick={(e) => { e.stopPropagation(); onEdit(); }}
-          className="flex items-center gap-1 text-[11.5px] font-medium text-ink hover:underline"
-        >
-          查看详情
-          <ChevronRight className="h-3 w-3" />
-        </button>
-      </div>
-    </div>
   );
 }
 

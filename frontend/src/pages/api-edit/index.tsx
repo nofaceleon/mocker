@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Settings } from 'lucide-react';
 import { ApiError } from '@/lib/api';
-import { Button, Modal, Drawer, IconBtn } from '@/components/ui';
-import { useIsMobile } from '@/lib/use-is-mobile';
+import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   type MockApiPayload,
@@ -55,8 +53,6 @@ export function ApiEditPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | undefined>(undefined);
   const [showSwitcher, setShowSwitcher] = useState(true);
-  const [configNavOpen, setConfigNavOpen] = useState(false);
-  const isMobile = useIsMobile();
 
   const prevApiIdRef = useRef<number | undefined>(undefined);
   useEffect(() => {
@@ -189,49 +185,32 @@ export function ApiEditPage() {
 
   return (
     <div className="relative flex flex-col" style={{ height: 'calc(100vh - 54px)' }}>
-      {/* 桌面端三栏布局 */}
       <div
         className={cn(
           'grid min-h-0 flex-1',
-          // 强制隐藏，不显示
-          isMobile ? 'grid-cols-1' :
-          (showSwitcher && activeGroup && !isNew ? 'lg:grid-cols-[264px_1fr_240px]' : 'lg:grid-cols-[264px_1fr]')
+          showSwitcher && activeGroup && !isNew
+            ? 'lg:grid-cols-[264px_1fr_240px]'
+            : 'lg:grid-cols-[264px_1fr]',
         )}
       >
-        {/* 桌面端：ConfigNav 左侧栏；移动端：隐藏，通过 Drawer + 浮动按钮触发 */}
-        <div className="hidden lg:block">
-          <ConfigNav
-            current={tab}
-            onChange={setTab}
-            method={summary.method}
-            path={summary.path}
-            breadcrumb={[
-              { label: '项目', to: '/projects' },
-              { label: project?.name ?? '...', to: `/projects/${projectId}` },
-              ...(activeGroup ? [{ label: activeGroup.name, to: `/projects/${projectId}` }] : []),
-            ]}
-            onLogClick={() =>
-              navigate(`/logs?projectId=${projectId}${apiId ? `&apiId=${apiId}` : ''}`)
-            }
-            summary={configSummary}
-            featureState={featureState}
-            showSwitcher={showSwitcher}
-            onToggleSwitcher={() => setShowSwitcher(!showSwitcher)}
-          />
-        </div>
-
-        {/* 移动端：浮动配置按钮 */}
-        {isMobile && (
-          <div className="fixed bottom-5 right-5 z-30">
-            <IconBtn
-              onClick={() => setConfigNavOpen(true)}
-              title="配置"
-              className="h-12 w-12 !rounded-full !bg-ink !text-white !shadow-lg hover:!bg-ink/80"
-            >
-              <Settings className="h-5 w-5" />
-            </IconBtn>
-          </div>
-        )}
+        <ConfigNav
+          current={tab}
+          onChange={setTab}
+          method={summary.method}
+          path={summary.path}
+          breadcrumb={[
+            { label: '项目', to: '/projects' },
+            { label: project?.name ?? '...', to: `/projects/${projectId}` },
+            ...(activeGroup ? [{ label: activeGroup.name, to: `/projects/${projectId}` }] : []),
+          ]}
+          onLogClick={() =>
+            navigate(`/logs?projectId=${projectId}${apiId ? `&apiId=${apiId}` : ''}`)
+          }
+          summary={configSummary}
+          featureState={featureState}
+          showSwitcher={showSwitcher}
+          onToggleSwitcher={() => setShowSwitcher(!showSwitcher)}
+        />
 
         {/* 主内容区 */}
         <div className="overflow-y-auto bg-canvas">
@@ -293,8 +272,8 @@ export function ApiEditPage() {
           )}
         </div>
 
-        {/* 桌面端：ApiSwitcherPanel 右侧栏 */}
-        {!isMobile && showSwitcher && activeGroup && !isNew && (
+        {/* 右侧 ApiSwitcherPanel */}
+        {showSwitcher && activeGroup && !isNew && (
           <ApiSwitcherPanel
             projectId={projectId}
             featureGroupId={activeGroup.id}
@@ -304,38 +283,6 @@ export function ApiEditPage() {
           />
         )}
       </div>
-
-      {/* 移动端：ConfigNav Drawer */}
-      {isMobile && (
-        <Drawer
-          open={configNavOpen}
-          onClose={() => setConfigNavOpen(false)}
-          title="接口配置"
-          width="sm"
-        >
-          <div className="-mt-2">
-            <ConfigNav
-              current={tab}
-              onChange={(t) => { setTab(t); setConfigNavOpen(false); }}
-              method={summary.method}
-              path={summary.path}
-              breadcrumb={[
-                { label: '项目', to: '/projects' },
-                { label: project?.name ?? '...', to: `/projects/${projectId}` },
-                ...(activeGroup ? [{ label: activeGroup.name, to: `/projects/${projectId}` }] : []),
-              ]}
-              onLogClick={() => {
-                setConfigNavOpen(false);
-                navigate(`/logs?projectId=${projectId}${apiId ? `&apiId=${apiId}` : ''}`);
-              }}
-              summary={configSummary}
-              featureState={featureState}
-              showSwitcher={false}
-              onToggleSwitcher={undefined}
-            />
-          </div>
-        </Drawer>
-      )}
 
       <Modal
         open={deleteOpen}

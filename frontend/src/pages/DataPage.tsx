@@ -139,7 +139,7 @@ export function DataPage() {
         }
       />
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-3 gap-3">
         <StatCard label="业务表" value={tableList.length} icon={<TableIcon />} />
         <StatCard label="总行数" value={totalRows} hint="当前范围内累计" icon={<DatabaseIcon />} />
         <StatCard
@@ -153,7 +153,7 @@ export function DataPage() {
       </div>
 
       <div className="grid min-h-[500px] grid-cols-12 gap-4">
-        <aside className="col-span-12 md:col-span-3">
+        <aside className="col-span-12 lg:col-span-3">
           <Card
             title={
               <span className="inline-flex items-center gap-2">
@@ -217,7 +217,7 @@ export function DataPage() {
           </Card>
         </aside>
 
-        <section className="col-span-12 md:col-span-9">
+        <section className="col-span-12 lg:col-span-9">
           {selectedTable ? (
             <TableDetail
               tableName={selectedTable}

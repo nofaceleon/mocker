@@ -12,11 +12,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
-import {
-  Card,
-  PageHeader,
-  StatCard,
-} from '@/components/ui';
+import { Card, PageHeader, StatCard } from '@/components/ui';
 import { useCallbackStats } from '@/hooks/queries/use-callback-tasks';
 import { useRequestLogStats } from '@/hooks/queries/use-request-logs';
 import { useProjects } from '@/hooks/queries/use-projects';
@@ -29,7 +25,9 @@ function TrendChart({ data }: { data: TrendPoint[] | null }) {
   if (!data || data.length === 0) {
     return <div className="px-1 py-8 text-center text-[12px] text-ink-subtle">暂无趋势数据</div>;
   }
-  const W = 720, H = 180, pad = 24;
+  const W = 720,
+    H = 180,
+    pad = 24;
   const max = Math.max(1, ...data.map((d) => d.http + d.ws + d.sse));
   const xStep = (W - pad * 2) / Math.max(1, data.length - 1);
   const points = (key: 'http' | 'ws' | 'sse') =>
@@ -155,7 +153,11 @@ function StatusPieChart({
 }
 
 // ---------- 项目调用排行 ----------
-function ProjectRankingCard({ projects }: { projects: Array<{ id: number; name: string; callCount?: number }> }) {
+function ProjectRankingCard({
+  projects,
+}: {
+  projects: Array<{ id: number; name: string; callCount?: number }>;
+}) {
   const sorted = useMemo(() => {
     if (!projects) return [];
     return [...projects]
@@ -165,11 +167,7 @@ function ProjectRankingCard({ projects }: { projects: Array<{ id: number; name: 
   }, [projects]);
 
   if (sorted.length === 0) {
-    return (
-      <div className="py-8 text-center text-[12px] text-ink-subtle">
-        暂无调用数据
-      </div>
-    );
+    return <div className="py-8 text-center text-[12px] text-ink-subtle">暂无调用数据</div>;
   }
 
   const max = sorted[0]?.callCount ?? 1;
@@ -228,10 +226,7 @@ export function StatsPage() {
 
   return (
     <div className="page-container">
-      <PageHeader
-        title="数据统计"
-        description="集中展示调用概览、回调任务和项目调用排行"
-      />
+      <PageHeader title="数据统计" description="集中展示调用概览、回调任务和项目调用排行" />
 
       {/* ========== 区块零：项目概览 ========== */}
       <section className="mb-6">
@@ -239,7 +234,7 @@ export function StatsPage() {
           <BarChart3 className="h-4 w-4 text-ink-tertiary" />
           项目概览
         </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard label="项目总数" value={projectStats.projects} icon={<LayoutGrid />} />
           <StatCard label="Mock 接口" value={projectStats.apis} icon={<Zap />} />
           <StatCard label="累计调用" value={formatNumber(projectStats.calls)} icon={<Activity />} />
@@ -255,14 +250,14 @@ export function StatsPage() {
         </h2>
 
         {logLoading ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
               <StatCard key={i} label="—" value="—" icon={<Activity />} />
             ))}
           </div>
         ) : (
           <>
-            <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatCard
                 label="总调用次数"
                 value={logStats ? formatNumber(logStats.total) : '—'}
@@ -330,7 +325,7 @@ export function StatsPage() {
           回调任务
         </h2>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-3 gap-3 lg:grid-cols-5">
           <StatCard label="待发送" value={callbackStats?.pending ?? 0} icon={<Clock />} />
           <StatCard label="今日已发送" value={callbackStats?.sent ?? 0} icon={<CheckCircle2 />} />
           <StatCard label="失败任务" value={callbackStats?.failed ?? 0} icon={<XCircle />} />

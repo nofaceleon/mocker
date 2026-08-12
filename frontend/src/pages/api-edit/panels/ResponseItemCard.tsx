@@ -161,9 +161,7 @@ export function ResponseItemCard({
               <Star className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" fill="currentColor" />
             </span>
           )}
-          <span className="text-[11px] text-ink-subtle truncate hidden sm:inline">
-            {conditionSummary}
-          </span>
+          <span className="text-[11px] text-ink-subtle truncate inline">{conditionSummary}</span>
         </button>
 
         <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
