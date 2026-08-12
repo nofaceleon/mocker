@@ -8,6 +8,8 @@ export type RequestContext = {
   /** 原始 query 参数（key 未转驼峰），用于 SQL where 条件等需要原始列名的场景 */
   originalQuery: Record<string, unknown>;
   body: Record<string, unknown>;
+  /** 原始 body（key 未转驼峰），用于日志等需要忠实反映真实请求的场景 */
+  originalBody: Record<string, unknown>;
   headers: Record<string, string>;
   raw: { method: string; path: string; url: string };
 };
@@ -25,6 +27,7 @@ export function extractContext(
     query: normalizeKeys(req.query as Record<string, unknown> | undefined),
     originalQuery: (req.query as Record<string, unknown> | undefined) ?? {},
     body: normalizeKeys(req.body as Record<string, unknown> | undefined),
+    originalBody: (req.body as Record<string, unknown> | undefined) ?? {},
     headers: pickRelevantHeaders(req.headers as Record<string, string | string[] | undefined>),
     raw: {
       method: req.method,

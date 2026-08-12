@@ -204,6 +204,9 @@ async function onMessage(
     body: (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
       ? parsed
       : { message: parsed }) as Record<string, unknown>,
+    originalBody: (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? parsed
+      : { message: parsed }) as Record<string, unknown>,
     headers: {},
     raw: { method: 'WS', path: url.pathname, url: url.pathname + url.search },
   };
