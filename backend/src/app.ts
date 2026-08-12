@@ -20,7 +20,13 @@ export function createApp(): Express {
 
   app.use(
     cors({
-      origin: config.corsOrigin.split(',').map((s) => s.trim()),
+      origin: (origin, cb) => {
+        const allow = config.corsOrigin.split(',').map((s) => s.trim());
+        // 同源请求（无 Origin）或非生产环境：放行任意 origin
+        // 函数式回显 origin 兼容 credentials: true（不能用 * 字面量）
+        if (!origin || config.env !== 'production') return cb(null, true);
+        return cb(null, allow.includes(origin));
+      },
       credentials: true,
     }),
   );
