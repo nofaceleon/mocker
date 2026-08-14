@@ -460,10 +460,7 @@ function TablePreview({ tableName }: { tableName: string }) {
 
   if (notFound) {
     return (
-      <div
-        className="mt-3 flex items-center gap-2 rounded-md border px-4 py-3 text-[12px]"
-        style={{ borderColor: '#FEF3C7', backgroundColor: '#FEFCE8', color: '#A16207' }}
-      >
+      <div className="mt-3 flex items-center gap-2 rounded-md border border-warning-border bg-warning-soft px-4 py-3 text-[12px] text-warning-text">
         <Database className="h-3.5 w-3.5" />表 <b className="font-mono">{tableName}</b> 不存在
       </div>
     );
@@ -492,7 +489,7 @@ function TablePreview({ tableName }: { tableName: string }) {
           <button
             type="button"
             onClick={handleCopyAllFields}
-            className="inline-flex items-center gap-1 rounded border border-line bg-white px-2 py-1 text-[11px] text-ink-secondary transition-colors hover:bg-canvas-subtle"
+            className="inline-flex items-center gap-1 rounded border border-line bg-canvas-elevated px-2 py-1 text-[11px] text-ink-secondary transition-colors hover:bg-canvas-subtle"
             title="复制写入模板"
           >
             <Copy className="h-3 w-3" />
@@ -507,7 +504,7 @@ function TablePreview({ tableName }: { tableName: string }) {
             key={c.name}
             type="button"
             onClick={() => handleCopyFieldName(c.name)}
-            className="inline-flex items-center gap-1 rounded border border-line bg-white px-1.5 py-0.5 font-mono text-[10.5px] text-ink-secondary transition-colors hover:bg-canvas-subtle hover:border-ink-subtle"
+            className="inline-flex items-center gap-1 rounded border border-line bg-canvas-elevated px-1.5 py-0.5 font-mono text-[10.5px] text-ink-secondary transition-colors hover:bg-canvas-subtle hover:border-ink-subtle"
             title={`点击复制字段名: ${c.name}`}
           >
             {c.name}
@@ -522,7 +519,7 @@ function TablePreview({ tableName }: { tableName: string }) {
       {rows.length > 0 && (
         <div className="px-4 py-2.5">
           <div className="mb-2 text-[11px] text-ink-tertiary">样本数据 (前 {rows.length} 行)</div>
-          <div className="overflow-x-auto rounded border border-line bg-white scrollbar-modern">
+          <div className="overflow-x-auto rounded border border-line bg-canvas-elevated scrollbar-modern">
             <table className="params-table !text-[11px]">
               <thead>
                 <tr>

@@ -98,7 +98,7 @@ export function ConfigNav({
   ];
 
   return (
-    <aside className="flex flex-col overflow-y-auto border-r border-line bg-white scrollbar-modern">
+    <aside className="flex flex-col overflow-y-auto border-r border-line bg-canvas-elevated scrollbar-modern">
       <div className="border-b border-line-subtle px-4 py-3.5">
         {breadcrumb && breadcrumb.length > 0 && (
           <div className="mb-3 text-[12px]">
@@ -112,7 +112,7 @@ export function ConfigNav({
         </div>
 
         {/* 端点展示条 */}
-        <div className="mb-3 flex items-center gap-2 rounded-lg bg-[#F8F8FA] px-3 py-2">
+        <div className="mb-3 flex items-center gap-2 rounded-lg bg-canvas-subtle px-3 py-2">
           <MethodBadge method={method} className="!text-[11px] !py-[1px] !px-[6px]" />
           <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-ink-secondary">
             {path || '/'}
@@ -214,7 +214,7 @@ function NavItem({ tab, active, onClick }: { tab: TabDef; active: boolean; onCli
         className={cn(
           'grid h-[22px] w-[22px] flex-shrink-0 place-items-center rounded transition-colors',
           active
-            ? 'bg-white/15 text-ink-inverse'
+            ? 'bg-canvas-elevated/15 text-ink-inverse'
             : 'text-ink-tertiary group-hover:text-ink-secondary',
         )}
       >
@@ -226,7 +226,7 @@ function NavItem({ tab, active, onClick }: { tab: TabDef; active: boolean; onCli
           className={cn(
             'rounded-full px-1.5 py-px text-[10px] font-medium',
             active
-              ? 'border border-transparent bg-white/15 text-ink-inverse'
+              ? 'border border-transparent bg-canvas-elevated/15 text-ink-inverse'
               : tab.badge === 'ON'
                 ? 'border border-success-border bg-success-soft text-success-text'
                 : 'border border-line bg-canvas-subtle text-ink-secondary',

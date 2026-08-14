@@ -29,7 +29,7 @@ export function Drawer({ open, onClose, title, width = 'md', children, footer }:
         role="dialog"
         aria-modal="true"
         className={cn(
-          'absolute right-0 top-0 flex h-full max-w-full flex-col rounded-l-lg bg-white shadow-lg',
+          'absolute right-0 top-0 flex h-full max-w-full flex-col rounded-l-lg bg-canvas-elevated shadow-lg',
           widthClasses[width],
         )}
       >

@@ -75,7 +75,7 @@ function LogRowView({
 }) {
   const { dateStr, timeStr, msStr } = formatDateParts(log.createdAt);
   return (
-    <tr onClick={onSelect} className={selected ? '' : 'cursor-pointer hover:bg-canvas-subtle'} style={selected ? { backgroundColor: '#f5f3ff' } : undefined}>
+    <tr onClick={onSelect} className={selected ? 'row-selected' : 'cursor-pointer hover:bg-canvas-subtle'}>
       <td onClick={(e) => e.stopPropagation()}>
         <input
           type="checkbox"

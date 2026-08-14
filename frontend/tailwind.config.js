@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
@@ -23,33 +24,55 @@ export default {
         mono: ['"JetBrains Mono"', '"SF Mono"', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       colors: {
-        // 背景层
+        // 背景层（绑定 CSS 变量，支持深色模式）
         canvas: {
-          DEFAULT: '#FAFAFA',
-          elevated: '#FFFFFF',
-          subtle: '#F4F4F5',
-          deep: '#09090B',
+          DEFAULT: 'rgb(var(--canvas-bg) / <alpha-value>)',
+          elevated: 'rgb(var(--canvas-elevated) / <alpha-value>)',
+          subtle: 'rgb(var(--canvas-subtle) / <alpha-value>)',
+          muted: 'rgb(var(--canvas-muted) / <alpha-value>)',
+          deep: 'rgb(var(--canvas-deep) / <alpha-value>)',
+          'deep-fg': 'rgb(var(--canvas-deep-foreground) / <alpha-value>)',
         },
         // 边框
         line: {
-          DEFAULT: '#E4E4E7',
-          subtle: '#F4F4F5',
-          strong: '#D4D4D8',
+          DEFAULT: 'rgb(var(--line-default) / <alpha-value>)',
+          subtle: 'rgb(var(--line-subtle) / <alpha-value>)',
+          strong: 'rgb(var(--line-strong) / <alpha-value>)',
         },
         // 文字
         ink: {
-          DEFAULT: '#09090B',
-          secondary: '#52525B',
-          tertiary: '#71717A',
-          subtle: '#A1A1AA',
-          disabled: '#D4D4D8',
-          inverse: '#FAFAFA',
+          DEFAULT: 'rgb(var(--ink-default) / <alpha-value>)',
+          secondary: 'rgb(var(--ink-secondary) / <alpha-value>)',
+          tertiary: 'rgb(var(--ink-tertiary) / <alpha-value>)',
+          subtle: 'rgb(var(--ink-subtle) / <alpha-value>)',
+          disabled: 'rgb(var(--ink-disabled) / <alpha-value>)',
+          inverse: 'rgb(var(--ink-inverse) / <alpha-value>)',
         },
         // 状态色
-        success: { DEFAULT: '#15803D', soft: '#F0FDF4', border: '#DCFCE7', text: '#166534' },
-        warning: { DEFAULT: '#A16207', soft: '#FEFCE8', border: '#FEF3C7', text: '#854D0E' },
-        danger: { DEFAULT: '#B91C1C', soft: '#FEF2F2', border: '#FEE2E2' },
-        info: { DEFAULT: '#0E7490', soft: '#ECFEFF', border: '#CFFAFE' },
+        success: {
+          DEFAULT: 'rgb(var(--success-fg) / <alpha-value>)',
+          soft: 'rgb(var(--success-bg) / <alpha-value>)',
+          border: 'rgb(var(--success-border) / <alpha-value>)',
+          text: 'rgb(var(--success-text) / <alpha-value>)',
+        },
+        warning: {
+          DEFAULT: 'rgb(var(--warning-fg) / <alpha-value>)',
+          soft: 'rgb(var(--warning-bg) / <alpha-value>)',
+          border: 'rgb(var(--warning-border) / <alpha-value>)',
+          text: 'rgb(var(--warning-text) / <alpha-value>)',
+        },
+        danger: {
+          DEFAULT: 'rgb(var(--danger-fg) / <alpha-value>)',
+          soft: 'rgb(var(--danger-bg) / <alpha-value>)',
+          border: 'rgb(var(--danger-border) / <alpha-value>)',
+          text: 'rgb(var(--danger-text) / <alpha-value>)',
+        },
+        info: {
+          DEFAULT: 'rgb(var(--info-fg) / <alpha-value>)',
+          soft: 'rgb(var(--info-bg) / <alpha-value>)',
+          border: 'rgb(var(--info-border) / <alpha-value>)',
+          text: 'rgb(var(--info-text) / <alpha-value>)',
+        },
         // 金色（高端金：奶油金 → 香槟金 → 琥珀金 → 尊贵金）
         gold: {
           50: '#FFFBEB',
@@ -64,13 +87,13 @@ export default {
           900: '#78350F',
         },
         // HTTP 方法
-        'm-get': { DEFAULT: '#0E7490', bg: '#ECFEFF' },
-        'm-post': { DEFAULT: '#15803D', bg: '#F0FDF4' },
-        'm-put': { DEFAULT: '#A16207', bg: '#FEFCE8' },
-        'm-delete': { DEFAULT: '#B91C1C', bg: '#FEF2F2' },
-        'm-patch': { DEFAULT: '#6D28D9', bg: '#F5F3FF' },
-        'm-ws': { DEFAULT: '#0F766E', bg: '#F0FDFA' },
-        'm-sse': { DEFAULT: '#BE185D', bg: '#FDF2F8' },
+        'm-get': { DEFAULT: 'rgb(var(--info-fg) / <alpha-value>)', bg: 'rgb(var(--info-bg) / <alpha-value>)' },
+        'm-post': { DEFAULT: 'rgb(var(--success-fg) / <alpha-value>)', bg: 'rgb(var(--success-bg) / <alpha-value>)' },
+        'm-put': { DEFAULT: 'rgb(var(--warning-fg) / <alpha-value>)', bg: 'rgb(var(--warning-bg) / <alpha-value>)' },
+        'm-delete': { DEFAULT: 'rgb(var(--danger-fg) / <alpha-value>)', bg: 'rgb(var(--danger-bg) / <alpha-value>)' },
+        'm-patch': { DEFAULT: 'rgb(124 58 237 / <alpha-value>)', bg: 'rgb(124 58 237 / 0.12 / <alpha-value>)' },
+        'm-ws': { DEFAULT: 'rgb(15 118 110 / <alpha-value>)', bg: 'rgb(15 118 110 / 0.1 / <alpha-value>)' },
+        'm-sse': { DEFAULT: 'rgb(190 24 93 / <alpha-value>)', bg: 'rgb(190 24 93 / 0.1 / <alpha-value>)' },
       },
       borderRadius: {
         sm: '4px',
@@ -80,11 +103,11 @@ export default {
         xl: '12px',
       },
       boxShadow: {
-        xs: '0 1px 1px rgba(0,0,0,0.03)',
-        sm: '0 1px 2px rgba(0,0,0,0.04)',
-        DEFAULT: '0 2px 4px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.04)',
-        md: '0 2px 4px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.04)',
-        lg: '0 8px 16px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04)',
+        xs: 'var(--shadow-card)',
+        sm: 'var(--shadow-sm)',
+        DEFAULT: 'var(--shadow-md)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
         xl: '0 16px 32px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04)',
       },
       keyframes: {

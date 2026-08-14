@@ -73,7 +73,7 @@ export function FilterChip<T extends string>({
           h,
           active
             ? 'border-ink bg-ink/[0.04] text-ink'
-            : 'border-line bg-white text-ink-secondary hover:border-line-strong hover:text-ink',
+            : 'border-line bg-canvas-elevated text-ink-secondary hover:border-line-strong hover:text-ink',
         )}
       >
         <span className="text-ink-tertiary">{label}</span>
@@ -107,7 +107,7 @@ export function FilterChip<T extends string>({
       {open && (
         <div
           className={cn(
-            'absolute top-full z-30 mt-1.5 min-w-[160px] overflow-hidden rounded-lg border border-line bg-white shadow-lg',
+            'absolute top-full z-30 mt-1.5 min-w-[160px] overflow-hidden rounded-lg border border-line bg-canvas-elevated shadow-lg',
             align === 'right' ? 'right-0' : 'left-0',
           )}
         >

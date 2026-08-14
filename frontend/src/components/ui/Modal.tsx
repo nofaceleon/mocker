@@ -29,7 +29,7 @@ export function Modal({ open, onClose, title, footer, width = 'md', children }: 
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative z-10 w-full overflow-hidden rounded-lg bg-white shadow-lg',
+          'relative z-10 w-full overflow-hidden rounded-lg bg-canvas-elevated shadow-lg',
           widthClasses[width],
         )}
       >

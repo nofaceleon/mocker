@@ -10,6 +10,8 @@ import {
   BarChart3,
   PanelLeftClose,
   PanelLeftOpen,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { Topbar, UserAvatar, IconBtn } from '@/components/ui';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -28,12 +30,14 @@ export function MainLayout() {
   const location = useLocation();
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
+  const theme = useUiStore((s) => s.theme);
+  const toggleTheme = useUiStore((s) => s.toggleTheme);
 
   return (
     <div className="flex min-h-screen bg-canvas text-ink">
       <aside
         className={cn(
-          'sidebar flex flex-shrink-0 flex-col border-r border-line bg-white transition-[width] duration-200',
+          'sidebar flex flex-shrink-0 flex-col border-r border-line bg-canvas-elevated transition-[width] duration-200',
           sidebarCollapsed ? 'w-16' : 'w-[216px]',
         )}
       >
@@ -99,11 +103,17 @@ export function MainLayout() {
                 <input
                   type="text"
                   placeholder="搜索项目、接口、数据键…"
-                  className="h-8 w-[260px] rounded-md border border-line bg-white pl-8 pr-3 text-[13px] text-ink transition-all placeholder:text-ink-subtle hover:border-line-strong focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
+                  className="h-8 w-[260px] rounded-md border border-line bg-canvas-elevated pl-8 pr-3 text-[13px] text-ink transition-all placeholder:text-ink-subtle hover:border-line-strong focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
                 />
               </div>
               <IconBtn title="通知">
                 <Bell />
+              </IconBtn>
+              <IconBtn
+                title={theme === 'dark' ? '切换为浅色模式' : '切换为深色模式'}
+                onClick={toggleTheme}
+              >
+                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </IconBtn>
             </>
           }

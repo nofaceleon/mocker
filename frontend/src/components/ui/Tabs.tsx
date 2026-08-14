@@ -20,7 +20,7 @@ export function Tabs<T extends string>({
     return (
       <div
         className={cn(
-          'inline-flex items-center gap-0.5 rounded-md border border-line bg-white p-[3px]',
+          'inline-flex items-center gap-0.5 rounded-md border border-line bg-canvas-elevated p-[3px]',
           className,
         )}
       >

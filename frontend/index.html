@@ -5,6 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MockHub</title>
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('mockhub-ui');
+          var t = 'light';
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            t = parsed && parsed.state && parsed.state.theme;
+          }
+          if (t === 'dark') document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-canvas text-ink antialiased">
     <div id="root"></div>

@@ -203,7 +203,7 @@ export function DataPage() {
                       <span
                         className={`rounded-full px-1.5 py-px text-[10px] font-medium ${
                           activeMeta?.name === t.name
-                            ? 'bg-white/15 text-ink-inverse'
+                            ? 'bg-canvas-elevated/15 text-ink-inverse'
                             : 'bg-canvas-subtle text-ink-tertiary'
                         }`}
                       >
@@ -632,7 +632,7 @@ function TableDetail({
           {columns.map((c) => (
             <span
               key={c.name}
-              className="inline-flex items-center gap-1 rounded border border-line bg-white px-1.5 py-0.5 font-mono text-[10.5px] text-ink-secondary"
+              className="inline-flex items-center gap-1 rounded border border-line bg-canvas-elevated px-1.5 py-0.5 font-mono text-[10.5px] text-ink-secondary"
             >
               {c.name}
               <span className="text-ink-subtle">{c.type || '?'}</span>

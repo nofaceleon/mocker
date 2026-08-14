@@ -123,7 +123,7 @@ export function ProjectDetailPage() {
       />
 
       <main className="flex-1 overflow-y-auto bg-canvas">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-white/85 px-6 py-3 backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-canvas-elevated/85 px-6 py-3 backdrop-blur">
           <Breadcrumb
             items={[
               { label: '项目', to: '/projects' },
@@ -204,7 +204,7 @@ function Sidebar({
 
   return (
     <aside
-      className="flex w-[240px] flex-shrink-0 flex-col border-r border-line bg-white"
+      className="flex w-[240px] flex-shrink-0 flex-col border-r border-line bg-canvas-elevated"
       style={{ height: 'calc(100vh - 54px)' }}
     >
       <div className="border-b border-line px-3 py-2.5">
@@ -235,7 +235,7 @@ function Sidebar({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜索功能组…"
-            className="h-7 w-full rounded-md border border-line-subtle bg-canvas-subtle px-2.5 pl-8 text-[12px] placeholder:text-ink-subtle transition-colors hover:border-line focus:border-ink-subtle focus:bg-white focus:outline-none"
+            className="h-7 w-full rounded-md border border-line-subtle bg-canvas-subtle px-2.5 pl-8 text-[12px] placeholder:text-ink-subtle transition-colors hover:border-line focus:border-ink-subtle focus:bg-canvas-elevated focus:outline-none"
           />
         </div>
       </div>
@@ -640,7 +640,7 @@ function ApiListPanel({
       <button
         type="button"
         onClick={onOpenAgentsEdit}
-        className="group mb-3 flex w-full items-center gap-3 rounded-lg border border-violet-200 bg-[linear-gradient(135deg,#F5F3FF_0%,#FAF5FF_55%,#FDF4FF_100%)] px-3.5 py-2.5 text-left shadow-[0_1px_0_rgba(109,40,217,0.06)] transition-all hover:border-violet-300 hover:shadow-[0_2px_8px_rgba(109,40,217,0.1)]"
+        className="purple-recommend-card group mb-3 flex w-full items-center gap-3 rounded-lg border border-violet-200 px-3.5 py-2.5 text-left transition-all hover:border-violet-300 dark:border-violet-800/60 dark:hover:border-violet-700"
       >
         <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-md bg-violet-100 text-violet-700 ring-1 ring-violet-200/80 transition-colors group-hover:bg-violet-200/70">
           <Sparkles className="h-4 w-4" />
@@ -1166,7 +1166,7 @@ function TestResultsModal({
                                 ({prettyBytes(byteSize(result.responseBody))})
                               </span>
                             </div>
-                            <pre className="max-h-[280px] overflow-auto rounded border border-line bg-white p-2 font-mono text-[12px] leading-[1.6] text-ink">
+                            <pre className="max-h-[280px] overflow-auto rounded border border-line bg-canvas-elevated p-2 font-mono text-[12px] leading-[1.6] text-ink">
                               {typeof result.responseBody === 'string'
                                 ? result.responseBody
                                 : JSON.stringify(result.responseBody, null, 2)}

@@ -362,7 +362,7 @@ function UploadPhase({
         <UploadCloud className="mx-auto mb-3 h-8 w-8 text-ink-tertiary" />
         {fileName ? (
           <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-1.5 text-[12.5px] text-ink">
+            <div className="flex items-center gap-2 rounded-md border border-line bg-canvas-elevated px-3 py-1.5 text-[12.5px] text-ink">
               <FileText className="h-3.5 w-3.5 text-ink-secondary" />
               <span>{fileName}</span>
               <button
@@ -720,7 +720,7 @@ function ActionPicker({
     { value: 'skip', label: '跳过', color: 'text-ink-subtle' },
   ];
   return (
-    <div className="inline-flex rounded-md border border-line bg-white p-0.5 text-[11px]">
+    <div className="inline-flex rounded-md border border-line bg-canvas-elevated p-0.5 text-[11px]">
       {options.map((opt) => {
         const selected = action === opt.value;
         // 仅当存在路由冲突时才允许"覆盖"，否则覆盖灰态
@@ -734,7 +734,7 @@ function ActionPicker({
             disabled={disabledOpt}
             className={[
               'rounded px-2 py-0.5 transition-colors',
-              selected ? 'bg-ink text-white' : `${opt.color} hover:bg-canvas-subtle`,
+              selected ? 'bg-ink text-canvas-deep-fg' : `${opt.color} hover:bg-canvas-subtle`,
               disabledOpt ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
             ].join(' ')}
             title={disabledOpt ? '没有可覆盖的目标' : undefined}

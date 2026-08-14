@@ -171,7 +171,7 @@ export function CallbackTasksPage() {
                     setPage(1);
                   }}
                   placeholder="搜索 URL / 接口 / body"
-                  className="h-8 w-[220px] rounded-md border border-line bg-white pl-8 pr-3 text-[13px] outline-none focus:border-ink"
+                  className="h-8 w-[220px] rounded-md border border-line bg-canvas-elevated pl-8 pr-3 text-[13px] outline-none focus:border-ink"
                 />
               </div>
               {apiId !== undefined && (
@@ -570,7 +570,7 @@ function AttemptCard({ attempt }: { attempt: import('@/types/api').CallbackAttem
         : 'border-danger-border bg-danger-soft text-danger-text';
 
   return (
-    <div className="rounded-lg border border-line bg-white p-3">
+    <div className="rounded-lg border border-line bg-canvas-elevated p-3">
       <div className="mb-2.5 flex flex-wrap items-center gap-2">
         <span className="text-[13px] font-semibold text-ink">第 {attempt.attempt} 次</span>
         <span

@@ -110,7 +110,7 @@ export function JsonImportModal({ open, onClose, onImport }: JsonImportModalProp
           <UploadCloud className="mx-auto mb-3 h-8 w-8 text-ink-tertiary" />
           {fileName ? (
             <div className="flex flex-col items-center gap-2">
-              <div className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-1.5 text-[12.5px] text-ink">
+              <div className="flex items-center gap-2 rounded-md border border-line bg-canvas-elevated px-3 py-1.5 text-[12.5px] text-ink">
                 <FileText className="h-3.5 w-3.5 text-ink-secondary" />
                 <span>{fileName}</span>
                 <button

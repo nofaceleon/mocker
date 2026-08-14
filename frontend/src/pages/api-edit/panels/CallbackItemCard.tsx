@@ -114,7 +114,7 @@ export function CallbackItemCard({
   return (
     <div
       className={cn(
-        'rounded-lg border bg-white transition-colors',
+        'rounded-lg border bg-canvas-elevated transition-colors',
         isDragOver ? 'border-primary bg-primary/5' : 'border-border',
         !chainEnabled && 'opacity-60',
         isDragging && 'opacity-40',

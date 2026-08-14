@@ -32,17 +32,22 @@ function TrendChart({ data }: { data: TrendPoint[] | null }) {
             y1={H - pad - p * (H - pad * 2)}
             x2={W - pad}
             y2={H - pad - p * (H - pad * 2)}
-            stroke="#F4F4F5"
+            style={{ stroke: 'rgb(var(--chart-grid))' }}
             strokeWidth="1"
           />
         ))}
         <defs>
           <linearGradient id="httpGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#09090B" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#09090B" stopOpacity="0" />
+            <stop offset="0%" style={{ stopColor: 'rgb(var(--chart-fg))', stopOpacity: 0.18 }} />
+            <stop offset="100%" style={{ stopColor: 'rgb(var(--chart-fg))', stopOpacity: 0 }} />
           </linearGradient>
         </defs>
-        <polyline points={points('http')} fill="none" stroke="#09090B" strokeWidth="1.5" />
+        <polyline
+          points={points('http')}
+          fill="none"
+          style={{ stroke: 'rgb(var(--chart-fg))' }}
+          strokeWidth="1.5"
+        />
         <polygon
           points={`${pad},${H - pad} ${points('http')} ${W - pad},${H - pad}`}
           fill="url(#httpGrad)"
@@ -55,7 +60,7 @@ function TrendChart({ data }: { data: TrendPoint[] | null }) {
             cx={pad + i * xStep}
             cy={H - pad - (d.http / max) * (H - pad * 2)}
             r={2}
-            fill="#09090B"
+            style={{ fill: 'rgb(var(--chart-fg))' }}
           />
         ))}
         {data.map((d, i) => (
@@ -66,7 +71,7 @@ function TrendChart({ data }: { data: TrendPoint[] | null }) {
             textAnchor="middle"
             fontSize="10.5"
             fontFamily="JetBrains Mono, monospace"
-            fill="#A1A1AA"
+            style={{ fill: 'rgb(var(--chart-axis-text))' }}
           >
             {d.date}
           </text>
@@ -118,7 +123,14 @@ function StatusPieChart({
             );
           })}
         </g>
-        <text x="40" y="44" textAnchor="middle" fontSize="13" fontWeight="600" fill="#09090B">
+        <text
+          x="40"
+          y="44"
+          textAnchor="middle"
+          fontSize="13"
+          fontWeight="600"
+          style={{ fill: 'rgb(var(--chart-fg))' }}
+        >
           {formatNumber(total)}
         </text>
       </svg>

@@ -35,7 +35,10 @@ export function ApiSwitcherPanel({
   }, [apis, search]);
 
   return (
-    <aside className="flex min-h-0 flex-col border-l border-line bg-white" style={{ width: 240 }}>
+    <aside
+      className="flex min-h-0 flex-col border-l border-line bg-canvas-elevated"
+      style={{ width: 240 }}
+    >
       <div className="flex items-center justify-between border-b border-line px-3 py-2.5">
         <span className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-ink-tertiary">
           同组接口
@@ -57,7 +60,7 @@ export function ApiSwitcherPanel({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="搜索接口…"
-          className="h-8 w-full rounded-lg border border-line-subtle bg-canvas-subtle px-3 pl-8 text-[12px] placeholder:text-ink-subtle transition-colors hover:border-line focus:border-ink-subtle focus:bg-white focus:outline-none"
+          className="h-8 w-full rounded-lg border border-line-subtle bg-canvas-subtle px-3 pl-8 text-[12px] placeholder:text-ink-subtle transition-colors hover:border-line focus:border-ink-subtle focus:bg-canvas-elevated focus:outline-none"
         />
       </div>
 
@@ -101,11 +104,11 @@ function ApiItem({ api, active, onClick }: { api: MockApi; active: boolean; onCl
             method={api.method}
             className={cn(
               '!text-[10px] !py-[0px] !px-[4px]',
-              active && '!border-transparent !bg-white/15 !text-white',
+              active && '!border-transparent !bg-canvas-deep !text-canvas-deep-fg',
             )}
           />
           <span
-            className={cn('text-[11.5px] font-medium truncate', active ? 'text-white' : 'text-ink')}
+            className={cn('text-[11.5px] font-medium truncate', active ? 'text-canvas-deep-fg' : 'text-ink')}
           >
             {api.name}
           </span>
@@ -113,7 +116,7 @@ function ApiItem({ api, active, onClick }: { api: MockApi; active: boolean; onCl
         <div
           className={cn(
             'mt-1 truncate font-mono text-[10.5px]',
-            active ? 'text-white/70' : 'text-ink-subtle',
+            active ? 'text-canvas-deep-fg/70' : 'text-ink-subtle',
           )}
         >
           {api.path}

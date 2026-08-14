@@ -215,7 +215,7 @@ export function Select({
           'form-select flex w-full items-center justify-between gap-1.5 text-left',
           compact && 'form-select-sm',
           invalid && 'border-danger',
-          open && '!border-ink !bg-white shadow-[0_0_0_3px_rgba(9,9,11,0.08)]',
+          open && '!border-ink !bg-canvas-elevated shadow-[0_0_0_3px_rgba(9,9,11,0.08)]',
           disabled && 'cursor-not-allowed',
         )}
       >
@@ -238,7 +238,7 @@ export function Select({
             tabIndex={-1}
             style={menuStyle}
             onKeyDown={onListKeyDown}
-            className="overflow-auto rounded-lg border border-line bg-white py-1 shadow-[0_8px_30px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] outline-none scrollbar-modern"
+            className="overflow-auto rounded-lg border border-line bg-canvas-elevated py-1 shadow-[0_8px_30px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] outline-none scrollbar-modern"
           >
             {options.length === 0 ? (
               <div className="px-3 py-2 text-[12px] text-ink-subtle">暂无选项</div>

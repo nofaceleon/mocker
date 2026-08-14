@@ -187,7 +187,7 @@ export function ScriptPanel({ formData, onChange, onSave, saving }: ScriptPanelP
 
         <div className="mt-2.5">
           <div className="mb-0 flex items-center gap-2 rounded-t-md border border-b-0 border-[#27272A] bg-[#1f1f23] px-3 py-1.5 text-[11px]">
-            <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[#A1A1AA]">
+            <span className="rounded bg-canvas-elevated/10 px-1.5 py-0.5 font-mono text-[#A1A1AA]">
               JavaScript
             </span>
             <span style={{ color: '#52525B' }}>对象：</span>

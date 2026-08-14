@@ -19,12 +19,12 @@ export function StatCard({
   return (
     <div
       className={cn(
-        'flex items-center gap-3.5 rounded-lg border border-line bg-white p-4 transition-all hover:border-line-strong hover:shadow-sm',
+        'flex items-center gap-3.5 rounded-lg border border-line bg-canvas-elevated p-4 transition-all hover:border-line-strong hover:shadow-sm',
         className,
       )}
     >
       {icon && (
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[9px] bg-canvas-deep text-white [&>svg]:h-[18px] [&>svg]:w-[18px]">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[9px] bg-canvas-deep text-canvas-deep-fg [&>svg]:h-[18px] [&>svg]:w-[18px]">
           {icon}
         </div>
       )}

@@ -259,7 +259,7 @@ function ProjectCard({
   return (
     <div
       onClick={onOpen}
-      className="group relative cursor-pointer rounded-lg border border-line bg-white p-[18px] transition-all hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lg"
+      className="group relative cursor-pointer rounded-lg border border-line bg-canvas-elevated p-[18px] transition-all hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lg"
     >
       <div className="mb-1 flex items-center gap-2 text-[15px] font-semibold tracking-[-0.015em] text-ink">
         {project.name}
@@ -341,7 +341,7 @@ function CreateCard({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[222px] flex-col items-center justify-center rounded-lg border-[1.5px] border-dashed border-line-strong bg-transparent p-[18px] text-ink-tertiary transition-all hover:border-ink hover:bg-white hover:text-ink"
+      className="flex min-h-[222px] flex-col items-center justify-center rounded-lg border-[1.5px] border-dashed border-line-strong bg-transparent p-[18px] text-ink-tertiary transition-all hover:border-ink hover:bg-canvas-elevated hover:text-ink"
     >
       <Plus className="mb-3 h-7 w-7" strokeWidth={1.5} />
       <span className="text-[13px] font-medium">新建项目</span>
@@ -617,7 +617,7 @@ function ImportAlertPanel({ alert }: { alert: ImportAlert }) {
   return (
     <div className="overflow-hidden rounded-lg border border-danger-border bg-danger-soft">
       <div className="flex items-start gap-2.5 px-3.5 py-3">
-        <div className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/80 text-danger">
+        <div className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-canvas-elevated/80 text-danger">
           <AlertTriangle className="h-3.5 w-3.5" />
         </div>
         <div className="min-w-0 flex-1">
@@ -629,7 +629,7 @@ function ImportAlertPanel({ alert }: { alert: ImportAlert }) {
       </div>
 
       {alert.routes && alert.routes.length > 0 && (
-        <div className="border-t border-danger-border/60 bg-white/70 px-3 py-2.5">
+        <div className="border-t border-danger-border/60 bg-canvas-elevated/70 px-3 py-2.5">
           <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-danger/70">
             冲突路由
           </div>
@@ -637,7 +637,7 @@ function ImportAlertPanel({ alert }: { alert: ImportAlert }) {
             {alert.routes.map((r, i) => (
               <li
                 key={`${r.method}:${r.path}:${i}`}
-                className="rounded-md border border-line bg-white px-2.5 py-2 shadow-sm"
+                className="rounded-md border border-line bg-canvas-elevated px-2.5 py-2 shadow-sm"
               >
                 <div className="flex items-center gap-2">
                   <MethodBadge method={(r.method as HttpMethod) || 'GET'} />
@@ -828,7 +828,7 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
           <UploadCloud className="mx-auto mb-3 h-8 w-8 text-ink-tertiary" />
           {fileName ? (
             <div className="flex flex-col items-center gap-2">
-              <div className="flex items-center gap-2 rounded-md border border-line bg-white px-3 py-1.5 text-[12.5px] text-ink">
+              <div className="flex items-center gap-2 rounded-md border border-line bg-canvas-elevated px-3 py-1.5 text-[12.5px] text-ink">
                 <FileText className="h-3.5 w-3.5 shrink-0 text-ink-secondary" />
                 <span className="max-w-[240px] truncate">{fileName}</span>
                 <button
@@ -876,7 +876,7 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
         {displayAlert && <ImportAlertPanel alert={displayAlert} />}
 
         {bundle && (
-          <div className="overflow-hidden rounded-lg border border-line bg-white">
+          <div className="overflow-hidden rounded-lg border border-line bg-canvas-elevated">
             <div className="flex items-start gap-3 border-b border-line-subtle px-4 py-3">
               <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-canvas-subtle text-ink">
                 <FolderTree className="h-4 w-4" />
@@ -941,7 +941,7 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
                       ? m.danger
                         ? 'border-danger bg-danger-soft/40 ring-1 ring-danger/30'
                         : 'border-ink bg-canvas-subtle ring-1 ring-ink/20'
-                      : 'border-line bg-white hover:border-ink-tertiary hover:bg-canvas-subtle/40',
+                      : 'border-line bg-canvas-elevated hover:border-ink-tertiary hover:bg-canvas-subtle/40',
                   ].join(' ')}
                 >
                   <div className="flex items-center gap-1.5">

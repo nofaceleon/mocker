@@ -373,7 +373,7 @@ function CallbackPanelForm({
           type="button"
           onClick={removeAll}
           disabled={items.length === 0 || deleteAllMut.isPending}
-          className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-[12.5px] text-danger-text transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-md border border-line bg-canvas-elevated px-3 py-1.5 text-[12.5px] text-danger-text transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Trash2 className="h-3.5 w-3.5" />
           清空全部
