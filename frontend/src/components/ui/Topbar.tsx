@@ -10,12 +10,7 @@ export type TopbarProps = {
 export function Topbar({ brand, nav, right }: TopbarProps) {
   return (
     <header className="topbar">
-      {brand ?? (
-        <a href="/" className="brand">
-          <div className="brand-mark">M</div>
-          <span>Mock Studio</span>
-        </a>
-      )}
+      {brand}
       {nav}
       <div className="ml-auto flex items-center gap-1.5">{right}</div>
     </header>

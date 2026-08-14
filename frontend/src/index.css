@@ -893,34 +893,48 @@
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
   }
 
-  /* ======== 顶部导航菜单 ======== */
-  .nav-menu {
-    display: flex;
-    gap: 2px;
-    margin-left: 28px;
+  /* ======== 左侧边栏 ======== */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    z-index: 90;
   }
 
-  .nav-menu a {
-    padding: 6px 11px;
+  /* ======== 侧边栏导航菜单 ======== */
+  .side-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .side-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
     color: #71717a;
     font-size: 13px;
-    border-radius: 5px;
+    border-radius: 6px;
     font-weight: 450;
     transition: all 0.15s;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
+    white-space: nowrap;
   }
 
-  .nav-menu a:hover {
+  .side-nav-item:hover {
     color: #09090b;
     background: #f4f4f5;
   }
 
-  .nav-menu a.active {
+  .side-nav-item.active {
     color: #09090b;
     background: #f4f4f5;
     font-weight: 500;
+  }
+
+  .side-nav-item.collapsed {
+    justify-content: center;
+    padding: 7px 0;
   }
 
   /* ======== 面包屑 ======== */
