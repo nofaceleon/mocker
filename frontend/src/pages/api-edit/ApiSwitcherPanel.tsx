@@ -35,7 +35,7 @@ export function ApiSwitcherPanel({
   }, [apis, search]);
 
   return (
-    <aside className="flex flex-col border-l border-line bg-white" style={{ width: 240 }}>
+    <aside className="flex min-h-0 flex-col border-l border-line bg-white" style={{ width: 240 }}>
       <div className="flex items-center justify-between border-b border-line px-3 py-2.5">
         <span className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-ink-tertiary">
           同组接口
