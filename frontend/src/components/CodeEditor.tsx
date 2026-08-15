@@ -1,5 +1,7 @@
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { forwardRef, useId, useImperativeHandle, useRef } from 'react';
+import { IndentIncrease } from 'lucide-react';
+import { toast } from 'sonner';
 import type { editor as MonacoEditor } from 'monaco-editor';
 import { cn } from '@/lib/cn';
 
@@ -81,6 +83,36 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
     getElement: () => containerRef.current,
   }));
 
+  const isFormattable = !isReadOnly && (language === 'javascript' || language === 'json');
+
+  const formatDocument = async () => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    if (language === 'json') {
+      // JSON：本地确定性格式化，不依赖 monaco worker
+      const raw = ed.getValue();
+      if (!raw.trim()) return;
+      try {
+        const parsed = JSON.parse(raw);
+        const model = ed.getModel();
+        if (!model) return;
+        ed.executeEdits('format', [
+          { range: model.getFullModelRange(), text: JSON.stringify(parsed, null, 2) },
+        ]);
+      } catch (e) {
+        toast.error('JSON 格式化失败：' + (e instanceof Error ? e.message : '语法错误'));
+      }
+      return;
+    }
+    // JavaScript：monaco 内置格式化（TypeScript 语言服务）
+    const action = ed.getAction('editor.action.formatDocument');
+    if (action) {
+      await action.run();
+    } else {
+      toast.error('当前编辑器暂不支持格式化');
+    }
+  };
+
   const handleMount: OnMount = (ed, monaco) => {
     editorRef.current = ed;
     ensureTheme(monaco);
@@ -117,12 +149,23 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
       ref={containerRef}
       tabIndex={-1}
       className={cn(
-        'overflow-hidden rounded-md border bg-[#18181B] outline-none',
+        'group relative overflow-hidden rounded-md border bg-[#18181B] outline-none',
         invalid ? 'border-danger' : 'border-[#27272A]',
         disabled && 'pointer-events-none opacity-60',
         className,
       )}
     >
+      {isFormattable && (
+        <button
+          type="button"
+          onClick={formatDocument}
+          title="格式化代码（Shift+Alt+F）"
+          className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-md border border-[#27272A] bg-[#1f1f23] px-1.5 py-1 text-[11px] text-[#A1A1AA] opacity-0 transition-opacity hover:border-[#3F3F46] hover:text-[#E4E4E7] focus-visible:opacity-100 group-hover:opacity-100"
+        >
+          <IndentIncrease className="h-3 w-3" />
+          格式化
+        </button>
+      )}
       <Editor
         height={resolvedHeight}
         language={language}

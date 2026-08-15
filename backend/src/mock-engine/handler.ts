@@ -6,7 +6,6 @@ import { requestLogs, callbackConfigs, type MockApi } from '../db/schema.js';
 import { logger } from '../utils/logger.js';
 import {
   matchBest,
-  matchSingle,
   findExactPathConflicts,
   buildRouteConflict,
   type Candidate,
@@ -116,8 +115,33 @@ export async function executeMockApi(
     const routeConflict = buildRouteConflict(api, others, { forced: true });
     const path = req.path || '/';
     const compiled = compileRoute(api.path);
-    const matched = matchSingle({ api, compiled }, api.method, path);
-    const pathParams = matched?.params ?? {};
+    // 只校验 path 模板本身（不检查 isEnabled / method：method 由 fakeReq 构造保证一致，
+    // 禁用中的接口也允许先测后启用）。匹配失败时模拟真实引擎的 404，
+    // 避免在线测试里改了路径仍照常执行。
+    const m = compiled.regex.exec(path);
+    if (!m) {
+      sendNotFound(res, api.method, path);
+      writeLogSafely({
+        apiId: api.id,
+        requestMethod: api.method,
+        requestPath: path,
+        requestParams: req.query,
+        requestBody: req.body,
+        requestHeaders: sanitizeHeaders(req.headers as Record<string, string | string[]>),
+        responseStatus: 404,
+        responseBody: { code: 'NOT_FOUND', message: `No mock matched ${api.method} ${path}` },
+        responseTime: Date.now() - start,
+        clientIp: meta.clientIp,
+        requestId: meta.requestId,
+        format: 'http',
+      });
+      return null;
+    }
+    const pathParams: Record<string, string> = {};
+    compiled.paramNames.forEach((name, idx) => {
+      const value = m[idx + 1];
+      if (value !== undefined) pathParams[name] = decodeURIComponent(value);
+    });
     await executeMatched(req, res, api, pathParams, start, meta, routeConflict);
     return routeConflict;
   } catch (err) {
