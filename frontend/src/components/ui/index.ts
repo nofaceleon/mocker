@@ -16,4 +16,5 @@ export { Switch, Tag, TagPill, LiveDot } from './Atoms';
 export { CodeBlock, CopyButton } from './CodeBlock';
 export { FilterChip, type FilterChipOption } from './FilterChip';
 export { Sparkline } from './Sparkline';
+export { Dropdown, type DropdownItem } from './Dropdown';
 export { FormField } from '../FormField';

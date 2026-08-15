@@ -10,6 +10,7 @@ import {
   FolderOpen,
   Layers,
   Loader2,
+  MoreHorizontal,
   MoreVertical,
   Pencil,
   Play,
@@ -23,21 +24,21 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  Breadcrumb,
   Button,
   Card,
+  Dropdown,
   Empty,
   FormField,
   Input,
   MethodBadge,
   Modal,
-  PageHeader,
   Select,
   Switch,
   Textarea,
   confirm,
   IconBtn,
   TagPill,
+  type DropdownItem,
 } from '@/components/ui';
 import {
   useCreateFeatureGroup,
@@ -123,20 +124,9 @@ export function ProjectDetailPage() {
       />
 
       <main className="flex-1 overflow-y-auto bg-canvas">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-canvas-elevated/85 px-6 py-3 backdrop-blur">
-          <Breadcrumb
-            items={[
-              { label: '项目', to: '/projects' },
-              { label: project.name, to: `/projects/${project.id}` },
-              ...(activeGroup ? [{ label: activeGroup.name, current: true }] : []),
-            ]}
-          />
-        </div>
-
         {activeGroup ? (
           <ApiListPanel
             projectId={pid}
-            projectName={project.name}
             group={activeGroup}
             onCreateApi={() => navigate(`/projects/${pid}/apis/new?gid=${activeGroup.id}`)}
             onEditApi={(api) => navigate(`/projects/${pid}/apis/${api.id}`)}
@@ -207,24 +197,13 @@ function Sidebar({
       className="flex w-[240px] flex-shrink-0 flex-col border-r border-line bg-canvas-elevated"
       style={{ height: 'calc(100vh - 54px)' }}
     >
-      <div className="border-b border-line px-3 py-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-tertiary">
-              功能组
-            </div>
-            <div className="mt-0.5 truncate text-[12.5px] text-ink" title={project.name}>
-              {project.name}
-              <span className="text-ink-subtle">
-                {' '}
-                · {groups.length} 组 · {totalApis} 接口
-              </span>
-            </div>
-          </div>
-          <IconBtn title="新建功能组" onClick={onCreateGroup}>
-            <Plus className="h-3.5 w-3.5" />
-          </IconBtn>
+      <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2.5">
+        <div className="min-w-0 truncate text-[13px] font-medium text-ink" title={project.name}>
+          {project.name}
         </div>
+        <IconBtn title="新建功能组" onClick={onCreateGroup}>
+          <Plus className="h-3.5 w-3.5" />
+        </IconBtn>
       </div>
 
       <div className="border-b border-line px-3 py-2">
@@ -241,6 +220,12 @@ function Sidebar({
       </div>
 
       <nav className="scrollbar-modern flex-1 overflow-y-auto px-1.5 py-1.5">
+        <div className="flex h-6 items-center justify-between px-1.5 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-ink-tertiary">
+          <span>功能组</span>
+          <span className="tabular-nums text-ink-subtle">
+            {groups.length} 组 · {totalApis} 接口
+          </span>
+        </div>
         {groups.length === 0 ? (
           <div className="flex flex-col items-center px-3 py-8 text-center">
             <FolderOpen className="mb-2 h-4 w-4 text-ink-subtle" />
@@ -335,14 +320,12 @@ function GroupNode({
 
 function ApiListPanel({
   projectId,
-  projectName,
   group,
   onCreateApi,
   onEditApi,
   onOpenAgentsEdit,
 }: {
   projectId: number;
-  projectName: string;
   group: FeatureGroup;
   onCreateApi: () => void;
   onEditApi: (api: MockApi) => void;
@@ -577,65 +560,113 @@ function ApiListPanel({
     }
   }, [apis, testMut]);
 
+  const enabledCount = useMemo(() => (apis ?? []).filter((a) => a.isEnabled).length, [apis]);
+  const disabledCount = (apis?.length ?? 0) - enabledCount;
+
+  const moreItems: DropdownItem[] = [
+    {
+      label: testing ? '测试中...' : '运行测试',
+      icon: testing ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Play className="h-3.5 w-3.5" />
+      ),
+      onClick: () => void handleRunAllTests(),
+      disabled: testing,
+    },
+    { divider: true },
+    {
+      label: '导入 Swagger',
+      icon: <Upload className="h-3.5 w-3.5" />,
+      onClick: () => setSwaggerOpen(true),
+    },
+  ];
+
   return (
     <div className="page-container !pt-6">
-      <PageHeader
-        title={
-          <>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink">
             {group.name}
-            <span className="text-[14px] font-normal text-ink-subtle">
-              · {apis?.length ?? 0} 接口
+          </h1>
+          {group.description && (
+            <p className="mt-1.5 max-w-[680px] text-[13px] leading-relaxed text-ink-tertiary">
+              {group.description}
+            </p>
+          )}
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-1 gap-y-1 text-[11.5px] text-ink-tertiary">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-canvas-subtle px-1.5 py-0.5">
+              <Layers className="h-3 w-3 text-ink-subtle" />
+              <strong className="font-medium text-ink-secondary tabular-nums">
+                {apis?.length ?? 0}
+              </strong>{' '}
+              接口
             </span>
-          </>
-        }
-        description={
-          group.description ?? `管理「${projectName} / ${group.name}」下的所有 Mock 接口`
-        }
-        actions={
-          <>
-            <Button variant="secondary" onClick={handleRunAllTests} disabled={testing}>
-              {testing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Play className="h-3.5 w-3.5" />
+            <Sep />
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <strong className="font-medium text-ink-secondary tabular-nums">{enabledCount}</strong>{' '}
+              已启用
+            </span>
+            <Sep />
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
+              <strong className="font-medium text-ink-secondary tabular-nums">{disabledCount}</strong>{' '}
+              已禁用
+            </span>
+            <Sep />
+            <span>创建于 {formatDate(group.createdAt)}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {batchMode ? (
+            <>
+              {selectedIds.size > 0 && (
+                <>
+                  <Button variant="secondary" onClick={() => handleBatchToggle(true)}>
+                    批量启用
+                  </Button>
+                  <Button variant="secondary" onClick={() => handleBatchToggle(false)}>
+                    批量禁用
+                  </Button>
+                  <Button variant="danger" onClick={handleBatchDelete}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    批量删除 ({selectedIds.size})
+                  </Button>
+                </>
               )}
-              {testing ? '测试中...' : '运行测试'}
-            </Button>
-            <Button
-              variant={batchMode ? 'primary' : 'secondary'}
-              onClick={() => {
-                setBatchMode(!batchMode);
-                setSelectedIds(new Set());
-              }}
-            >
-              {batchMode ? (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setBatchMode(false);
+                  setSelectedIds(new Set());
+                }}
+              >
                 <XCircle className="h-3.5 w-3.5" />
-              ) : (
-                <SquareCheck className="h-3.5 w-3.5" />
-              )}
-              {batchMode ? '退出批量' : '批量管理'}
+                退出批量
+              </Button>
+            </>
+          ) : (
+            <Button variant="secondary" onClick={() => setBatchMode(true)}>
+              <SquareCheck className="h-3.5 w-3.5" />
+              批量管理
             </Button>
-            {batchMode && selectedIds.size > 0 && (
-              <>
-                <Button variant="secondary" onClick={() => handleBatchToggle(true)}>
-                  批量启用
-                </Button>
-                <Button variant="secondary" onClick={() => handleBatchToggle(false)}>
-                  批量禁用
-                </Button>
-                <Button variant="danger" onClick={handleBatchDelete}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                  批量删除 ({selectedIds.size})
-                </Button>
-              </>
-            )}
-            <Button variant="primary" onClick={onCreateApi}>
-              <Plus className="h-3.5 w-3.5" />
-              新建接口
-            </Button>
-          </>
-        }
-      />
+          )}
+          <Button variant="primary" onClick={onCreateApi}>
+            <Plus className="h-3.5 w-3.5" />
+            新建接口
+          </Button>
+          <Dropdown
+            trigger={
+              <Button variant="ghost" aria-label="更多操作">
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            }
+            items={moreItems}
+          />
+        </div>
+      </div>
 
       <button
         type="button"
@@ -661,13 +692,6 @@ function ApiListPanel({
           <ChevronRight className="h-3.5 w-3.5" />
         </span>
       </button>
-
-      <div className="mb-3 flex items-center gap-2">
-        <Button variant="secondary" onClick={() => setSwaggerOpen(true)}>
-          <Upload className="h-3.5 w-3.5" />
-          导入 Swagger
-        </Button>
-      </div>
 
       <div className="mb-3.5 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[140px] max-w-[240px]">
@@ -1279,4 +1303,17 @@ function byteSize(v: unknown): number {
   } catch {
     return 0;
   }
+}
+
+function Sep() {
+  return <span aria-hidden className="text-ink-disabled">·</span>;
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
