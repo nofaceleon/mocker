@@ -81,7 +81,7 @@ export function MainLayout() {
         <div
           className={cn(
             'flex flex-shrink-0 items-center gap-1 border-t border-line py-2',
-            sidebarCollapsed ? 'flex-col' : 'px-2',
+            sidebarCollapsed ? 'flex-col gap-2.5 py-3' : 'px-2',
           )}
         >
           <NavLink to="/settings" className={cn(sidebarCollapsed ? 'inline-flex' : 'flex-1')}>

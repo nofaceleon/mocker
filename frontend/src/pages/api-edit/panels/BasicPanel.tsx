@@ -1,17 +1,28 @@
 import { useRef, useState } from 'react';
 import { Settings } from 'lucide-react';
-import { Card, FormField, Input, Select, Switch } from '@/components/ui';
+import { Card, CopyButton, FormField, Input, Select, Switch } from '@/components/ui';
 import type { HttpMethod, Protocol } from '@/types/api';
 import type { MockApiPayload } from '@/hooks/queries/use-mock-apis';
+import { config as runtimeConfig } from '@/lib/runtime-config';
 import { reportFieldError } from '@/lib/form-validation';
+import type { ConfigTab } from '../ConfigNav';
 import { PanelHeader } from '../PanelHeader';
 import { PanelActions } from '../PanelActions';
+import { FeatureFlagsCard, type FeatureFlagsCardProps } from '../FeatureFlagsCard';
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
-const PROTOCOLS: { value: Protocol; label: string }[] = [
-  { value: 'HTTP', label: 'HTTP / REST' },
-  { value: 'WebSocket', label: 'WebSocket' },
-  { value: 'SSE', label: 'SSE' },
+const PROTOCOLS: { value: Protocol; label: string; hint: string }[] = [
+  { value: 'HTTP', label: 'HTTP / REST', hint: '标准请求-响应模式，适用于绝大多数业务接口' },
+  {
+    value: 'WebSocket',
+    label: 'WebSocket',
+    hint: '长连接双向通信，由客户端通过 upgrade 协议建立',
+  },
+  {
+    value: 'SSE',
+    label: 'SSE',
+    hint: '服务端推送；底层走 HTTP GET，客户端使用 EventSource',
+  },
 ];
 const PRIORITIES = [
   { value: 'high', label: '高（精确匹配）' },
@@ -41,6 +52,10 @@ type BasicPanelProps = {
   saving?: boolean;
   extra?: Extra;
   onExtraChange?: (next: Extra) => void;
+  tab?: ConfigTab;
+  onTabChange?: (tab: ConfigTab) => void;
+  featureRows?: FeatureFlagsCardProps['rows'];
+  onToggleFeatureHidden?: FeatureFlagsCardProps['onToggleHidden'];
 };
 
 export type BasicExtra = Extra;
@@ -48,6 +63,12 @@ export type BasicExtra = Extra;
 type FieldErrors = {
   name?: string;
   path?: string;
+};
+
+const PROTOCOL_HINT_BY_VALUE: Record<Protocol, string> = {
+  HTTP: PROTOCOLS[0].hint,
+  WebSocket: PROTOCOLS[1].hint,
+  SSE: PROTOCOLS[2].hint,
 };
 
 export function BasicPanel({
@@ -58,6 +79,9 @@ export function BasicPanel({
   saving,
   extra,
   onExtraChange,
+  onTabChange,
+  featureRows,
+  onToggleFeatureHidden,
 }: BasicPanelProps) {
   const protocol = extra?.protocol ?? 'HTTP';
   const priority = extra?.priority ?? 'high';
@@ -138,6 +162,8 @@ export function BasicPanel({
     onSave();
   };
 
+  const fullUrl = `${runtimeConfig.apiBase}${formData.path || '/'}`;
+
   return (
     <div className="mx-auto max-w-[880px] px-8 pb-12 pt-7">
       <PanelHeader
@@ -146,25 +172,17 @@ export function BasicPanel({
         description="定义 Mock 接口的基础信息：名称、HTTP 方法、路由路径、归属分组与启用状态。"
       />
 
-      <Card title="接口信息">
-        <div className="form-row">
-          <FormField label="接口名称" required error={errors.name}>
-            <Input
-              ref={nameRef}
-              value={formData.name}
-              onChange={(e) => handleChange({ ...formData, name: e.target.value })}
-              placeholder="例如：人脸注册"
-              maxLength={100}
-              invalid={!!errors.name}
-            />
-          </FormField>
-          <FormField label="所属功能组" hint="项目 / 模块">
-            <Input value={groupName ?? '—'} disabled />
-          </FormField>
-        </div>
+      {featureRows && onTabChange && onToggleFeatureHidden && (
+        <FeatureFlagsCard
+          rows={featureRows}
+          onJumpTab={(t) => onTabChange(t)}
+          onToggleHidden={onToggleFeatureHidden}
+        />
+      )}
 
+      <Card title="路由">
         <div className="form-row three-col">
-          <FormField label="协议">
+          <FormField label="协议" hint={PROTOCOL_HINT_BY_VALUE[protocol]} hintIcon>
             <Select
               value={protocol}
               onChange={(e) => handleProtocolChange(e.target.value as Protocol)}
@@ -209,32 +227,43 @@ export function BasicPanel({
           required
           error={errors.path}
           hint={
-            errors.path
-              ? undefined
-              : isSSE
-                ? 'SSE 基于 HTTP GET，客户端通过 EventSource API 建立连接'
-                : undefined
+            errors.path ? undefined : '支持 :id 占位符、* 通配符；匹配优先级：精确 > 参数 > 通配符'
           }
+          hintIcon
         >
-          <div className="input-group">
-            <span className="input-group-text">{isSSE ? 'GET' : formData.method}</span>
-            <Input
-              ref={pathRef}
-              className="mono"
-              value={formData.path}
-              onChange={(e) => handleChange({ ...formData, path: e.target.value })}
-              placeholder="/api/events"
-              invalid={!!errors.path}
-            />
-          </div>
-          {!errors.path && !isSSE && (
-            <div className="form-helper">
-              支持 <code>:id</code> 占位符、<code>*</code> 通配符；匹配优先级：精确 &gt; 参数 &gt;
-              通配符
+          <div className="flex items-stretch gap-2">
+            <div className="input-group flex-1">
+              <span className="input-group-text">{isSSE ? 'GET' : formData.method}</span>
+              <Input
+                ref={pathRef}
+                className="mono"
+                value={formData.path}
+                onChange={(e) => handleChange({ ...formData, path: e.target.value })}
+                placeholder="/api/events"
+                invalid={!!errors.path}
+              />
             </div>
-          )}
+            <CopyButton text={fullUrl} label="已复制完整 URL" />
+          </div>
         </FormField>
+      </Card>
 
+      <Card title="元数据">
+        <div className="form-row">
+          <FormField label="接口名称" required error={errors.name}>
+            <Input
+              ref={nameRef}
+              value={formData.name}
+              onChange={(e) => handleChange({ ...formData, name: e.target.value })}
+              placeholder="例如：人脸注册"
+              maxLength={100}
+              invalid={!!errors.name}
+            />
+          </FormField>
+          <FormField label="所属功能组" hint="项目 / 模块">
+            <Input value={groupName ?? '—'} disabled />
+          </FormField>
+        </div>
         <FormField label="接口描述">
           <textarea
             value={formData.description ?? ''}
@@ -245,7 +274,9 @@ export function BasicPanel({
             maxLength={2000}
           />
         </FormField>
+      </Card>
 
+      <Card title="响应默认值">
         <div className="form-row">
           {!isSSE && (
             <FormField label="Content-Type">

@@ -64,6 +64,8 @@ type ConfigNavProps = {
     lastCalledAt?: string;
   };
   featureState?: FeatureState;
+  /** 高级特性 tab 是否在侧边栏隐藏（用户偏好） */
+  hiddenTabs?: ReadonlySet<ConfigTab>;
   showSwitcher?: boolean;
   onToggleSwitcher?: () => void;
 };
@@ -77,6 +79,7 @@ export function ConfigNav({
   onLogClick,
   summary,
   featureState,
+  hiddenTabs,
   showSwitcher,
   onToggleSwitcher,
 }: ConfigNavProps) {
@@ -91,28 +94,52 @@ export function ConfigNav({
     });
   }, [featureState]);
 
-  const sections: Array<{ title: string; tabs: TabDef[] }> = [
-    { title: '基础配置', tabs: dynamicTabs.slice(0, 3) },
-    { title: '高级特性', tabs: dynamicTabs.slice(3, 6) },
-    { title: '调试', tabs: dynamicTabs.slice(6) },
-  ];
+  const filteredTabs = useMemo(
+    () => dynamicTabs.filter((t) => !hiddenTabs?.has(t.value)),
+    [dynamicTabs, hiddenTabs],
+  );
+
+  const sections: Array<{ title: string; tabs: TabDef[] }> = useMemo(() => {
+    const all = filteredTabs;
+    return [
+      { title: '基础配置', tabs: all.slice(0, 3) },
+      { title: '高级特性', tabs: all.slice(3, 6) },
+      { title: '调试', tabs: all.slice(6) },
+    ].filter((sec) => sec.tabs.length > 0);
+  }, [filteredTabs]);
 
   return (
     <aside className="flex flex-col overflow-y-auto border-r border-line bg-canvas-elevated scrollbar-modern">
-      <div className="border-b border-line-subtle px-4 py-3.5">
+      <div className="border-b border-line-subtle px-4 py-3">
         {breadcrumb && breadcrumb.length > 0 && (
-          <div className="mb-3 text-[12px]">
+          <div className="mb-2 text-[12px]">
             <Breadcrumb items={breadcrumb} className="!ml-0" />
           </div>
         )}
 
-        {/* 接口名称 */}
-        <div className="mb-2.5 truncate text-[15px] font-semibold leading-snug text-ink">
-          {summary?.name || '新建接口'}
+        {/* 接口名称 + 状态徽章 */}
+        <div className="mb-2.5 flex items-center gap-2">
+          <div
+            className="min-w-0 flex-1 truncate text-[15px] font-semibold leading-snug text-ink"
+            title={summary?.name || '新建接口'}
+          >
+            {summary?.name || '新建接口'}
+          </div>
+          {summary?.isEnabled ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-1.5 py-0.5 text-[10.5px] font-medium text-success-text">
+              <span className="live-dot !h-[5px] !w-[5px]" />
+              运行中
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-canvas-subtle px-1.5 py-0.5 text-[10.5px] font-medium text-ink-tertiary">
+              <span className="live-dot-danger !h-[5px] !w-[5px]" />
+              未启用
+            </span>
+          )}
         </div>
 
         {/* 端点展示条 */}
-        <div className="mb-3 flex items-center gap-2 rounded-lg bg-canvas-subtle px-3 py-2">
+        <div className="mb-2.5 flex items-center gap-2 rounded-lg bg-canvas-subtle px-3 py-1.5">
           <MethodBadge method={method} className="!text-[11px] !py-[1px] !px-[6px]" />
           <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-ink-secondary">
             {path || '/'}
@@ -121,18 +148,7 @@ export function ConfigNav({
         </div>
 
         {/* 元信息行 */}
-        <div className="flex items-center gap-2 text-[11px]">
-          {summary?.isEnabled ? (
-            <span className="inline-flex items-center gap-1.5 font-medium text-ink-secondary">
-              <span className="live-dot !h-[6px] !w-[6px]" />
-              运行中
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 font-medium text-ink-secondary">
-              <span className="live-dot-danger !h-[6px] !w-[6px]" />
-              未启用
-            </span>
-          )}
+        <div className="flex items-center gap-1 text-[11px]">
           <button
             type="button"
             onClick={onLogClick}

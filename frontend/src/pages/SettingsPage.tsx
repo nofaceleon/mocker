@@ -216,56 +216,58 @@ export function SettingsPage() {
                 description="点击「立即备份」创建你的第一个备份"
               />
             ) : (
-              <table className="params-table">
-                <thead>
-                  <tr>
-                    <th>名称</th>
-                    <th style={{ width: 100 }}>大小</th>
-                    <th style={{ width: 200 }}>创建时间</th>
-                    <th>路径</th>
-                    <th style={{ width: 130 }}>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {backups.map((b) => (
-                    <tr key={b.name} className="hover:bg-canvas">
-                      <td>
-                        <span className="param-code !text-[12px]">{b.name}</span>
-                      </td>
-                      <td>
-                        <TagPill>{formatSize(b.size)}</TagPill>
-                      </td>
-                      <td className="text-ink-secondary">{new Date(b.mtime).toLocaleString()}</td>
-                      <td>
-                        <span className="truncate font-mono text-[11.5px] text-ink-tertiary">
-                          {b.path}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            loading={restoreMut.isPending && restoreMut.variables === b.name}
-                            onClick={() => handleRestore(b.name)}
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                            恢复
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete(b.name)}
-                            className="!text-ink-subtle hover:!bg-danger-soft hover:!text-danger"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="params-table">
+                  <thead>
+                    <tr>
+                      <th>名称</th>
+                      <th style={{ width: 100 }}>大小</th>
+                      <th style={{ width: 200 }}>创建时间</th>
+                      <th>路径</th>
+                      <th style={{ width: 130 }}>操作</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {backups.map((b) => (
+                      <tr key={b.name} className="hover:bg-canvas">
+                        <td>
+                          <span className="param-code !text-[12px]">{b.name}</span>
+                        </td>
+                        <td>
+                          <TagPill>{formatSize(b.size)}</TagPill>
+                        </td>
+                        <td className="text-ink-secondary">{new Date(b.mtime).toLocaleString()}</td>
+                        <td>
+                          <span className="truncate font-mono text-[11.5px] text-ink-tertiary">
+                            {b.path}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              loading={restoreMut.isPending && restoreMut.variables === b.name}
+                              onClick={() => handleRestore(b.name)}
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              恢复
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDelete(b.name)}
+                              className="!text-ink-subtle hover:!bg-danger-soft hover:!text-danger"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </Card>
         </>

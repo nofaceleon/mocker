@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Code2, Link2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { ApiError } from '@/lib/api';
 import { Button, Modal } from '@/components/ui';
@@ -12,12 +13,21 @@ import {
   useTestMockApi,
   useUpdateMockApi,
 } from '@/hooks/queries/use-mock-apis';
+import { useCallbackConfig } from '@/hooks/queries/use-callback-config';
 import { useProject } from '@/hooks/queries/use-projects';
 import { useFeatureGroups } from '@/hooks/queries/use-feature-groups';
 import type { MockApi } from '@/types/api';
 import { genId } from '@/lib/id';
+import {
+  type FeatureVisibility,
+  loadApiEditPrefs,
+  loadFeatureVisibility,
+  saveApiEditPrefs,
+  saveFeatureVisibility,
+} from '@/lib/api-edit-prefs';
 import { ConfigNav, type ConfigTab } from './ConfigNav';
 import { ApiSwitcherPanel } from './ApiSwitcherPanel';
+import { SaveStatusBar, type SaveStatusState } from './SaveStatusBar';
 import { BasicPanel, type BasicExtra } from './panels/BasicPanel';
 import { ParamsPanel } from './panels/ParamsPanel';
 import { ResponsePanel } from './panels/ResponsePanel';
@@ -25,6 +35,12 @@ import { CallbackPanel } from './panels/CallbackPanel';
 import { DataLinkPanel } from './panels/DataLinkPanel';
 import { ScriptPanel } from './panels/ScriptPanel';
 import { TestPanel } from './panels/TestPanel';
+
+const HIDDEN_TAB_BY_FEATURE: Record<keyof FeatureVisibility, ConfigTab> = {
+  callback: 'callback',
+  datalink: 'datalink',
+  script: 'script',
+};
 
 export function ApiEditPage() {
   const params = useParams();
@@ -41,6 +57,7 @@ export function ApiEditPage() {
   const deleteMut = useDeleteMockApi();
   const createMut = useCreateMockApi();
   const testMut = useTestMockApi();
+  const { data: callbackConfigs } = useCallbackConfig(isNew ? undefined : apiId);
 
   const [formData, setFormData] = useState<MockApiPayload>(() => newFormData());
   const [extra, setExtra] = useState<BasicExtra>({
@@ -49,18 +66,56 @@ export function ApiEditPage() {
     contentType: 'application/json',
     enabled: true,
   });
-  const [tab, setTab] = useState<ConfigTab>('basic');
+  const [tab, setTab] = useState<ConfigTab>(() => loadApiEditPrefs().tab);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | undefined>(undefined);
-  const [showSwitcher, setShowSwitcher] = useState(true);
+  const [showSwitcher, setShowSwitcher] = useState(() => loadApiEditPrefs().showSwitcher);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const [featureVisibility, setFeatureVisibility] = useState<FeatureVisibility>(() =>
+    loadFeatureVisibility(),
+  );
+  const pristineRef = useRef<MockApiPayload | null>(null);
+
+  useEffect(() => {
+    saveApiEditPrefs({ tab });
+  }, [tab]);
+
+  useEffect(() => {
+    saveApiEditPrefs({ showSwitcher });
+  }, [showSwitcher]);
+
+  useEffect(() => {
+    saveFeatureVisibility(featureVisibility);
+  }, [featureVisibility]);
+
+  // 当前 tab 被隐藏时回到 basic
+  useEffect(() => {
+    const hiddenTabs = new Set(
+      (Object.entries(featureVisibility) as Array<[keyof FeatureVisibility, boolean]>)
+        .filter(([, v]) => !v)
+        .map(([k]) => HIDDEN_TAB_BY_FEATURE[k]),
+    );
+    if (hiddenTabs.has(tab)) setTab('basic');
+  }, [featureVisibility, tab]);
+
+  useEffect(() => {
+    if (!justSaved) return;
+    const t = window.setTimeout(() => setJustSaved(false), 2400);
+    return () => window.clearTimeout(t);
+  }, [justSaved]);
 
   const prevApiIdRef = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (api && !isNew) {
       // 仅在 api id 变化时（初次加载 / 切换接口）重置 formData，避免 refetch 时覆盖未保存的修改
       if (prevApiIdRef.current === undefined || prevApiIdRef.current !== api.id) {
-        setFormData(apiToFormData(api));
+        const initial = apiToFormData(api);
+        setFormData(initial);
+        pristineRef.current = initial;
         prevApiIdRef.current = api.id;
+        setSaveError(null);
+        setJustSaved(false);
       }
       setExtra((prev) => ({
         ...prev,
@@ -116,13 +171,39 @@ export function ApiEditPage() {
   );
 
   const saving = updateMut.isPending || createMut.isPending;
+
+  const isDirty = useMemo(() => {
+    if (isNew) return !!(formData.name.trim() || formData.path.trim() !== '/');
+    if (!pristineRef.current) return false;
+    return JSON.stringify(formData) !== JSON.stringify(pristineRef.current);
+  }, [formData, isNew]);
+
+  // 用户编辑后清除先前的错误状态
+  useEffect(() => {
+    if (saveError) setSaveError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(formData)]);
+
+  const canSave = tab !== 'test';
+  const saveStatusState: SaveStatusState = useMemo(() => {
+    if (saveError) return 'error';
+    if (saving) return 'saving';
+    if (justSaved) return 'saved';
+    if (isDirty) return 'dirty';
+    return 'pristine';
+  }, [saveError, saving, justSaved, isDirty]);
+
   const featureState = useMemo(
     () => ({
-      hasCallback: summary.hasCallback,
+      hasCallback: !!callbackConfigs && callbackConfigs.length > 0,
+      callbackCount: callbackConfigs?.length ?? 0,
       hasDataLink: (formData.dataOp ?? 'none') !== 'none',
+      dataOp: formData.dataOp ?? 'none',
+      dataTable: formData.dataTable ?? null,
       hasScript: !!(formData.script && formData.script.trim()),
+      scriptLines: formData.script ? formData.script.split('\n').length : 0,
     }),
-    [summary.hasCallback, formData.dataOp, formData.script],
+    [callbackConfigs, formData.dataOp, formData.dataTable, formData.script],
   );
   const configSummary = {
     name: summary.name,
@@ -142,6 +223,7 @@ export function ApiEditPage() {
   }
 
   const handleSave = async (data?: Partial<MockApiPayload>) => {
+    setSaveError(null);
     try {
       // 合并data到formData
       const saveData = data ? { ...formData, ...data } : formData;
@@ -158,8 +240,11 @@ export function ApiEditPage() {
       } else if (api) {
         const updated = await updateMut.mutateAsync({ id: api.id, data: saveData });
         toast.success('已保存');
-        setFormData(apiToFormData(updated));
+        const fresh = apiToFormData(updated);
+        setFormData(fresh);
+        pristineRef.current = fresh;
         setLastSavedAt(updated.updatedAt);
+        setJustSaved(true);
       }
     } catch (err) {
       if (err instanceof ApiError && err.code === 'ROUTE_CONFLICT') {
@@ -167,7 +252,9 @@ export function ApiEditPage() {
         setTab('basic');
         return;
       }
-      toast.error(formatApiError(err));
+      const msg = formatApiError(err);
+      setSaveError(msg);
+      toast.error(msg);
     }
   };
 
@@ -189,8 +276,8 @@ export function ApiEditPage() {
         className={cn(
           'grid min-h-0 flex-1',
           showSwitcher && activeGroup && !isNew
-            ? 'lg:grid-cols-[264px_1fr_240px]'
-            : 'lg:grid-cols-[264px_1fr]',
+            ? 'xl:grid-cols-[264px_1fr_240px] lg:grid-cols-[264px_1fr]'
+            : 'lg:grid-cols-[264px_1fr] grid-cols-[1fr]',
         )}
       >
         <ConfigNav
@@ -208,12 +295,27 @@ export function ApiEditPage() {
           }
           summary={configSummary}
           featureState={featureState}
+          hiddenTabs={
+            new Set(
+              (Object.entries(featureVisibility) as Array<[keyof FeatureVisibility, boolean]>)
+                .filter(([, v]) => !v)
+                .map(([k]) => HIDDEN_TAB_BY_FEATURE[k]),
+            )
+          }
           showSwitcher={showSwitcher}
           onToggleSwitcher={() => setShowSwitcher(!showSwitcher)}
         />
 
         {/* 主内容区 */}
         <div className="overflow-y-auto bg-canvas">
+          <SaveStatusBar
+            state={saveStatusState}
+            lastSavedAt={lastSavedAt}
+            errorMessage={saveError ?? undefined}
+            canSave={canSave}
+            onSave={() => handleSave()}
+            saving={saving}
+          />
           {tab === 'basic' && (
             <BasicPanel
               formData={formData}
@@ -223,6 +325,54 @@ export function ApiEditPage() {
               saving={saving}
               extra={extra}
               onExtraChange={setExtra}
+              onTabChange={setTab}
+              featureRows={[
+                {
+                  id: 'callback',
+                  label: '延迟回调',
+                  tab: 'callback',
+                  icon: Send,
+                  status: {
+                    configured: featureState.hasCallback,
+                    summary:
+                      featureState.callbackCount > 0
+                        ? `已配置 ${featureState.callbackCount} 条`
+                        : '',
+                  },
+                  hidden: !featureVisibility.callback,
+                },
+                {
+                  id: 'datalink',
+                  label: '数据联动',
+                  tab: 'datalink',
+                  icon: Link2,
+                  status: {
+                    configured: featureState.hasDataLink,
+                    summary:
+                      featureState.hasDataLink && featureState.dataTable
+                        ? `${featureState.dataOp} → ${featureState.dataTable}`
+                        : '',
+                  },
+                  hidden: !featureVisibility.datalink,
+                },
+                {
+                  id: 'script',
+                  label: '自定义脚本',
+                  tab: 'script',
+                  icon: Code2,
+                  status: {
+                    configured: featureState.hasScript,
+                    summary:
+                      featureState.hasScript && featureState.scriptLines > 0
+                        ? `${featureState.scriptLines} 行`
+                        : '',
+                  },
+                  hidden: !featureVisibility.script,
+                },
+              ]}
+              onToggleFeatureHidden={(id, hidden) =>
+                setFeatureVisibility((prev) => ({ ...prev, [id]: !hidden }))
+              }
             />
           )}
           {tab === 'params' && (
