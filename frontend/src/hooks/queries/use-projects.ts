@@ -57,7 +57,7 @@ export function useUpdateProject() {
   return useMutation({
     mutationFn: async (vars: {
       id: ID;
-      data: Partial<{ name: string; description: string | null }>;
+      data: Partial<{ name: string; description: string | null; favorite: boolean }>;
     }) => unwrap(await api.put<Project>(`/projects/${vars.id}`, vars.data)),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: KEYS.all });

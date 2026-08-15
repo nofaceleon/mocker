@@ -7,6 +7,7 @@ export type Project = {
   id: ID;
   name: string;
   description: string | null;
+  favorite: boolean;
   createdAt: string;
   updatedAt: string;
   featureGroupCount?: number;

@@ -26,6 +26,7 @@ const router = Router();
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(2000).optional().nullable(),
+  favorite: z.boolean().optional(),
 });
 
 const updateSchema = createSchema.partial();
@@ -53,6 +54,7 @@ router.get(
         id: projects.id,
         name: projects.name,
         description: projects.description,
+        favorite: projects.favorite,
         createdAt: projects.createdAt,
         updatedAt: projects.updatedAt,
         featureGroupCount: sql<number>`(SELECT COUNT(*) FROM ${featureGroups} WHERE ${featureGroups.projectId} = ${sql.raw('projects.id')})`,
@@ -247,7 +249,11 @@ router.post(
     if (exists) throw new ApiError('CONFLICT', `项目名 "${body.name}" 已存在`, 409);
     const [row] = db
       .insert(projects)
-      .values({ name: body.name, description: body.description ?? null })
+      .values({
+        name: body.name,
+        description: body.description ?? null,
+        favorite: body.favorite ?? false,
+      })
       .returning()
       .all();
     res.success(row, { status: 201 });
@@ -273,10 +279,15 @@ router.put(
     }
 
     const existing = notFoundOr(db.select().from(projects).where(eq(projects.id, id)).get(), id);
+    const favoritesOnly =
+      body.favorite !== undefined && body.name === undefined && body.description === undefined;
     db.update(projects)
       .set({
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.favorite !== undefined ? { favorite: body.favorite } : {}),
+        // 仅切换收藏时不触碰 updated_at（显式传原值可覆盖 $onUpdateFn）
+        ...(favoritesOnly ? { updatedAt: existing.updatedAt } : {}),
       })
       .where(eq(projects.id, id))
       .run();

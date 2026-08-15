@@ -54,7 +54,8 @@ export function ProjectsPage() {
   const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
   const deleteMut = useDeleteProject();
-  const [tab, setTab] = useState<'all' | 'recent' | 'pinned'>('all');
+  const updateMut = useUpdateProject();
+  const [tab, setTab] = useState<'all' | 'recent' | 'favorite'>('all');
   const [sort, setSort] = useState<'updated' | 'created' | 'name'>('updated');
   const [search] = useState('');
   const [editing, setEditing] = useState<Project | null>(null);
@@ -75,8 +76,8 @@ export function ProjectsPage() {
       list = [...list]
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
         .slice(0, 3);
-    } else if (tab === 'pinned') {
-      list = list.filter((p) => (p.apiCount ?? 0) > 0).slice(0, 2);
+    } else if (tab === 'favorite') {
+      list = list.filter((p) => p.favorite);
     }
     list = [...list].sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name);
@@ -105,6 +106,14 @@ export function ProjectsPage() {
       toast.success(`项目 "${p.name}" 已删除`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '删除失败');
+    }
+  };
+
+  const handleToggleFavorite = async (p: Project) => {
+    try {
+      await updateMut.mutateAsync({ id: p.id, data: { favorite: !p.favorite } });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '操作失败');
     }
   };
 
@@ -162,14 +171,17 @@ export function ProjectsPage() {
       </button>
 
       <div className="mb-3 flex items-center justify-between">
-        <Tabs<'all' | 'recent' | 'pinned'>
+        <Tabs<'all' | 'recent' | 'favorite'>
           variant="pill"
           value={tab}
           onChange={setTab}
           items={[
             { value: 'all', label: `全部项目 · ${projects?.length ?? 0}` },
             { value: 'recent', label: '最近访问 · 3' },
-            { value: 'pinned', label: '已置顶 · 2' },
+            {
+              value: 'favorite',
+              label: `已收藏 · ${projects?.filter((p) => p.favorite).length ?? 0}`,
+            },
           ]}
         />
         <div className="flex items-center gap-2">
@@ -218,6 +230,7 @@ export function ProjectsPage() {
               onOpen={() => navigate(`/projects/${p.id}`)}
               onEdit={() => setEditing(p)}
               onDelete={() => handleDelete(p)}
+              onToggleFavorite={() => handleToggleFavorite(p)}
               onExport={async () => {
                 try {
                   const bundle = await exportProjectBundle(p.id, { includeData: true });
@@ -249,12 +262,14 @@ function ProjectCard({
   onEdit,
   onDelete,
   onExport,
+  onToggleFavorite,
 }: {
   project: Project;
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onExport: () => void;
+  onToggleFavorite: () => void;
 }) {
   return (
     <div
@@ -262,8 +277,24 @@ function ProjectCard({
       className="group relative cursor-pointer rounded-lg border border-line bg-canvas-elevated p-[18px] transition-all hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lg"
     >
       <div className="mb-1 flex items-center gap-2 text-[15px] font-semibold tracking-[-0.015em] text-ink">
-        {project.name}
-        {(project.apiCount ?? 0) > 0 && <Star className="h-3 w-3 fill-current text-ink-subtle" />}
+        <span className="min-w-0 truncate">{project.name}</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite();
+          }}
+          className="grid h-5 w-5 flex-shrink-0 place-items-center rounded text-ink-subtle transition-colors hover:bg-amber-100 hover:text-amber-500"
+          title={project.favorite ? '取消收藏' : '收藏'}
+        >
+          <Star
+            className={
+              project.favorite
+                ? 'h-3 w-3 fill-amber-400 text-amber-400'
+                : 'h-3 w-3 text-ink-subtle'
+            }
+          />
+        </button>
       </div>
       <p className="mb-3.5 line-clamp-2 min-h-[38px] text-[12.5px] leading-[1.55] text-ink-tertiary">
         {project.description || '暂无描述'}
@@ -928,7 +959,8 @@ function ProjectImportModal({ onClose }: { onClose: () => void }) {
             {IMPORT_MODES.map((m) => {
               const Icon = m.icon;
               const active = mode === m.value;
-              return (
+
+  return (
                 <button
                   key={m.value}
                   type="button"

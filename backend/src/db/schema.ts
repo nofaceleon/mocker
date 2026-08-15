@@ -30,6 +30,7 @@ export const projects = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     name: text('name').notNull(),
     description: text('description'),
+    favorite: integer('favorite', { mode: 'boolean' }).notNull().default(false),
     ...timestamps,
   },
   (t) => [uniqueIndex('uniq_projects_name').on(t.name)],
