@@ -248,7 +248,7 @@ export function BasicPanel({
         </FormField>
       </Card>
 
-      <Card title="元数据">
+      <Card title="元数据" className="mt-5">
         <div className="form-row">
           <FormField label="接口名称" required error={errors.name}>
             <Input
@@ -276,7 +276,7 @@ export function BasicPanel({
         </FormField>
       </Card>
 
-      <Card title="响应默认值">
+      <Card title="响应默认值" className="mt-5">
         <div className="form-row">
           {!isSSE && (
             <FormField label="Content-Type">
