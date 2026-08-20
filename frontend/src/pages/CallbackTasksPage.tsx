@@ -28,6 +28,7 @@ import {
   useCallbackTask,
   useCallbackTasks,
   useCancelCallbackTask,
+  useClearAllCallbackTasks,
   useRetryCallbackTask,
   type CallbackTaskTimeRange,
 } from '@/hooks/queries/use-callback-tasks';
@@ -117,10 +118,12 @@ export function CallbackTasksPage() {
   const retryMut = useRetryCallbackTask();
   const cancelMut = useCancelCallbackTask();
   const batchDeleteMut = useBatchDeleteCallbackTasks();
+  const clearAllMut = useClearAllCallbackTasks();
 
   const [selected, setSelected] = useState<number | null>(null);
   const [checkedIds, setCheckedIds] = useState<number[]>([]);
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
 
   const total = page1?.total ?? 0;
   const items = page1?.items ?? [];
@@ -148,6 +151,27 @@ export function CallbackTasksPage() {
       setCheckedIds([]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '删除失败';
+      toast.error(msg);
+    }
+  }
+
+  async function handleClearAll() {
+    try {
+      const res = await clearAllMut.mutateAsync({
+        confirm: true,
+        apiId,
+        status: status === 'all' ? undefined : status,
+        keyword: keyword || undefined,
+        range,
+        start: range === 'custom' && customStart ? new Date(customStart).getTime() : undefined,
+        end: range === 'custom' && customEnd ? new Date(customEnd + 'T23:59:59').getTime() : undefined,
+      });
+      toast.success(`已清除 ${res.deleted} 条任务`);
+      setConfirmClearAll(false);
+      setCheckedIds([]);
+      setPage(1);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '清除失败';
       toast.error(msg);
     }
   }
@@ -202,6 +226,21 @@ export function CallbackTasksPage() {
               <span className="w-8 text-right font-mono text-[11px] text-ink-tertiary">
                 {Math.ceil(((100 - progress) * 50) / 1000)}s
               </span>
+              <span className="h-4 w-px bg-line" />
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setConfirmClearAll(true)}
+                disabled={clearAllMut.isPending || total === 0}
+                title={
+                  total === 0
+                    ? '当前筛选条件下没有任务'
+                    : `清除当前筛选条件下的 ${total} 条任务`
+                }
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                清除全部
+              </Button>
             </div>
           </div>
         }
@@ -485,6 +524,63 @@ export function CallbackTasksPage() {
           删除后无法恢复。pending 状态的待发送任务会被一并取消。
         </p>
       </Modal>
+
+      <Modal
+        open={confirmClearAll}
+        onClose={() => setConfirmClearAll(false)}
+        title={`清除全部 ${total} 条任务？`}
+        width="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmClearAll(false)}>
+              取消
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleClearAll}
+              disabled={clearAllMut.isPending}
+            >
+              {clearAllMut.isPending ? '清除中…' : '确认清除'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-[13px] text-ink-secondary">
+          <p>
+            将清除<strong className="text-danger-text">当前筛选条件下</strong>的所有任务，包括 表格外未分页的记录。
+          </p>
+          <div className="rounded-md border border-line bg-canvas-subtle px-3 py-2 text-[12.5px] text-ink-secondary">
+            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary">
+              当前筛选条件
+            </div>
+            <ul className="space-y-1">
+              <li>
+                <span className="text-ink-tertiary">状态：</span>
+                {status === 'all' ? '全部' : STATUS_MAP[status].label}
+              </li>
+              <li>
+                <span className="text-ink-tertiary">时间：</span>
+                {describeRange(range, customStart, customEnd)}
+              </li>
+              {keyword && (
+                <li>
+                  <span className="text-ink-tertiary">关键字：</span>
+                  <code className="mono">{keyword}</code>
+                </li>
+              )}
+              {apiId !== undefined && (
+                <li>
+                  <span className="text-ink-tertiary">接口：</span>
+                  API #{apiId}
+                </li>
+              )}
+            </ul>
+          </div>
+          <p className="text-[12px] text-ink-tertiary">
+            操作不可撤销。pending 状态的待发送任务会被一并取消，不再触发。
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -697,6 +793,30 @@ function formatTime(iso: string): string {
   if (Number.isNaN(d.getTime())) return iso;
   const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/** 拼出当前时间筛选的易读描述，给「清除全部」确认弹窗用 */
+function describeRange(
+  range: CallbackTaskTimeRange,
+  customStart: string,
+  customEnd: string,
+): string {
+  switch (range) {
+    case '1h':
+      return '最近 1 小时';
+    case '24h':
+      return '最近 24 小时';
+    case '7d':
+      return '最近 7 天';
+    case 'custom':
+      if (customStart && customEnd) return `${customStart} 至 ${customEnd}`;
+      if (customStart) return `${customStart} 起`;
+      if (customEnd) return `截至 ${customEnd}`;
+      return '自定义（未填写）';
+    case 'all':
+    default:
+      return '全部';
+  }
 }
 
 /** 待发送任务倒计时：距 scheduledAt 的剩余时间，每秒刷新 */

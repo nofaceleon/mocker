@@ -102,3 +102,33 @@ export function useBatchDeleteCallbackTasks() {
     },
   });
 }
+
+export type ClearAllPayload = {
+  confirm: true;
+  apiId?: ID;
+  status?: CallbackTaskStatus;
+  keyword?: string;
+  range?: CallbackTaskTimeRange;
+  start?: number;
+  end?: number;
+};
+
+/** 按当前筛选条件清除全部任务。confirm 必须为 true 才能执行。 */
+export function useClearAllCallbackTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: ClearAllPayload) => {
+      const body: Record<string, unknown> = { confirm: true };
+      if (payload.apiId != null) body.apiId = payload.apiId;
+      if (payload.status) body.status = payload.status;
+      if (payload.keyword) body.keyword = payload.keyword;
+      if (payload.range && payload.range !== 'all') body.range = payload.range;
+      if (payload.start != null) body.start = payload.start;
+      if (payload.end != null) body.end = payload.end;
+      return unwrap(await api.post<{ deleted: number }>('/callback-tasks/clear-all', body));
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['callback-tasks'] });
+    },
+  });
+}

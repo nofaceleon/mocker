@@ -212,7 +212,7 @@ function parseTimeBound(v: string | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function buildTimeRangeFilter(q: z.infer<typeof taskQuerySchema>) {
+function buildTimeRangeFilter(q: { range?: string; start?: string; end?: string }) {
   if (q.range === 'custom') {
     const start = parseTimeBound(q.start);
     const end = parseTimeBound(q.end);
@@ -406,6 +406,77 @@ router.post(
       .all();
     for (const t of pending) callbackScheduler.cancel(t.id);
     const r = db.delete(callbackTasks).where(inArray(callbackTasks.id, ids)).run();
+    res.success({ deleted: r.changes ?? 0 });
+  }),
+);
+
+/** 清除全部：按当前筛选条件删除所有匹配的任务。
+ *  二次确认：必须传 `confirm: true`，避免误触。
+ */
+const clearAllSchema = z.object({
+  confirm: z.literal(true),
+  apiId: z.coerce.number().int().positive().optional(),
+  status: z.enum(['pending', 'sent', 'failed']).optional(),
+  keyword: z.string().trim().min(1).max(200).optional(),
+  range: z.enum(['all', '1h', '24h', '7d', 'custom']).optional().default('all'),
+  start: z.string().optional(),
+  end: z.string().optional(),
+});
+
+router.post(
+  '/callback-tasks/clear-all',
+  asyncHandler(async (req: Request, res: Response) => {
+    const body = clearAllSchema.parse(req.body ?? {});
+    const db = getDb();
+
+    const baseWhere = and(
+      body.apiId ? eq(callbackTasks.apiId, body.apiId) : undefined,
+      body.status ? eq(callbackTasks.status, body.status) : undefined,
+      buildTimeRangeFilter(body),
+    );
+    const keywordWhere = body.keyword
+      ? or(
+          like(callbackTasks.callbackUrl, `%${body.keyword}%`),
+          like(callbackTasks.callbackBody, `%${body.keyword}%`),
+          like(mockApis.name, `%${body.keyword}%`),
+          like(mockApis.path, `%${body.keyword}%`),
+        )
+      : undefined;
+    const fullWhere = keywordWhere ? and(baseWhere, keywordWhere) : baseWhere;
+
+    // 统计将被删除的 pending 任务，先清调度器定时器，避免删除后仍被触发
+    const pendingSub = db
+      .select({ id: callbackTasks.id })
+      .from(callbackTasks)
+      .leftJoin(mockApis, eq(callbackTasks.apiId, mockApis.id))
+      .where(
+        keywordWhere
+          ? and(baseWhere, eq(callbackTasks.status, 'pending'), keywordWhere)
+          : and(baseWhere, eq(callbackTasks.status, 'pending')),
+      );
+    const pending = db
+      .select({ id: callbackTasks.id })
+      .from(callbackTasks)
+      .where(inArray(callbackTasks.id, pendingSub))
+      .all();
+    for (const t of pending) callbackScheduler.cancel(t.id);
+
+    // 若有关键字搜索条件（需要 join mockApis），用 subquery 包一层
+    const r = keywordWhere
+      ? db
+          .delete(callbackTasks)
+          .where(
+            inArray(
+              callbackTasks.id,
+              db
+                .select({ id: callbackTasks.id })
+                .from(callbackTasks)
+                .leftJoin(mockApis, eq(callbackTasks.apiId, mockApis.id))
+                .where(fullWhere),
+            ),
+          )
+          .run()
+      : db.delete(callbackTasks).where(fullWhere).run();
     res.success({ deleted: r.changes ?? 0 });
   }),
 );
