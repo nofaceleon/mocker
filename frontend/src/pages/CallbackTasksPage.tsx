@@ -88,6 +88,7 @@ export function CallbackTasksPage() {
   const {
     data: page1,
     isLoading,
+    isFetching,
     refetch,
   } = useCallbackTasks({
     apiId,
@@ -176,6 +177,15 @@ export function CallbackTasksPage() {
     }
   }
 
+  async function handleManualRefresh() {
+    try {
+      await refetch();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '刷新失败';
+      toast.error(msg);
+    }
+  }
+
   return (
     <div className="page-container">
       <PageHeader title="回调任务管理" description="查看、管理所有 Mock 接口产生的异步回调任务" />
@@ -226,6 +236,17 @@ export function CallbackTasksPage() {
               <span className="w-8 text-right font-mono text-[11px] text-ink-tertiary">
                 {Math.ceil(((100 - progress) * 50) / 1000)}s
               </span>
+              <span className="h-4 w-px bg-line" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleManualRefresh}
+                loading={isFetching}
+                title="立即刷新当前列表"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                刷新
+              </Button>
               <span className="h-4 w-px bg-line" />
               <Button
                 variant="danger"
